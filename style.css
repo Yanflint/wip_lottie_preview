@@ -44,13 +44,14 @@ body{
   gap:var(--stack-gap);
 }
 
-/* Коробка превью */
+/* Коробка превью (кликабельная на десктопе) */
 .wrapper{
   position:relative; width:360px; height:800px;
   border:none; outline:none;
   border-radius:var(--wrap-r);
-  overflow:visible;              /* чтобы рамку не клипало */
+  overflow:visible;
 }
+.wrapper.clickable{ cursor:pointer; } /* [ANCHOR:WRAPPER_POINTER] */
 
 /* Единственная пунктирная рамка */
 .wrapper::after{
@@ -88,16 +89,16 @@ body{
 .placeholder .ph-2{ color:var(--muted); }
 .placeholder.hidden{ display:none; }
 
-/* ВАЖНО: во время перетаскивания скрываем плейсхолдер */
+/* Во время перетаскивания скрываем плейсхолдер */
 body.dragging .placeholder{ display:none !important; }
 
-/* ===== Drag&Drop overlay — теперь внутри .wrapper и по центру превью ===== */
+/* ===== Drag&Drop overlay — внутри .wrapper и по центру превью ===== */
 .drop-overlay{
-  position:absolute; inset:0;              /* занимает ровно область превью */
+  position:absolute; inset:0;
   display:none; align-items:center; justify-content:center;
   background:rgba(255,255,255,.04);
-  z-index:3;                               /* поверх содержимого, под рамкой тоже ок */
-  pointer-events:none;                     /* чтобы не мешать событиям */
+  z-index:3;
+  pointer-events:none;
 }
 .drop-overlay .box{
   border:2px dashed #2b334a; color:#ddd; padding:14px 18px; border-radius:10px; font-size:13px;
