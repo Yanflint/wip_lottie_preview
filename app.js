@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v58-mobile-center-flex + pickBtn';
+const VERSION = 'v56-rollback + share-fallback';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -13,9 +13,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const phEl        = document.getElementById('ph');
   const toastEl     = document.getElementById('toast');
   const verEl       = document.getElementById('ver');
-
-  const pickBtn     = document.getElementById('pickBtn');
-  const filePick    = document.getElementById('filePick');
 
   const restartBtn  = document.getElementById('restartBtn');
   const loopChk     = document.getElementById('loopChk');
@@ -32,20 +29,18 @@ document.addEventListener('DOMContentLoaded', function () {
   let wide = false;         // 360 / 1000 (десктоп)
   let fullH = false;        // высота = экран (десктоп)
   let lastLottieJSON = null;
+  const MOBILE = isMobile();
   let loopOn = false;
 
   // фон
-  let bgNatW = 0, bgNatH = 800;
+  let bgNatW = 0, bgNatH = 800; // до загрузки — 800 (для плейсхолдера)
 
   // номинал композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
   /* ---------------- INIT ---------------- */
   if (verEl) verEl.textContent = VERSION;
-
-  const MOBILE = isMobile();
-  const STANDALONE = isStandalonePWA();
-  if (MOBILE || STANDALONE) document.body.classList.add('is-mobile');
+  if (MOBILE) document.body.classList.add('is-mobile');
 
   try { if (typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_){}
 
@@ -60,12 +55,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const uaMob  = /iPhone|Android|Mobile|iPod|IEMobile|Windows Phone/i.test(ua);
     return (coarse || touch || uaMob) && small;
   }
-  function isStandalonePWA(){
-    const mm = window.matchMedia ? window.matchMedia('(display-mode: standalone)').matches : false;
-    const ios = 'standalone' in navigator ? navigator.standalone : false;
-    return !!(mm || ios);
+  function matchMediaSafe(q){
+    try { return window.matchMedia && window.matchMedia(q).matches; } catch(_){ return false; }
   }
-  function matchMediaSafe(q){ try { return window.matchMedia && window.matchMedia(q).matches; } catch(_){ return false; } }
 
   function basePreviewHeight(){ return Math.max(1, bgNatH || 800); }
   function basePreviewWidth(){ return wide ? 1000 : 360; }
@@ -88,8 +80,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Масштабирует сцену Lottie (lotStage) по ВЫСОТЕ превью
   function resizeLottieStage(){
-    if (!lotNomW || !lotNomH) return;
-    const ph = preview.clientHeight;
+    if (!lotNomW || !lotNomH) return; // нет анимации
+    const ph = preview.clientHeight;  // высота "коробочки" превью (логическая)
     const scale = ph / lotNomH;
 
     lotStage.style.width  = lotNomW + 'px';
@@ -97,9 +89,9 @@ document.addEventListener('DOMContentLoaded', function () {
     lotStage.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
 
-  // Десктоп
+  // Десктоп: применяем размеры wrapper/preview и обновляем подписи
   function applyDesktopScale(){
-    if (isStandalonePWA()) { applyMobileScale(); return; }
+    if (MOBILE) return;
     const baseW = basePreviewWidth();
     const baseH = basePreviewHeight();
 
@@ -131,26 +123,25 @@ document.addEventListener('DOMContentLoaded', function () {
     resizeLottieStage();
   }
 
-  // Мобилка/PWA: центр флексом, только scale(...)
+  // Мобилка: коробочка 360×(высота фона). Масштаб по ширине экрана
   function applyMobileScale(){
+    if (!MOBILE) return;
     const vw = (window.visualViewport && window.visualViewport.width)  ? window.visualViewport.width  : window.innerWidth;
     const s  = vw / 360;
-
     preview.style.width  = '360px';
     preview.style.height = basePreviewHeight() + 'px';
-    preview.style.transform = `scale(${s})`;
+    preview.style.transform = `translate(-50%, -50%) scale(${s})`;
 
     resizeLottieStage();
   }
 
+  // Единая точка: пересчитать размеры и сцену Lottie
   function layout(){
-    if (MOBILE || STANDALONE || isStandalonePWA()) applyMobileScale();
-    else applyDesktopScale();
+    if (MOBILE) applyMobileScale(); else applyDesktopScale();
   }
 
-  /* ---------------- EVENTS ---------------- */
-  // На мобиле/PWA — тап по превью = повтор
-  if (MOBILE || STANDALONE) {
+  /* ---------------- MOBILE: tap-to-restart ---------------- */
+  if (MOBILE) {
     wrapper.addEventListener('click', function(e){
       if (e.target.closest && e.target.closest('.controls')) return;
       if (!anim) return;
@@ -159,11 +150,8 @@ document.addEventListener('DOMContentLoaded', function () {
   } else {
     window.addEventListener('resize', ()=>{ if (fullH) layout(); });
   }
-  window.matchMedia && window.matchMedia('(display-mode: standalone)').addEventListener?.('change', layout);
-  window.addEventListener('orientationchange', layout);
-  window.visualViewport && window.visualViewport.addEventListener('resize', layout);
 
-  /* ---------------- DnD ---------------- */
+  /* ---------------- LISTENERS: DnD ---------------- */
   let dragDepth = 0;
   const isImageFile = (f) => f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name));
   const isJsonFile  = (f) => f && (f.type === 'application/json' || /\.json$/i.test(f.name));
@@ -213,28 +201,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Загрузка по кнопке PNG/Lottie ---------------- */
-  if (pickBtn && filePick){
-    pickBtn.addEventListener('click', ()=> filePick.click());
-    filePick.addEventListener('change', async (e)=>{
-      const f = e.target.files && e.target.files[0];
-      if (!f) return;
-      try{
-        if (isImageFile(f)) {
-          const src = await readAsDataURL(f);
-          await setBackgroundFromSrc(src);
-        } else if (isJsonFile(f)) {
-          const data = await readAsText(f);
-          loadLottieFromData(JSON.parse(String(data)));
-        } else {
-          alert('Поддерживаются PNG/JPEG/WebP (фон) или JSON (Lottie).');
-        }
-      } finally {
-        e.target.value = ''; // сбросить, чтобы можно было выбрать тот же файл
-      }
-    });
-  }
-
   /* ---------------- Lottie + фон ---------------- */
   function renewLottieRoot(){
     try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
@@ -281,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ---------------- Контролы ---------------- */
-  if (sizeBtn)   sizeBtn.addEventListener('click', ()=>{ wide=!wide; layout(); });
+  if (sizeBtn) sizeBtn.addEventListener('click', ()=>{ wide=!wide; layout(); });
   if (heightBtn) heightBtn.addEventListener('click',()=>{ fullH=!fullH; layout(); });
 
   restartBtn && restartBtn.addEventListener('click', function(){
@@ -297,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* ---------------- Share (как раньше) ---------------- */
+  /* ---------------- Share: сервер → запасной локальный ---------------- */
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -321,22 +287,41 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  function buildLocalShareLink(){
+    const payload = {
+      v:1,
+      lot:lastLottieJSON || null,
+      bg:bgImg && bgImg.src ? bgImg.src : null,
+      opts:{ loop:!!loopOn, wide:!!wide, fullH:!!fullH }
+    };
+    const json = JSON.stringify(payload);
+    // сжимаем в URI-safe строку
+    const packed = (window.LZString && LZString.compressToEncodedURIComponent)
+      ? LZString.compressToEncodedURIComponent(json)
+      : encodeURIComponent(json);
+    return location.origin + location.pathname + '?d=' + packed;
+  }
+
   if (shareBtn){
     shareBtn.addEventListener('click', async function(){
-      if (!lastLottieJSON){ showToastNear(shareBtn, 'Загрузи Lottie'); return; }
+      if (!lastLottieJSON && !bgImg.src){ showToastNear(shareBtn, 'Загрузите фон или Lottie'); return; }
       await withLoading(shareBtn, async ()=>{
-        const payload = { v:1, lot:lastLottieJSON, bg:bgImg.src || null, opts:{ loop:loopOn, wide:!!wide, fullH:!!fullH } };
-        const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
-        if (!resp.ok) throw new Error('share failed');
-        const data = await resp.json();
-        const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id);
-
-        try { await navigator.clipboard.writeText(link); }
-        catch(_){
-          const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta);
-          ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        // 1) пробуем короткий серверный вариант
+        try {
+          const payload = { v:1, lot:lastLottieJSON, bg:bgImg.src || null, opts:{ loop:loopOn, wide:!!wide, fullH:!!fullH } };
+          const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
+          if (!resp.ok) throw new Error('share failed');
+          const data = await resp.json();
+          const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id);
+          await copyText(link);
+          showToastNear(shareBtn, 'Ссылка скопирована');
+          return;
+        } catch(e){
+          // 2) падение → локальная ссылка
+          const link = buildLocalShareLink();
+          await copyText(link);
+          showToastNear(shareBtn, 'Ссылка скопирована (локальный режим)');
         }
-        showToastNear(shareBtn, 'Ссылка скопирована');
       }).catch(err=>{
         console.error(err);
         showToastNear(shareBtn, 'Ошибка при шаринге');
@@ -344,28 +329,56 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Load from link ---------------- */
-  (async function loadIfLinked(){
-    const id = new URLSearchParams(location.search).get('id');
-    if (!id) { layout(); return; }
-    try {
-      const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
-      if (!resp.ok) throw new Error('404');
-      const snap = await resp.json();
+  async function copyText(text){
+    try { await navigator.clipboard.writeText(text); }
+    catch(_){
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+      ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    }
+  }
 
-      if (snap.opts && typeof snap.opts.loop === 'boolean') {
-        loopOn = !!snap.opts.loop;
-        if (loopChk) loopChk.checked = loopOn;
+  /* ---------------- Загрузка из ссылки ---------------- */
+  (async function loadIfLinked(){
+    const qs = new URLSearchParams(location.search);
+    const id = qs.get('id');
+    const d  = qs.get('d'); // локально сжатые данные
+    if (!id && !d) { layout(); return; }
+
+    try {
+      if (id){
+        const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
+        if (!resp.ok) throw new Error('404');
+        const snap = await resp.json();
+        if (snap.opts && typeof snap.opts.loop === 'boolean') {
+          loopOn = !!snap.opts.loop;
+          if (loopChk) loopChk.checked = loopOn;
+        }
+        if (snap.bg)  { await setBackgroundFromSrc(snap.bg); }
+        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
+        else { layout(); }
+        return;
       }
 
-      if (snap.bg) { await setBackgroundFromSrc(snap.bg); }
-      if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
-      else { layout(); }
+      if (d){
+        const json = (window.LZString && LZString.decompressFromEncodedURIComponent)
+          ? LZString.decompressFromEncodedURIComponent(d)
+          : decodeURIComponent(d);
+        const snap = JSON.parse(json);
+
+        if (snap.opts && typeof snap.opts.loop === 'boolean') {
+          loopOn = !!snap.opts.loop;
+          if (loopChk) loopChk.checked = loopOn;
+        }
+        if (snap.bg)  { await setBackgroundFromSrc(snap.bg); }
+        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
+        else { layout(); }
+      }
     } catch(e){
       console.error(e);
       layout();
     }
   })();
 
+  // первичный рендер
   layout();
 });
