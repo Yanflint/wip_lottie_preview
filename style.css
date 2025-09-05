@@ -1,0 +1,137 @@
+/* ===================== Т О К Е Н Ы  И  Б А З А ===================== */
+/* (перенесены и адаптированы из старого проекта) */
+:root{
+  --bg:#0b0c10;--panel:#12141b;--muted:#9aa3b2;
+  --accent:#6ee7b7;--accent-2:#8ab4f8;--danger:#ef4444;
+  --accent-orange:#FF7700;
+  --preview-bg:#0b0f1a;
+  --ctl-h: 32px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  background:linear-gradient(180deg,#0b0c10,#0f1117);
+  color:#eef2f8;
+}
+
+/* Центрирование контента по экрану (как просили) */
+.page{
+  min-height:100dvh;
+  display:grid;
+  place-items:center;
+  padding:16px;
+}
+
+/* Контейнеры/подписи в стиле старого проекта */
+.container-like{ max-width:1120px; margin:0 auto; padding:0 16px; width:100%; }
+h1{font-size:28px;margin:0 0 8px}
+.sub{color:var(--muted);margin-bottom:20px}
+
+/* Панель управления (визуально как .panel/.controls из старого проекта) */
+.controls.panel-like{
+  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  background:var(--panel);padding:12px 14px;border-radius:14px;border:1px solid #1e2230;
+  width:100%;max-width:1000px;
+}
+
+/* Кнопки в стиле старого проекта */
+.buttons{display:flex;gap:8px;flex-wrap:wrap}
+button{
+  cursor:pointer;border:none;border-radius:12px;padding:10px 14px;font-weight:600;
+  color:#0b0c10;background:var(--accent);
+  transition:transform .05s ease,opacity .2s ease,filter .2s ease;
+}
+button.secondary{background:#273046;color:#dce3ef;border:1px solid #2e374f}
+button.accent{background:var(--accent-orange);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:active{transform:translateY(1px)}
+button:hover:not(:disabled){ filter:brightness(1.05); }
+
+/* Чекбокс */
+.chk{display:inline-flex;align-items:center;gap:8px;color:#dce3ef;background:#273046;border:1px solid #2e374f;border-radius:12px;padding:6px 10px;height:var(--ctl-h)}
+.chk input{width:14px;height:14px;margin:0}
+
+/* Индикатор загрузки на кнопке «Поделиться» */
+button.loading{ opacity:.9; pointer-events:none; position:relative; }
+button.loading::after{
+  content:""; width:14px; height:14px; margin-left:6px;
+  border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%;
+  display:inline-block; animation:spin .8s linear infinite; vertical-align:middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Тост/подсказка */
+.toast{
+  position:fixed; padding:8px 10px; background:rgba(0,0,0,.85); color:#fff; border-radius:8px;
+  font-size:12px; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
+  z-index:1000; backdrop-filter:blur(4px);
+  transform:translate(-50%, calc(-100% - 8px));
+}
+.toast.show{ opacity:1; }
+
+/* Бейдж версии (как обсуждали) */
+.ver{
+  position:fixed; right:8px; bottom:6px; z-index:1000;
+  font-size:11px; line-height:1; padding:4px 6px; color:#bbb;
+  background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
+}
+
+/* DnD-затемнение (как dropzone-стили по духу) */
+.drop-overlay{
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.04);
+  z-index:1200;
+}
+.drop-overlay .box{
+  border:2px dashed #2b334a; color:#ddd; padding:18px 22px; border-radius:10px; font-size:14px;
+  background:rgba(0,0,0,.35);
+}
+body.dragging .drop-overlay{ display:flex; }
+
+/* ===================== П Р Е В Ь Ю  L O T T I E ===================== */
+
+/* [ANCHOR:WRAPPER_STYLES] */
+.app{ width:100%; max-width:1000px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+.wrapper{ position:relative; width:360px; height:800px; overflow:hidden; background:#000; border:1px solid #1f2638; border-radius:16px; }
+.preview{ position:absolute; inset:0; overflow:hidden; }
+
+/* Фон всегда по высоте контейнера */
+.bg, .lottie-layer{ position:absolute; inset:0; }
+.bg{ overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.bg img{ display:block; height:100%; width:auto; margin:0 auto; }
+
+/* Сцена лотти: фикс. номинал и масштаб по высоте превью */
+.lottie-layer{ overflow:hidden; }
+.lot-stage{
+  position:absolute; left:50%; top:50%;
+  transform-origin:50% 50%;
+  /* width/height → из JS; transform → translate + scale(...) */
+}
+.lottie-mount{ width:100%; height:100%; }
+
+/* Плейсхолдер — пунктир как в старом проекте */
+.placeholder{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--muted); font-size:14px; letter-spacing:.2px; background:var(--preview-bg);
+  border:2px dashed #2b334a; border-radius:12px; text-align:center; padding:12px;
+}
+.placeholder.hidden{ display:none; }
+
+/* Статусная строка */
+.status{ margin-top:8px; color:var(--muted); font-size:13px; }
+
+/* ===================== М О Б И Л Ь Н Ы Й  Р Е Ж И М ===================== */
+body.is-mobile .page{ padding:0; }
+body.is-mobile .app{ max-width:none; }
+body.is-mobile .controls{ display:none !important; }
+body.is-mobile{ overflow:hidden; }
+body.is-mobile .wrapper{ position:fixed; inset:0; width:100vw; height:100dvh; background:#000; border:none; border-radius:0; }
+body.is-mobile .preview{
+  width:360px;
+  left:50%; top:50%; transform-origin:50% 50%;
+  /* height и transform выставляет JS */
+}
+body.is-mobile .ver{ display:none !important; }
