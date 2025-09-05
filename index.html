@@ -6,24 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lottie-превью</title>
 
-  <!-- Lottie Web -->
+  <!-- [ANCHOR:SCRIPTS_INCLUDE] Lottie Web -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
 
   <!-- [ANCHOR:STYLESHEET] -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- [ANCHOR:PAGE_CENTER] — центр по экрану (как в старом проекте) -->
+  <!-- [ANCHOR:PAGE_CENTER] — центр по экрану -->
   <div class="page">
     <div class="app"><!-- [ANCHOR:APP_ROOT] -->
 
-      <!-- [ANCHOR:PANEL_HEADER] — шапка/подзаголовок в стилистике старого проекта -->
-      <div class="container-like">
-        <h1>Превью Lottie</h1>
-        <div class="sub">Фон + Lottie, масштаб по высоте фона. Drag & Drop поддерживается.</div>
-      </div>
-
-      <!-- [ANCHOR:WRAPPER_NODE] — внешняя рамка превью -->
+      <!-- [ANCHOR:WRAPPER_NODE] -->
       <div id="wrapper" class="wrapper" aria-label="Область превью">
         <div id="preview" class="preview"><!-- [ANCHOR:PREVIEW_NODE] -->
 
@@ -38,28 +32,25 @@
 
           <!-- [ANCHOR:LOTTIE_LAYER_NODE] -->
           <div class="lottie-layer">
-            <div id="lotStage" class="lot-stage"><!-- фикс. сцена с номиналом композиции -->
-              <div id="lottie" class="lottie-mount"></div>
+            <div id="lotStage" class="lot-stage"><!-- [ANCHOR:LOT_STAGE] -->
+              <div id="lottie" class="lottie-mount"></div><!-- [ANCHOR:LOTTIE_MOUNT] -->
             </div>
           </div>
 
         </div>
       </div>
 
-      <!-- [ANCHOR:CONTROL_PANEL] — панель в стилистике старого проекта -->
-      <div id="mode" class="controls panel-like">
-        <div class="buttons">
-          <button class="primary" id="sizeBtn">Ширина: 360px</button>
-          <button class="primary" id="heightBtn">Высота: 800px</button>
-          <button class="secondary" id="restartBtn" title="Повторить анимацию">Повтор</button>
-          <label class="chk" title="Играть зацикленно"><input type="checkbox" id="loopChk"> Зацикленно</label>
-          <button class="accent" id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
-        </div>
-      </div>
+      <!-- [ANCHOR:CONTROL_PANEL] — без подложки -->
+      <div id="mode" class="controls">
+        <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
+        <button class="btn primary"  id="heightBtn">Высота: 800px</button>
 
-      <!-- [ANCHOR:STATUS_STRIP] — статус/подпись в стилистике -->
-      <div class="container-like">
-        <div id="status" class="status">Готово</div>
+        <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
+        <label class="chk" title="Играть зацикленно">
+          <input type="checkbox" id="loopChk"> Зацикленно
+        </label>
+
+        <button class="btn accent"   id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
       </div>
     </div>
   </div>
@@ -74,6 +65,6 @@
   <div id="dropOverlay" class="drop-overlay"><div class="box">Отпустите файл здесь</div></div>
 
   <!-- [ANCHOR:SCRIPTS] -->
-  <script src="app.js"></script>
+  <script src="app.js?v=53"></script>
 </body>
 </html>
