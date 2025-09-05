@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v55-click-to-pick-files-fs-access-memo';
+const VERSION = 'v56-rollback-no-click-upload';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -23,8 +23,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const lotStage    = document.getElementById('lotStage');
   const lottieMount = document.getElementById('lottie');
-  const dropOverlay = document.getElementById('dropOverlay');
-  const filePick    = document.getElementById('filePick');
 
   /* ---------------- STATE ---------------- */
   let anim = null, animName = null;
@@ -40,13 +38,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // номинал композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
-  // File System Access API — запоминаем последний handle (в рамках сессии)
-  let lastFsHandle = null;
-
   /* ---------------- INIT ---------------- */
   if (verEl) verEl.textContent = VERSION;
   if (MOBILE) document.body.classList.add('is-mobile');
-  if (!MOBILE) wrapper.classList.add('clickable'); // курсор "pointer" на десктопе
 
   try { if (typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_){}
 
@@ -81,8 +75,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const r = modeEl.getBoundingClientRect();
     return Math.ceil(r.height);
   }
-
-  const setStatus = (msg) => { /* статусную строку мы убрали; функция оставлена на будущее */ };
 
   /* ---------------- LAYOUT CORE ---------------- */
 
@@ -148,83 +140,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (MOBILE) applyMobileScale(); else applyDesktopScale();
   }
 
-  /* ---------------- CLICK-TO-PICK (desktop) ---------------- */
-  if (!MOBILE) {
-    wrapper.addEventListener('click', async (e)=>{
-      // игнор, если клик по элементам управления (их нет внутри wrapper, но на всякий случай)
-      if (e.target.closest && e.target.closest('.controls')) return;
-      // открываем выбор файла
-      await chooseFileViaBestAPI();
-    });
-
-    // hidden input fallback
-    if (filePick){
-      filePick.addEventListener('change', async (e)=>{
-        const f = e.target.files && e.target.files[0];
-        if (f) await processPickedFile(f);
-        // сбрасываем значение, чтобы можно было выбрать тот же файл повторно
-        e.target.value = '';
-      });
-    }
-  } else {
-    // На мобиле клик по превью — повтор анимации, как раньше
+  /* ---------------- MOBILE: tap-to-restart ---------------- */
+  if (MOBILE) {
     wrapper.addEventListener('click', function(e){
       if (e.target.closest && e.target.closest('.controls')) return;
       if (!anim) return;
       try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
     });
-  }
-
-  // Выбор файла: сначала пытаемся через File System Access API, иначе — скрытый input
-  async function chooseFileViaBestAPI(){
-    // File System Access API
-    if (window.showOpenFilePicker){
-      try{
-        const [handle] = await window.showOpenFilePicker({
-          multiple: false,
-          excludeAcceptAllOption: false,
-          startIn: lastFsHandle || 'documents',
-          types: [
-            {
-              description: 'Images (PNG, JPEG, WebP)',
-              accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }
-            },
-            {
-              description: 'Lottie JSON',
-              accept: { 'application/json': ['.json'] }
-            }
-          ]
-        });
-        if (!handle) return;
-        lastFsHandle = handle; // запомним для следующего старта (в пределах сессии)
-        const file = await handle.getFile();
-        await processPickedFile(file);
-        return;
-      } catch(err){
-        // Пользователь мог отменить — тогда молча падаем к input
-      }
-    }
-    // Фоллбек: обычный input
-    if (filePick){
-      filePick.click();
-    }
-  }
-
-  // Обработка файла (общая для dnd и click)
-  async function processPickedFile(file){
-    if (!file) return;
-    if (isImageFile(file)) {
-      const src = await readAsDataURL(file);
-      await setBackgroundFromSrc(src);
-      return;
-    }
-    if (isJsonFile(file)) {
-      const data = await readAsText(file);
-      try { loadLottieFromData(JSON.parse(String(data))); }
-      catch(_){ alert('Некорректный JSON Lottie.'); }
-      return;
-    }
-    alert('Поддерживаются PNG/JPEG/WebP (фон) или JSON (Lottie).');
+  } else {
+    window.addEventListener('resize', ()=>{ if (fullH) layout(); });
   }
 
   /* ---------------- LISTENERS: DnD ---------------- */
@@ -323,6 +247,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ---------------- Контролы ---------------- */
+  if (sizeBtn) sizeBtn.addEventListener('click', ()=>{ wide=!wide; layout(); });
+  if (heightBtn) heightBtn.addEventListener('click',()=>{ fullH=!fullH; layout(); });
+
   restartBtn && restartBtn.addEventListener('click', function(){
     if (!anim) return;
     try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
@@ -336,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* ---------------- Share (без изменений логики) ---------------- */
+  /* ---------------- Share (как раньше) ---------------- */
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
