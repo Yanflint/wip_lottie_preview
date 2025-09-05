@@ -44,14 +44,13 @@ body{
   gap:var(--stack-gap);
 }
 
-/* Коробка превью (кликабельная на десктопе) */
+/* Коробка превью */
 .wrapper{
   position:relative; width:360px; height:800px;
   border:none; outline:none;
   border-radius:var(--wrap-r);
-  overflow:visible;
+  overflow:visible;              /* чтобы рамку не клипало */
 }
-.wrapper.clickable{ cursor:pointer; } /* [ANCHOR:WRAPPER_POINTER] */
 
 /* Единственная пунктирная рамка */
 .wrapper::after{
@@ -167,7 +166,7 @@ body.dragging .drop-overlay{ display:flex; }
 
 /* ===================== М О Б И Л Ь Н Ы Й  Р Е Ж И М ===================== */
 body.is-mobile .page{ padding:0; }
-body.is-mobile .app{ max-width:none; }
+body.is-mobile .app{ max_width:none; }
 body.is-mobile .controls{ display:none !important; }
 body.is-mobile{ overflow:hidden; }
 body.is-mobile .wrapper{
