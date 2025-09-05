@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v50-refactor-lottie-fit-height-via-stage';
+const VERSION = 'v51-center-dd-indicator';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -14,8 +14,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const toastEl   = document.getElementById('toast');
   const verEl     = document.getElementById('ver');
 
-  const bgInput   = document.getElementById('bgInput');
-  const lotInput  = document.getElementById('lotInput');
   const restartBtn= document.getElementById('restartBtn');
   const loopChk   = document.getElementById('loopChk');
   const sizeBtn   = document.getElementById('sizeBtn');
@@ -23,8 +21,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const shareBtn  = document.getElementById('shareBtn');
   const modeEl    = document.getElementById('mode');
 
-  const lotStage  = document.getElementById('lotStage');   // сцена фиксированного номинала
-  const lottieMount = document.getElementById('lottie');    // точка монтирования Lottie
+  const lotStage     = document.getElementById('lotStage');   // сцена фиксированного номинала
+  const lottieMount  = document.getElementById('lottie');     // точка монтирования Lottie
+  const dropOverlay  = document.getElementById('dropOverlay');
 
   /* ---------------- STATE ---------------- */
   let anim = null, animName = null;
@@ -37,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // фон
   let bgNatW = 0, bgNatH = 800; // до загрузки — 800 (для плейсхолдера)
 
-  // номинал композиции Lottie, чтобы масштабировать по ВЫСОТЕ
+  // номинал композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
   /* ---------------- INIT ---------------- */
@@ -83,10 +82,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // Масштабирует сцену Lottie (lotStage) по ВЫСОТЕ превью
   function resizeLottieStage(){
     if (!lotNomW || !lotNomH) return; // нет анимации
-    const ph = preview.clientHeight;  // высота "коробочки" превью (НЕ визуальный scale)
+    const ph = preview.clientHeight;  // высота "коробочки" превью (логическая)
     const scale = ph / lotNomH;
 
-    // сцене задаём "номинальные" размеры и центрируем
     lotStage.style.width  = lotNomW + 'px';
     lotStage.style.height = lotNomH + 'px';
     lotStage.style.transform = `translate(-50%, -50%) scale(${scale})`;
@@ -112,8 +110,8 @@ document.addEventListener('DOMContentLoaded', function () {
       targetH = baseH;
     }
 
-    wrapper.style.width  = targetW + 'px';
-    wrapper.style.height = targetH + 'px';
+    wrapper.style.width  = `${targetW}px`;
+    wrapper.style.height = `${targetH}px`;
 
     preview.style.left = '0'; preview.style.top = '0';
     preview.style.width  = '100%';
@@ -159,41 +157,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---------------- LOADERS ---------------- */
 
-  // Фон
-  bgInput && bgInput.addEventListener('change', function(e){
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(){
-      const src = String(reader.result);
+  // Полная очистка точки монтирования Lottie
+  function renewLottieRoot(){
+    try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
+    try { if (anim && anim.destroy) anim.destroy(); } catch(_){}
+    anim = null; animName = null;
+    while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
+  }
+
+  // Загрузка фонового изображения (dataURL)
+  async function setBackgroundFromSrc(src){
+    await new Promise(res=>{
       const meta = new Image();
       meta.onload = function(){
         bgNatW = meta.naturalWidth  || meta.width  || 0;
         bgNatH = meta.naturalHeight || meta.height || 0;
         bgImg.src = src;
         phEl && phEl.classList.add('hidden');
-        layout();
+        res();
       };
       meta.src = src;
-      try { e.target.value=''; } catch(_){}
-    };
-    reader.readAsDataURL(file);
-  });
-
-  // Lottie
-  function renewLottieRoot(){
-    try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
-    try { if (anim && anim.destroy) anim.destroy(); } catch(_){}
-    anim = null; animName = null;
-
-    // полностью очищаем mount
-    while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
+    });
+    layout();
   }
 
+  // Загрузка Lottie из JSON-объекта
   function loadLottieFromData(animationData){
     renewLottieRoot();
 
-    // запоминаем номинал композиции (ключевое для масштабирования по высоте)
     lotNomW = Number(animationData.w) || 0;
     lotNomH = Number(animationData.h) || 0;
 
@@ -208,26 +199,10 @@ document.addEventListener('DOMContentLoaded', function () {
         loop: loopOn,
         autoplay: true,
         animationData: JSON.parse(JSON.stringify(animationData)),
-        // rendererSettings по умолчанию; размеры задаёт наш lotStage
       });
-
-      anim.addEventListener('DOMLoaded', function(){
-        layout(); // как только DOM Lottie готов — сразу подгоняем сцену
-      });
+      anim.addEventListener('DOMLoaded', layout); // как только DOM готов — пересчёт
     });
   }
-
-  lotInput && lotInput.addEventListener('change', function(e){
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(){
-      try { loadLottieFromData(JSON.parse(String(reader.result))); }
-      catch(err){ alert('Не удалось прочитать JSON Lottie.'); }
-      try { e.target.value=''; } catch(_){}
-    };
-    reader.readAsText(file, 'utf-8');
-  });
 
   // Повтор
   restartBtn && restartBtn.addEventListener('click', function(){
@@ -244,7 +219,69 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* ---------------- SHARE (как было) ---------------- */
+  /* ---------------- DRAG & DROP ---------------- */
+
+  // [ANCHOR:DRAGNDROP_HANDLERS]
+  let dragDepth = 0;
+  function isImageFile(f){ return f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(f.name)); }
+  function isJsonFile(f){ return f && (f.type === 'application/json' || /\.json$/i.test(f.name)); }
+
+  document.addEventListener('dragenter', (e)=>{ e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+  document.addEventListener('dragover',  (e)=>{ e.preventDefault(); });
+  document.addEventListener('dragleave', (e)=>{ e.preventDefault(); dragDepth=Math.max(0,dragDepth-1); if(!dragDepth) document.body.classList.remove('dragging'); });
+  document.addEventListener('drop', async (e)=>{
+    e.preventDefault(); dragDepth=0; document.body.classList.remove('dragging');
+
+    const dt = e.dataTransfer; if (!dt) return;
+    const files = dt.files && dt.files.length ? Array.from(dt.files) : [];
+    if (!files.length) return;
+
+    // приоритет: первая картинка → фон, первый json → lottie
+    let imgFile = files.find(isImageFile);
+    let jsonFile = files.find(isJsonFile);
+
+    // если перетащили одно — определяем по типу
+    if (files.length === 1) {
+      const f = files[0];
+      if (isImageFile(f)) imgFile = f;
+      else if (isJsonFile(f)) jsonFile = f;
+    }
+
+    try {
+      if (imgFile) {
+        const src = await readAsDataURL(imgFile);
+        await setBackgroundFromSrc(src);
+      }
+      if (jsonFile) {
+        const data = await readAsText(jsonFile);
+        try { loadLottieFromData(JSON.parse(String(data))); }
+        catch(_){ alert('Некорректный JSON Lottie.'); }
+      }
+    } catch(err){
+      console.error(err);
+    }
+  });
+
+  function readAsDataURL(file){
+    return new Promise((res, rej)=>{
+      const r = new FileReader();
+      r.onload = ()=> res(String(r.result));
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+  function readAsText(file){
+    return new Promise((res, rej)=>{
+      const r = new FileReader();
+      r.onload = ()=> res(String(r.result));
+      r.onerror = rej;
+      r.readAsText(file, 'utf-8');
+    });
+  }
+
+  /* ---------------- SHARE ---------------- */
+
+  // [ANCHOR:TOAST_API]
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -256,10 +293,23 @@ document.addEventListener('DOMContentLoaded', function () {
     showToastNear._t = setTimeout(()=> toastEl.classList.remove('show'), 1400);
   }
 
+  // [ANCHOR:SHARE_LOADING] — индикатор на кнопке
+  async function withLoading(btn, fn){
+    if (!btn) return fn();
+    const original = btn.textContent;
+    btn.classList.add('loading');
+    btn.textContent = 'Готовим ссылку…';
+    try { return await fn(); }
+    finally {
+      btn.classList.remove('loading');
+      btn.textContent = original;
+    }
+  }
+
   if (shareBtn){
     shareBtn.addEventListener('click', async function(){
       if (!lastLottieJSON){ showToastNear(shareBtn, 'Загрузи Lottie'); return; }
-      try {
+      await withLoading(shareBtn, async ()=>{
         const payload = { v:1, lot:lastLottieJSON, bg:bgImg.src || null, opts:{ loop:loopOn, wide:!!wide, fullH:!!fullH } };
         const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
         if (!resp.ok) throw new Error('share failed');
@@ -272,9 +322,10 @@ document.addEventListener('DOMContentLoaded', function () {
           ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
         }
         showToastNear(shareBtn, 'Ссылка скопирована');
-      } catch(err) {
-        console.error(err); showToastNear(shareBtn, 'Ошибка при шаринге');
-      }
+      }).catch(err=>{
+        console.error(err);
+        showToastNear(shareBtn, 'Ошибка при шаринге');
+      });
     });
   }
 
@@ -293,17 +344,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       if (snap.bg) {
-        await new Promise(res=>{
-          const meta = new Image();
-          meta.onload = function(){
-            bgNatW = meta.naturalWidth  || meta.width  || 0;
-            bgNatH = meta.naturalHeight || meta.height || 0;
-            bgImg.src = snap.bg;
-            phEl && phEl.classList.add('hidden');
-            res();
-          };
-          meta.src = snap.bg;
-        });
+        await setBackgroundFromSrc(snap.bg);
       }
 
       if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
