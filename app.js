@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v56-rollback-no-click-upload';
+const VERSION = 'v57-pwa-standalone-mobile-force';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -29,18 +29,21 @@ document.addEventListener('DOMContentLoaded', function () {
   let wide = false;         // 360 / 1000 (десктоп)
   let fullH = false;        // высота = экран (десктоп)
   let lastLottieJSON = null;
-  const MOBILE = isMobile();
   let loopOn = false;
 
   // фон
-  let bgNatW = 0, bgNatH = 800; // до загрузки — 800 (для плейсхолдера)
+  let bgNatW = 0, bgNatH = 800;
 
   // номинал композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
   /* ---------------- INIT ---------------- */
   if (verEl) verEl.textContent = VERSION;
-  if (MOBILE) document.body.classList.add('is-mobile');
+
+  // Определение мобильного и/или standalone (PWA)
+  const MOBILE = isMobile();
+  const STANDALONE = isStandalonePWA();
+  if (MOBILE || STANDALONE) document.body.classList.add('is-mobile');
 
   try { if (typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_){}
 
@@ -55,9 +58,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const uaMob  = /iPhone|Android|Mobile|iPod|IEMobile|Windows Phone/i.test(ua);
     return (coarse || touch || uaMob) && small;
   }
-  function matchMediaSafe(q){
-    try { return window.matchMedia && window.matchMedia(q).matches; } catch(_){ return false; }
+  function isStandalonePWA(){
+    const mm = window.matchMedia ? window.matchMedia('(display-mode: standalone)').matches : false;
+    const ios = 'standalone' in navigator ? navigator.standalone : false; // iOS Safari
+    return !!(mm || ios);
   }
+  function matchMediaSafe(q){ try { return window.matchMedia && window.matchMedia(q).matches; } catch(_){ return false; } }
 
   function basePreviewHeight(){ return Math.max(1, bgNatH || 800); }
   function basePreviewWidth(){ return wide ? 1000 : 360; }
@@ -78,10 +84,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---------------- LAYOUT CORE ---------------- */
 
-  // Масштабирует сцену Lottie (lotStage) по ВЫСОТЕ превью
   function resizeLottieStage(){
-    if (!lotNomW || !lotNomH) return; // нет анимации
-    const ph = preview.clientHeight;  // высота "коробочки" превью (логическая)
+    if (!lotNomW || !lotNomH) return;
+    const ph = preview.clientHeight;
     const scale = ph / lotNomH;
 
     lotStage.style.width  = lotNomW + 'px';
@@ -89,9 +94,8 @@ document.addEventListener('DOMContentLoaded', function () {
     lotStage.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
 
-  // Десктоп: применяем размеры wrapper/preview и обновляем подписи
   function applyDesktopScale(){
-    if (MOBILE) return;
+    if (isStandalonePWA()) { applyMobileScale(); return; } // установленная PWA ведёт себя как мобилка
     const baseW = basePreviewWidth();
     const baseH = basePreviewHeight();
 
@@ -123,25 +127,23 @@ document.addEventListener('DOMContentLoaded', function () {
     resizeLottieStage();
   }
 
-  // Мобилка: коробочка 360×(высота фона). Масштаб по ширине экрана
   function applyMobileScale(){
-    if (!MOBILE) return;
     const vw = (window.visualViewport && window.visualViewport.width)  ? window.visualViewport.width  : window.innerWidth;
     const s  = vw / 360;
     preview.style.width  = '360px';
     preview.style.height = basePreviewHeight() + 'px';
     preview.style.transform = `translate(-50%, -50%) scale(${s})`;
-
     resizeLottieStage();
   }
 
-  // Единая точка: пересчитать размеры и сцену Lottie
   function layout(){
-    if (MOBILE) applyMobileScale(); else applyDesktopScale();
+    if (MOBILE || STANDALONE || isStandalonePWA()) applyMobileScale();
+    else applyDesktopScale();
   }
 
-  /* ---------------- MOBILE: tap-to-restart ---------------- */
-  if (MOBILE) {
+  /* ---------------- EVENTS ---------------- */
+  // На мобиле/стэндалоун — тап по превью = повтор
+  if (MOBILE || STANDALONE) {
     wrapper.addEventListener('click', function(e){
       if (e.target.closest && e.target.closest('.controls')) return;
       if (!anim) return;
@@ -151,7 +153,15 @@ document.addEventListener('DOMContentLoaded', function () {
     window.addEventListener('resize', ()=>{ if (fullH) layout(); });
   }
 
-  /* ---------------- LISTENERS: DnD ---------------- */
+  // Отслеживаем смену display-mode (например, запустили с ярлыка)
+  window.matchMedia && window.matchMedia('(display-mode: standalone)').addEventListener?.('change', () => {
+    if (isStandalonePWA()) document.body.classList.add('is-mobile');
+    layout();
+  });
+  window.addEventListener('orientationchange', layout);
+  window.visualViewport && window.visualViewport.addEventListener('resize', layout);
+
+  /* ---------------- DnD ---------------- */
   let dragDepth = 0;
   const isImageFile = (f) => f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name));
   const isJsonFile  = (f) => f && (f.type === 'application/json' || /\.json$/i.test(f.name));
@@ -333,6 +343,5 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   })();
 
-  // первичный рендер
   layout();
 });
