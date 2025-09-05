@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v53-compact-controls-no-header-loader-restore';
+const VERSION = 'v54-border-only-dashed-ctl-36px-13pt-sizeBtns-color';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Load from link (если используешь /api/shot) ---------------- */
+  /* ---------------- Load from link ---------------- */
   (async function loadIfLinked(){
     const id = new URLSearchParams(location.search).get('id');
     if (!id) { layout(); return; }
