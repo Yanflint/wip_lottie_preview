@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v59-fitH-by-default + full-viewport-width';
+const VERSION = 'v60-pwa-cache + fitH/fitW by aspect';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---------------- STATE ---------------- */
   let anim = null, animName = null;
-  let wide = false;         // теперь = "вся ширина viewport", не 1000
-  let fullH = false;        // если true — высота ровно доступная; если false — min(800, доступная)
+  let wide = false;         // кнопка «Ширина»
+  let fullH = false;        // кнопка «Высота»
   let lastLottieJSON = null;
   let loopOn = false;
 
@@ -39,10 +39,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // номинал композиции Lottie
   let lotNomW = 0, lotNomH = 0;
-
-  // номинальные размеры превью (портрет)
-  const BASE_W = 360;
-  const BASE_H = 800;
 
   /* ---------------- INIT ---------------- */
   if (verEl) verEl.textContent = VERSION;
@@ -71,13 +67,15 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   function matchMediaSafe(q){ try { return window.matchMedia && window.matchMedia(q).matches; } catch(_){ return false; } }
 
-  // Больше НЕ используем высоту фонового PNG как "базовую высоту превью".
-  // Превью всегда пляшет от номинальных 800px, но ограничивается высотой окна.
-  function basePreviewHeight(){ return BASE_H; }
-  // Ширина: 360 (узко) или полная ширина viewport (широко)
-  function basePreviewWidth(){
-    if (!wide) return BASE_W;
-    // вычтем рамки/поля страницы (примерно 16px слева/справа + безопасная зона)
+  // Аспект активного контента (фон > Lottie > дефолт 360×800)
+  function contentAspect(){
+    if (bgNatW && bgNatH) return bgNatW / bgNatH;
+    if (lotNomW && lotNomH) return lotNomW / lotNomH;
+    return 360 / 800;
+  }
+
+  // максимальная ширина, если нужно во всю (минус небольшие поля)
+  function viewportWidthMax(){
     const SAFE = 8, PAGE_PAD = 16;
     const winW = window.innerWidth || 1000;
     return Math.max(320, Math.round(winW - 2*SAFE - 2*PAGE_PAD));
@@ -97,10 +95,10 @@ document.addEventListener('DOMContentLoaded', function () {
     return Math.ceil(r.height);
   }
 
-  // доступная высота окна с учётом "хрома" и безопасных отступов
+  // доступная высота окна с учётом UI
   function availableViewportHeight(){
     const SAFE = 8, GAP = 8;
-    const winH = window.innerHeight || basePreviewHeight();
+    const winH = window.innerHeight || 800;
     const hCtrls  = controlsH();
     const hChrome = appChromeH();
     return Math.max(80, winH - (SAFE*2 + hCtrls + hChrome + GAP));
@@ -127,22 +125,30 @@ document.addEventListener('DOMContentLoaded', function () {
   function applyDesktopScale(){
     if (isStandalonePWA()) { applyMobileScale(); return; }
 
-    const baseW = basePreviewWidth();
-    const baseH = basePreviewHeight();
-
+    const ratio = contentAspect();
     const availH = availableViewportHeight();
 
-    // Новая логика высоты:
-    // - fullH=true  → высота ровно доступная (как "Высота на весь экран")
-    // - fullH=false → высота = min(номинал 800, доступная) — НИКОГДА не больше экрана
-    const targetH = fullH ? availH : Math.min(baseH, availH);
+    let targetW, targetH;
 
-    // Новая логика ширины:
-    // - wide=false → 360px
-    // - wide=true  → ширина из viewport, без жёстких 1000px
-    let targetW = baseW;
+    if (wide) {
+      // «Ширина»: на всю ширину вьюпорта; высоту вписываем в доступную область
+      targetW = viewportWidthMax();
+      targetH = Math.min(Math.round(targetW / ratio), availH);
+    } else if (fullH) {
+      // «Высота»: ровно по доступной высоте; ширину считаем по аспекту
+      targetH = availH;
+      targetW = Math.round(targetH * ratio);
+    } else {
+      // По умолчанию: размер картинки/лоти, но не больше экрана по высоте
+      const naturalH =
+        (bgNatH || 0) ? bgNatH :
+        (lotNomH || 0) ? lotNomH : 800;
 
-    // Применяем размеры к wrapper/preview
+      targetH = Math.min(naturalH, availH);
+      targetW = Math.round(targetH * ratio);
+    }
+
+    // Применяем
     wrapper.style.width  = `${targetW}px`;
     wrapper.style.height = `${targetH}px`;
 
@@ -159,11 +165,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Мобилка/PWA: центр флексом, только scale(...)
   function applyMobileScale(){
-    const vw = (window.visualViewport && window.visualViewport.width)  ? window.visualViewport.width  : window.innerWidth;
-    const s  = vw / BASE_W;
+    const vw = (window.visualViewport && window.visualViewport.width) ? window.visualViewport.width : window.innerWidth;
+    const s  = vw / 360;
 
-    preview.style.width  = BASE_W + 'px';
-    preview.style.height = basePreviewHeight() + 'px';
+    preview.style.width  = '360px';
+    // высота — натуральная, но сам контейнер ограничен экраном (CSS), так что «кишки» нет
+    const naturalH = (bgNatH || 0) ? bgNatH : (lotNomH || 0) ? lotNomH : 800;
+    preview.style.height = naturalH + 'px';
     preview.style.transform = `scale(${s})`;
 
     resizeLottieStage();
@@ -183,7 +191,6 @@ document.addEventListener('DOMContentLoaded', function () {
       try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
     });
   } else {
-    // даже когда fullH=false, нам нужно пересчитать ограничение по высоте при ресайзе
     window.addEventListener('resize', layout);
   }
   window.matchMedia && window.matchMedia('(display-mode: standalone)').addEventListener?.('change', layout);
@@ -257,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
           alert('Поддерживаются PNG/JPEG/WebP (фон) или JSON (Lottie).');
         }
       } finally {
-        e.target.value = ''; // сбросить, чтобы можно было выбрать тот же файл
+        e.target.value = ''; // сброс, чтобы выбрать тот же файл повторно
       }
     });
   }
@@ -282,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
       };
       meta.src = src;
     });
-    layout(); // после загрузки фона — пересчитать раскладку (высота по экрану)
+    layout(); // после загрузки — пересчитать по новым натуральным размерам
   }
 
   function loadLottieFromData(animationData){
@@ -308,8 +315,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ---------------- Контролы ---------------- */
-  if (sizeBtn)   sizeBtn.addEventListener('click', ()=>{ wide=!wide; layout(); });
-  if (heightBtn) heightBtn.addEventListener('click',()=>{ fullH=!fullH; layout(); });
+  if (sizeBtn)   sizeBtn.addEventListener('click', ()=>{ wide=!wide; fullH=false; layout(); });
+  if (heightBtn) heightBtn.addEventListener('click',()=>{ fullH=!fullH; wide=false; layout(); });
 
   restartBtn && restartBtn.addEventListener('click', function(){
     if (!anim) return;
