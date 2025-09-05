@@ -14,7 +14,7 @@
   --btn-dim-bg: #525b72;   /* цвет кнопок ширины/высоты */
 
   /* [ANCHOR:STACK_GAP] — расстояние между превью и блоком кнопок */
-  --stack-gap: 24px;       /* было ~12px, теперь в 2 раза больше */
+  --stack-gap: 24px;
 }
 
 *{box-sizing:border-box}
@@ -41,11 +41,10 @@ body{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:var(--stack-gap); /* ← расстояние между wrapper и .controls */
+  gap:var(--stack-gap);
 }
 
-/* Коробка превью: без бордеров/outline.
-   Единственная пунктирная рамка рисуется псевдо-элементом ::after, вынесенным наружу. */
+/* Коробка превью */
 .wrapper{
   position:relative; width:360px; height:800px;
   border:none; outline:none;
@@ -53,18 +52,18 @@ body{
   overflow:visible;              /* чтобы рамку не клипало */
 }
 
-/* Пунктирная рамка — один раз, красиво по углам, поверх содержимого */
+/* Единственная пунктирная рамка */
 .wrapper::after{
   content:"";
   position:absolute;
-  inset:-6px;                    /* вынос рамки за коробку */
+  inset:-6px;
   border:2px dashed #2b334a;
   border-radius: calc(var(--wrap-r) + 6px);
   pointer-events:none;
   z-index:2;
 }
 
-/* Содержимое клипим внутри, рамку не трогаем */
+/* Внутреннее содержимое */
 .preview{ position:absolute; inset:0; overflow:hidden; z-index:1; }
 
 .bg, .lottie-layer{ position:absolute; inset:0; }
@@ -75,11 +74,10 @@ body{
 .lot-stage{
   position:absolute; left:50%; top:50%;
   transform-origin:50% 50%;
-  /* width/height → из JS; transform → translate + scale(...) */
 }
 .lottie-mount{ width:100%; height:100%; }
 
-/* Плейсхолдер — белая 1-я строка, вторая в muted, всё по центру */
+/* Плейсхолдер — центр */
 .placeholder{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   color:var(--muted); font-size:13px; letter-spacing:.2px; background:var(--preview-bg);
@@ -90,8 +88,22 @@ body{
 .placeholder .ph-2{ color:var(--muted); }
 .placeholder.hidden{ display:none; }
 
-/* ВАЖНО: когда идёт drag-and-drop, скрываем плейсхолдер, чтобы не наслаивался текст */
+/* ВАЖНО: во время перетаскивания скрываем плейсхолдер */
 body.dragging .placeholder{ display:none !important; }
+
+/* ===== Drag&Drop overlay — теперь внутри .wrapper и по центру превью ===== */
+.drop-overlay{
+  position:absolute; inset:0;              /* занимает ровно область превью */
+  display:none; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.04);
+  z-index:3;                               /* поверх содержимого, под рамкой тоже ок */
+  pointer-events:none;                     /* чтобы не мешать событиям */
+}
+.drop-overlay .box{
+  border:2px dashed #2b334a; color:#ddd; padding:14px 18px; border-radius:10px; font-size:13px;
+  background:rgba(0,0,0,.35);
+}
+body.dragging .drop-overlay{ display:flex; }
 
 /* ===================== К Н О П К И  И  Ч Е К Б О К С ===================== */
 .controls{
@@ -112,14 +124,11 @@ body.dragging .placeholder{ display:none !important; }
 .btn:active{transform:translateY(1px)}
 .btn:hover:not(:disabled){ filter:brightness(1.05); }
 
-/* Варианты */
 .btn.secondary { background:#273046; color:#dce3ef; border:1px solid #2e374f; }
 .btn.accent    { background:var(--accent-orange); color:#fff; }
 
-/* Требование: кнопки «Ширина» и «Высота» */
 #sizeBtn, #heightBtn { background:var(--btn-dim-bg); color:#fff; }
 
-/* Чекбокс */
 .chk{
   display:inline-flex; align-items:center; gap:6px;
   color:#dce3ef; background:#273046; border:1px solid #2e374f;
@@ -155,18 +164,6 @@ body.dragging .placeholder{ display:none !important; }
   background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
 }
 
-/* DnD-затемнение (центрировано по высоте/ширине) */
-.drop-overlay{
-  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-  background:rgba(255,255,255,.04);
-  z-index:1200;
-}
-.drop-overlay .box{
-  border:2px dashed #2b334a; color:#ddd; padding:14px 18px; border-radius:10px; font-size:13px;
-  background:rgba(0,0,0,.35);
-}
-body.dragging .drop-overlay{ display:flex; }
-
 /* ===================== М О Б И Л Ь Н Ы Й  Р Е Ж И М ===================== */
 body.is-mobile .page{ padding:0; }
 body.is-mobile .app{ max-width:none; }
@@ -174,8 +171,7 @@ body.is-mobile .controls{ display:none !important; }
 body.is-mobile{ overflow:hidden; }
 body.is-mobile .wrapper{
   position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
-  border-radius:0;               /* радиус короба */
-  --wrap-r: 0px;                 /* и для рамки тоже */
+  border-radius:0; --wrap-r: 0px;
 }
 body.is-mobile .preview{
   width:360px;
