@@ -24,7 +24,7 @@
           <!-- [ANCHOR:PLACEHOLDER_NODE] — двухстрочный центрированный текст -->
           <div id="ph" class="placeholder">
             <div class="ph">
-              <div class="ph-1">Перетащите файл:</div>
+              <div class="ph-1">Кликните или перетащите:</div>
               <div class="ph-2">PNG / JSON</div>
             </div>
           </div>
@@ -41,10 +41,13 @@
 
         </div>
 
-        <!-- [ANCHOR:DRAGNDROP_OVERLAY] — ПЕРЕНЕСЁН ВНУТРЬ WRAPPER -->
+        <!-- [ANCHOR:DRAGNDROP_OVERLAY] — внутри wrapper, центр по высоте/ширине -->
         <div id="dropOverlay" class="drop-overlay">
           <div class="box">Отпустите файл здесь</div>
         </div>
+
+        <!-- [ANCHOR:HIDDEN_FILE_INPUT] — скрытый инпут как фоллбек -->
+        <input id="filePick" type="file" accept="image/*,application/json,.json" hidden>
       </div>
 
       <!-- [ANCHOR:CONTROL_PANEL] — без подложки -->
@@ -69,6 +72,6 @@
   <div id="ver" class="ver"></div>
 
   <!-- [ANCHOR:SCRIPTS] -->
-  <script src="app.js?v=54"></script>
+  <script src="app.js?v=55"></script>
 </body>
 </html>
