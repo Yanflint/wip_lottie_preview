@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v52-theme-from-old-project';
+const VERSION = 'v53-compact-controls-no-header-loader-restore';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const phEl      = document.getElementById('ph');
   const toastEl   = document.getElementById('toast');
   const verEl     = document.getElementById('ver');
-  const statusEl  = document.getElementById('status');
 
   const restartBtn= document.getElementById('restartBtn');
   const loopChk   = document.getElementById('loopChk');
@@ -77,8 +76,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const r = modeEl.getBoundingClientRect();
     return Math.ceil(r.height);
   }
-
-  const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg || ''; };
 
   /* ---------------- LAYOUT CORE ---------------- */
 
@@ -232,11 +229,10 @@ document.addEventListener('DOMContentLoaded', function () {
       if (imgFile) {
         const src = await readAsDataURL(imgFile);
         await setBackgroundFromSrc(src);
-        setStatus('Загружен фон: ' + imgFile.name);
       }
       if (jsonFile) {
         const data = await readAsText(jsonFile);
-        try { loadLottieFromData(JSON.parse(String(data))); setStatus('Загружен Lottie: ' + jsonFile.name); }
+        try { loadLottieFromData(JSON.parse(String(data))); }
         catch(_){ alert('Некорректный JSON Lottie.'); }
       }
     } catch(err){ console.error(err); }
@@ -273,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* ---------------- Share + индикатор ---------------- */
+  /* ---------------- Share + яркий лоудер ---------------- */
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -289,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!btn) return fn();
     const original = btn.textContent;
     btn.classList.add('loading');
-    btn.textContent = 'Готовим ссылку…';
+    btn.textContent = 'Ссылка…';
     try { return await fn(); }
     finally {
       btn.classList.remove('loading');
