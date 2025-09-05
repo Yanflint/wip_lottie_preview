@@ -160,3 +160,10 @@ body.is-mobile .preview{
   transform-origin:50% 50%;
 }
 body.is-mobile .ver{ display:none !important; }
+
+/* ===================== WIDE MODE (для кнопки «Ширина») ===================== */
+/* На десктопе убираем ограничение 1000px, чтобы превью могло занять всю ширину экрана */
+body.wide-mode .app{
+  max-width: none;
+  width: 100%;
+}

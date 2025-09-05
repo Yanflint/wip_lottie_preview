@@ -1,0 +1,22 @@
+{
+  "name": "Lottie Preview",
+  "short_name": "Lottie",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABl8KqGAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5AgMDyM0YbKq/QAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVAAABZGSURBVHja7d1BctswEEXRk///sZ2lM1bQ0xgqVwJ6m7O2o2mVbqg2iYzC3xVw3d7h0Q1/6h1g7Qy2B+0wAAAAAAPA7wAeQfF8/AAAAAABgB8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4G2wQAAADgPwAAAP8BAAAA/wEAAP//AwAA/8cHAAA=",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAIElEQVQYV2NkwAT/Gf4zMDBgYGAAE0YwCkYwGv8Z/jMAAAStAQpOe6o0AAAAAElFTkSuQmCC",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
