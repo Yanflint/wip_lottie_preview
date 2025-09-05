@@ -19,7 +19,6 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
-html{ background:#000; } /* чтобы в standalone iOS позади не было белого полотна */
 body{
   margin:0;
   font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
@@ -29,7 +28,7 @@ body{
 
 /* Центрирование контента по экрану + safe area */
 .page{
-  min-height:100svh; /* стабильная высота, без прыжков */
+  min-height:100dvh;
   display:grid;
   place-items:center;
   padding:16px;
@@ -145,24 +144,19 @@ body.is-mobile .app{ max-width:none; }
 body.is-mobile .controls{ display:none !important; } /* интерфейс скрыт на мобилке */
 body.is-mobile{ overflow:hidden; }
 
-/* ключ: высота на всю «стабильную» область + чёрный фон, без лишних паддингов */
+/* ключ: делаем wrapper центровщиком по флексу + учитываем safe areas */
 body.is-mobile .wrapper{
-  position:fixed; inset:0; width:100vw; height:100svh;
+  position:fixed; inset:0; width:100vw; height:100dvh;
   background:#000;
   border-radius:0; --wrap-r: 0px;
   display:flex; align-items:center; justify-content:center;
-  /* не добавляем лишний padding-bottom, чтобы не провоцировать белую «ступень» */
+  padding-top:env(safe-area-inset-top, 0px);
+  padding-bottom:env(safe-area-inset-bottom, 0px);
 }
 
-/* превью перестаёт быть absolute и центрится флексом; масштаб только scale(.) */
+/* превью перестаёт быть absolute и центрится флексом; масштаб только scale(...) */
 body.is-mobile .preview{
   position:relative; left:auto; top:auto;
   transform-origin:50% 50%;
 }
 body.is-mobile .ver{ display:none !important; }
-
-/* ===================== WIDE MODE (для кнопки «Ширина») ===================== */
-body.wide-mode .app{
-  max-width: none;
-  width: 100%;
-}

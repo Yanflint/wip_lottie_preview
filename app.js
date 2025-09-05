@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v60-pwa-cache + fitH/fitW by aspect';
+const VERSION = 'v58-mobile-center-flex + pickBtn';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---------------- STATE ---------------- */
   let anim = null, animName = null;
-  let wide = false;         // кнопка «Ширина»
-  let fullH = false;        // кнопка «Высота»
+  let wide = false;         // 360 / 1000 (десктоп)
+  let fullH = false;        // высота = экран (десктоп)
   let lastLottieJSON = null;
   let loopOn = false;
 
@@ -67,19 +67,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   function matchMediaSafe(q){ try { return window.matchMedia && window.matchMedia(q).matches; } catch(_){ return false; } }
 
-  // Аспект активного контента (фон > Lottie > дефолт 360×800)
-  function contentAspect(){
-    if (bgNatW && bgNatH) return bgNatW / bgNatH;
-    if (lotNomW && lotNomH) return lotNomW / lotNomH;
-    return 360 / 800;
-  }
-
-  // максимальная ширина, если нужно во всю (минус небольшие поля)
-  function viewportWidthMax(){
-    const SAFE = 8, PAGE_PAD = 16;
-    const winW = window.innerWidth || 1000;
-    return Math.max(320, Math.round(winW - 2*SAFE - 2*PAGE_PAD));
-  }
+  function basePreviewHeight(){ return Math.max(1, bgNatH || 800); }
+  function basePreviewWidth(){ return wide ? 1000 : 360; }
 
   function appChromeH(){
     const app = document.querySelector('.app'); if (!app) return 0;
@@ -93,19 +82,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!modeEl) return 0;
     const r = modeEl.getBoundingClientRect();
     return Math.ceil(r.height);
-  }
-
-  // доступная высота окна с учётом UI
-  function availableViewportHeight(){
-    const SAFE = 8, GAP = 8;
-    const winH = window.innerHeight || 800;
-    const hCtrls  = controlsH();
-    const hChrome = appChromeH();
-    return Math.max(80, winH - (SAFE*2 + hCtrls + hChrome + GAP));
-  }
-
-  function updateWideClass(){
-    document.body.classList.toggle('wide-mode', !!wide);
   }
 
   /* ---------------- LAYOUT CORE ---------------- */
@@ -124,31 +100,23 @@ document.addEventListener('DOMContentLoaded', function () {
   // Десктоп
   function applyDesktopScale(){
     if (isStandalonePWA()) { applyMobileScale(); return; }
+    const baseW = basePreviewWidth();
+    const baseH = basePreviewHeight();
 
-    const ratio = contentAspect();
-    const availH = availableViewportHeight();
+    const SAFE = 8, GAP = 8;
+    const winH = window.innerHeight || baseH;
 
-    let targetW, targetH;
-
-    if (wide) {
-      // «Ширина»: на всю ширину вьюпорта; высоту вписываем в доступную область
-      targetW = viewportWidthMax();
-      targetH = Math.min(Math.round(targetW / ratio), availH);
-    } else if (fullH) {
-      // «Высота»: ровно по доступной высоте; ширину считаем по аспекту
-      targetH = availH;
-      targetW = Math.round(targetH * ratio);
+    let targetH, targetW;
+    if (fullH){
+      const hCtrls  = controlsH();
+      const hChrome = appChromeH();
+      targetH = Math.max(80, winH - (SAFE*2 + hCtrls + hChrome + GAP));
+      targetW = Math.round(baseW * (targetH / baseH));
     } else {
-      // По умолчанию: размер картинки/лоти, но не больше экрана по высоте
-      const naturalH =
-        (bgNatH || 0) ? bgNatH :
-        (lotNomH || 0) ? lotNomH : 800;
-
-      targetH = Math.min(naturalH, availH);
-      targetW = Math.round(targetH * ratio);
+      targetW = baseW;
+      targetH = baseH;
     }
 
-    // Применяем
     wrapper.style.width  = `${targetW}px`;
     wrapper.style.height = `${targetH}px`;
 
@@ -165,25 +133,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Мобилка/PWA: центр флексом, только scale(...)
   function applyMobileScale(){
-    const vw = (window.visualViewport && window.visualViewport.width) ? window.visualViewport.width : window.innerWidth;
+    const vw = (window.visualViewport && window.visualViewport.width)  ? window.visualViewport.width  : window.innerWidth;
     const s  = vw / 360;
 
     preview.style.width  = '360px';
-    // высота — натуральная, но сам контейнер ограничен экраном (CSS), так что «кишки» нет
-    const naturalH = (bgNatH || 0) ? bgNatH : (lotNomH || 0) ? lotNomH : 800;
-    preview.style.height = naturalH + 'px';
+    preview.style.height = basePreviewHeight() + 'px';
     preview.style.transform = `scale(${s})`;
 
     resizeLottieStage();
   }
 
   function layout(){
-    updateWideClass();
     if (MOBILE || STANDALONE || isStandalonePWA()) applyMobileScale();
     else applyDesktopScale();
   }
 
   /* ---------------- EVENTS ---------------- */
+  // На мобиле/PWA — тап по превью = повтор
   if (MOBILE || STANDALONE) {
     wrapper.addEventListener('click', function(e){
       if (e.target.closest && e.target.closest('.controls')) return;
@@ -191,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
       try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
     });
   } else {
-    window.addEventListener('resize', layout);
+    window.addEventListener('resize', ()=>{ if (fullH) layout(); });
   }
   window.matchMedia && window.matchMedia('(display-mode: standalone)').addEventListener?.('change', layout);
   window.addEventListener('orientationchange', layout);
@@ -264,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function () {
           alert('Поддерживаются PNG/JPEG/WebP (фон) или JSON (Lottie).');
         }
       } finally {
-        e.target.value = ''; // сброс, чтобы выбрать тот же файл повторно
+        e.target.value = ''; // сбросить, чтобы можно было выбрать тот же файл
       }
     });
   }
@@ -289,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function () {
       };
       meta.src = src;
     });
-    layout(); // после загрузки — пересчитать по новым натуральным размерам
+    layout();
   }
 
   function loadLottieFromData(animationData){
@@ -315,8 +281,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ---------------- Контролы ---------------- */
-  if (sizeBtn)   sizeBtn.addEventListener('click', ()=>{ wide=!wide; fullH=false; layout(); });
-  if (heightBtn) heightBtn.addEventListener('click',()=>{ fullH=!fullH; wide=false; layout(); });
+  if (sizeBtn)   sizeBtn.addEventListener('click', ()=>{ wide=!wide; layout(); });
+  if (heightBtn) heightBtn.addEventListener('click',()=>{ fullH=!fullH; layout(); });
 
   restartBtn && restartBtn.addEventListener('click', function(){
     if (!anim) return;
