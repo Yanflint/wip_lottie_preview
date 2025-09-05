@@ -6,15 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lottie-превью</title>
 
-  <!-- [ANCHOR:PWA_META] iOS/Android PWA -->
+  <!-- [ANCHOR:PWA_META] -->
   <meta name="theme-color" content="#000000">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Lottie Preview">
-  <!-- Иконка для iOS ярлыка (можно заменить своим файлом) -->
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <!-- Манифест -->
   <link rel="manifest" href="manifest.webmanifest">
 
   <!-- [ANCHOR:SCRIPTS_INCLUDE] Lottie Web -->
@@ -24,7 +22,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- [ANCHOR:PAGE_CENTER] — центр по экрану -->
+  <!-- [ANCHOR:PAGE_CENTER] -->
   <div class="page">
     <div class="app"><!-- [ANCHOR:APP_ROOT] -->
 
@@ -52,7 +50,7 @@
 
         </div>
 
-        <!-- [ANCHOR:DRAGNDROP_OVERLAY] — внутри wrapper -->
+        <!-- [ANCHOR:DRAGNDROP_OVERLAY] -->
         <div id="dropOverlay" class="drop-overlay">
           <div class="box">Отпустите файл здесь</div>
         </div>
@@ -63,6 +61,8 @@
         <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
         <button class="btn primary"  id="heightBtn">Высота: 800px</button>
 
+        <button class="btn secondary" id="pickBtn" title="Загрузить PNG/JPEG или Lottie JSON">PNG/Lottie</button>
+
         <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
         <label class="chk" title="Играть зацикленно">
           <input type="checkbox" id="loopChk"> Зацикленно
@@ -70,6 +70,9 @@
 
         <button class="btn accent"   id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
       </div>
+
+      <!-- [ANCHOR:HIDDEN_FILE_INPUT] -->
+      <input id="filePick" type="file" accept="image/*,application/json,.json" hidden>
     </div>
   </div>
 
@@ -89,6 +92,6 @@
   </script>
 
   <!-- [ANCHOR:SCRIPTS] -->
-  <script src="app.js?v=57"></script>
+  <script src="app.js?v=58"></script>
 </body>
 </html>

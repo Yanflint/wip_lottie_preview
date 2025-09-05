@@ -26,7 +26,7 @@ body{
   color:#eef2f8;
 }
 
-/* Центрирование контента по экрану, учёт безопасных зон на iOS */
+/* Центрирование контента по экрану + safe area */
 .page{
   min-height:100dvh;
   display:grid;
@@ -36,7 +36,7 @@ body{
   padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
-/* ===================== П Р Е В Ь Ю  ===================== */
+/* ===================== П Р Е В Ь Ю ===================== */
 .app{
   width:100%;
   max-width:1000px;
@@ -49,23 +49,19 @@ body{
 /* Коробка превью */
 .wrapper{
   position:relative; width:360px; height:800px;
-  border:none; outline:none;
-  border-radius:var(--wrap-r);
+  border:none; outline:none; border-radius:var(--wrap-r);
   overflow:visible;
 }
 
-/* Пунктир вокруг — один раз, поверх */
+/* Пунктир вокруг */
 .wrapper::after{
-  content:"";
-  position:absolute;
-  inset:-6px;
+  content:""; position:absolute; inset:-6px;
   border:2px dashed #2b334a;
   border-radius: calc(var(--wrap-r) + 6px);
-  pointer-events:none;
-  z-index:2;
+  pointer-events:none; z-index:2;
 }
 
-/* Внутренности */
+/* Содержимое */
 .preview{ position:absolute; inset:0; overflow:hidden; z-index:1; }
 .bg, .lottie-layer{ position:absolute; inset:0; }
 .bg{ overflow:hidden; display:flex; align-items:center; justify-content:center; }
@@ -88,10 +84,8 @@ body{
 /* DnD */
 body.dragging .placeholder{ display:none !important; }
 .drop-overlay{
-  position:absolute; inset:0;
-  display:none; align-items:center; justify-content:center;
-  background:rgba(255,255,255,.04);
-  z-index:3; pointer-events:none;
+  position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.04); z-index:3; pointer-events:none;
 }
 .drop-overlay .box{
   border:2px dashed #2b334a; color:#ddd; padding:14px 18px; border-radius:10px; font-size:13px;
@@ -144,17 +138,25 @@ body.dragging .drop-overlay{ display:flex; }
   background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
 }
 
-/* ===================== МОБИЛЬНЫЙ/СТЭНДАЛОУН ===================== */
+/* ===================== МОБИЛЬНЫЙ / PWA ===================== */
 body.is-mobile .page{ padding:0; }
 body.is-mobile .app{ max-width:none; }
-body.is-mobile .controls{ display:none !important; }
+body.is-mobile .controls{ display:none !important; } /* интерфейс скрыт на мобилке */
 body.is-mobile{ overflow:hidden; }
+
+/* ключ: делаем wrapper центровщиком по флексу + учитываем safe areas */
 body.is-mobile .wrapper{
-  position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
+  position:fixed; inset:0; width:100vw; height:100dvh;
+  background:#000;
   border-radius:0; --wrap-r: 0px;
+  display:flex; align-items:center; justify-content:center;
+  padding-top:env(safe-area-inset-top, 0px);
+  padding-bottom:env(safe-area-inset-bottom, 0px);
 }
+
+/* превью перестаёт быть absolute и центрится флексом; масштаб только scale(...) */
 body.is-mobile .preview{
-  width:360px;
-  left:50%; top:50%; transform-origin:50% 50%;
+  position:relative; left:auto; top:auto;
+  transform-origin:50% 50%;
 }
 body.is-mobile .ver{ display:none !important; }

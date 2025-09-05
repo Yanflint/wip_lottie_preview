@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v57-pwa-standalone-mobile-force';
+const VERSION = 'v58-mobile-center-flex + pickBtn';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const phEl        = document.getElementById('ph');
   const toastEl     = document.getElementById('toast');
   const verEl       = document.getElementById('ver');
+
+  const pickBtn     = document.getElementById('pickBtn');
+  const filePick    = document.getElementById('filePick');
 
   const restartBtn  = document.getElementById('restartBtn');
   const loopChk     = document.getElementById('loopChk');
@@ -40,7 +43,6 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ---------------- INIT ---------------- */
   if (verEl) verEl.textContent = VERSION;
 
-  // Определение мобильного и/или standalone (PWA)
   const MOBILE = isMobile();
   const STANDALONE = isStandalonePWA();
   if (MOBILE || STANDALONE) document.body.classList.add('is-mobile');
@@ -60,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   function isStandalonePWA(){
     const mm = window.matchMedia ? window.matchMedia('(display-mode: standalone)').matches : false;
-    const ios = 'standalone' in navigator ? navigator.standalone : false; // iOS Safari
+    const ios = 'standalone' in navigator ? navigator.standalone : false;
     return !!(mm || ios);
   }
   function matchMediaSafe(q){ try { return window.matchMedia && window.matchMedia(q).matches; } catch(_){ return false; } }
@@ -84,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---------------- LAYOUT CORE ---------------- */
 
+  // Масштабирует сцену Lottie (lotStage) по ВЫСОТЕ превью
   function resizeLottieStage(){
     if (!lotNomW || !lotNomH) return;
     const ph = preview.clientHeight;
@@ -94,8 +97,9 @@ document.addEventListener('DOMContentLoaded', function () {
     lotStage.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
 
+  // Десктоп
   function applyDesktopScale(){
-    if (isStandalonePWA()) { applyMobileScale(); return; } // установленная PWA ведёт себя как мобилка
+    if (isStandalonePWA()) { applyMobileScale(); return; }
     const baseW = basePreviewWidth();
     const baseH = basePreviewHeight();
 
@@ -127,12 +131,15 @@ document.addEventListener('DOMContentLoaded', function () {
     resizeLottieStage();
   }
 
+  // Мобилка/PWA: центр флексом, только scale(...)
   function applyMobileScale(){
     const vw = (window.visualViewport && window.visualViewport.width)  ? window.visualViewport.width  : window.innerWidth;
     const s  = vw / 360;
+
     preview.style.width  = '360px';
     preview.style.height = basePreviewHeight() + 'px';
-    preview.style.transform = `translate(-50%, -50%) scale(${s})`;
+    preview.style.transform = `scale(${s})`;
+
     resizeLottieStage();
   }
 
@@ -142,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ---------------- EVENTS ---------------- */
-  // На мобиле/стэндалоун — тап по превью = повтор
+  // На мобиле/PWA — тап по превью = повтор
   if (MOBILE || STANDALONE) {
     wrapper.addEventListener('click', function(e){
       if (e.target.closest && e.target.closest('.controls')) return;
@@ -152,12 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
   } else {
     window.addEventListener('resize', ()=>{ if (fullH) layout(); });
   }
-
-  // Отслеживаем смену display-mode (например, запустили с ярлыка)
-  window.matchMedia && window.matchMedia('(display-mode: standalone)').addEventListener?.('change', () => {
-    if (isStandalonePWA()) document.body.classList.add('is-mobile');
-    layout();
-  });
+  window.matchMedia && window.matchMedia('(display-mode: standalone)').addEventListener?.('change', layout);
   window.addEventListener('orientationchange', layout);
   window.visualViewport && window.visualViewport.addEventListener('resize', layout);
 
@@ -211,6 +213,28 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  /* ---------------- Загрузка по кнопке PNG/Lottie ---------------- */
+  if (pickBtn && filePick){
+    pickBtn.addEventListener('click', ()=> filePick.click());
+    filePick.addEventListener('change', async (e)=>{
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      try{
+        if (isImageFile(f)) {
+          const src = await readAsDataURL(f);
+          await setBackgroundFromSrc(src);
+        } else if (isJsonFile(f)) {
+          const data = await readAsText(f);
+          loadLottieFromData(JSON.parse(String(data)));
+        } else {
+          alert('Поддерживаются PNG/JPEG/WebP (фон) или JSON (Lottie).');
+        }
+      } finally {
+        e.target.value = ''; // сбросить, чтобы можно было выбрать тот же файл
+      }
+    });
+  }
+
   /* ---------------- Lottie + фон ---------------- */
   function renewLottieRoot(){
     try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
@@ -257,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /* ---------------- Контролы ---------------- */
-  if (sizeBtn) sizeBtn.addEventListener('click', ()=>{ wide=!wide; layout(); });
+  if (sizeBtn)   sizeBtn.addEventListener('click', ()=>{ wide=!wide; layout(); });
   if (heightBtn) heightBtn.addEventListener('click',()=>{ fullH=!fullH; layout(); });
 
   restartBtn && restartBtn.addEventListener('click', function(){
