@@ -6,152 +6,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lottie-превью</title>
 
-  <!-- [ANCHOR:SCRIPTS_INCLUDE] Lottie Web -->
+  <!-- Lottie Web -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
 
-  <style>
-    :root { --ctl-h: 30px; }
-
-    /* [ANCHOR:CSS_BASE] */
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body { margin: 0; background:#0f0f10; color:#e8e8e8; font-family:-apple-system,Segoe UI,Roboto,Inter,Arial; }
-
-    /* [ANCHOR:CENTERING] — центрируем контент по вертикали на десктопе */
-    .page {
-      min-height: 100dvh;
-      display: grid;
-      place-items: center;     /* по центру и по вертикали, и по горизонтали */
-      padding: 16px;
-    }
-
-    /* [ANCHOR:APP_WRAP] */
-    .app {
-      width: 100%;
-      max-width: 1000px;
-      display:flex; flex-direction:column; align-items:center; gap:12px;
-    }
-
-    /* [ANCHOR:WRAPPER] — внешний контейнер превью */
-    .wrapper { position:relative; width:360px; height:800px; overflow:hidden; background:#000; border:none; }
-
-    /* [ANCHOR:PREVIEW] — «коробочка» превью */
-    .preview { position:absolute; inset:0; overflow:hidden; }
-
-    /* [ANCHOR:BG_LAYER] */
-    .bg, .lottie-layer { position:absolute; inset:0; }
-    .bg { overflow:hidden; display:flex; align-items:center; justify-content:center; }
-    .bg img { display:block; height:100%; width:auto; margin:0 auto; } /* фон всегда по высоте контейнера */
-
-    /* [ANCHOR:LOTTIE_LAYER] — сцена и точка монтирования */
-    .lottie-layer { overflow:hidden; }
-    .lot-stage {
-      position:absolute; left:50%; top:50%;
-      transform-origin:50% 50%;
-      /* width/height задаём из JS = номиналу Lottie; transform = translate+scale(...) */
-    }
-    .lottie-mount { width:100%; height:100%; }
-
-    /* [ANCHOR:PLACEHOLDER_CSS] */
-    .placeholder{
-      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-      color:#9aa0a6; font-size:14px; letter-spacing:.2px; background:#0b0b0c;
-      border:3px dashed #3a3a3a; border-radius:16px; text-align:center; padding:12px;
-    }
-    .placeholder.hidden{ display:none; }
-
-    /* [ANCHOR:MODE_PANEL] */
-    .mode{ display:flex; flex-wrap:wrap; gap:8px; font-size:12px; align-items:center; justify-content:center; }
-    .btn, .chk{
-      height:var(--ctl-h); padding:0 10px; display:inline-flex; align-items:center; gap:6px;
-      background:#2a2a2a; color:#e8e8e8; border:none; border-radius:6px; font-size:12px; line-height:1;
-      cursor:pointer; user-select:none;
-    }
-    .btn:active{ opacity:.85; }
-    .chk input[type="checkbox"]{ width:14px; height:14px; margin:0; }
-
-    /* [ANCHOR:BTN_LOADING] — индикатор загрузки на «Поделиться» */
-    .btn.loading{ opacity:.9; pointer-events:none; position:relative; }
-    .btn.loading::after{
-      content:""; width:14px; height:14px; margin-left:6px;
-      border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%;
-      display:inline-block; animation:spin .8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* [ANCHOR:MOBILE_MODE] — на телефоне: wrapper=экран, preview=360×(высота фона), масштаб по ШИРИНЕ */
-    body.is-mobile .page{ padding:0; }
-    body.is-mobile .app{ max-width:none; }
-    body.is-mobile .mode{ display:none !important; }
-    body.is-mobile{ overflow:hidden; }
-    body.is-mobile .wrapper{ position:fixed; inset:0; width:100vw; height:100dvh; background:#000; }
-    body.is-mobile .preview{
-      width:360px; /* логическая ширина коробочки */
-      /* высота задаётся JS: = высота загруженной картинки (или 800 до загрузки) */
-      left:50%; top:50%; transform-origin:50% 50%;
-      /* transform из JS: translate(-50%,-50%) scale(vw/360) */
-    }
-
-    /* [ANCHOR:TOAST_CSS] */
-    .toast{
-      position:fixed; padding:8px 10px; background:rgba(0,0,0,.85); color:#fff; border-radius:8px;
-      font-size:12px; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
-      z-index:1000; backdrop-filter:blur(4px);
-      transform:translate(-50%, calc(-100% - 8px));
-    }
-    .toast.show{ opacity:1; }
-
-    /* [ANCHOR:VERSION_BADGE] */
-    .ver{
-      position:fixed; right:8px; bottom:6px; z-index:1000;
-      font-size:11px; line-height:1; padding:4px 6px; color:#bbb;
-      background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
-    }
-    /* скрыть версию на мобиле */
-    body.is-mobile .ver{ display:none !important; }
-
-    /* [ANCHOR:DRAGNDROP_CSS] — оверлей при перетаскивании */
-    .drop-overlay{
-      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-      background:rgba(255,255,255,.04);
-      z-index:1200;
-    }
-    .drop-overlay .box{
-      border:2px dashed #888; color:#ddd; padding:18px 22px; border-radius:10px; font-size:14px;
-      background:rgba(0,0,0,.35);
-    }
-    body.dragging .drop-overlay{ display:flex; }
-  </style>
+  <!-- [ANCHOR:STYLESHEET] -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="page"><!-- [ANCHOR:PAGE_CENTER] -->
+  <!-- [ANCHOR:PAGE_CENTER] — центр по экрану (как в старом проекте) -->
+  <div class="page">
     <div class="app"><!-- [ANCHOR:APP_ROOT] -->
-      <div id="wrapper" class="wrapper" aria-label="Область превью"><!-- [ANCHOR:WRAPPER_NODE] -->
+
+      <!-- [ANCHOR:PANEL_HEADER] — шапка/подзаголовок в стилистике старого проекта -->
+      <div class="container-like">
+        <h1>Превью Lottie</h1>
+        <div class="sub">Фон + Lottie, масштаб по высоте фона. Drag & Drop поддерживается.</div>
+      </div>
+
+      <!-- [ANCHOR:WRAPPER_NODE] — внешняя рамка превью -->
+      <div id="wrapper" class="wrapper" aria-label="Область превью">
         <div id="preview" class="preview"><!-- [ANCHOR:PREVIEW_NODE] -->
+
+          <!-- [ANCHOR:PLACEHOLDER_NODE] -->
           <div id="ph" class="placeholder">
-            Перетащите изображение (PNG/JPEG) для фона<br>или Lottie JSON (.json) для анимации
-          </div><!-- [ANCHOR:PLACEHOLDER_NODE] -->
+            Перетащите сюда изображение (PNG/JPEG) для фона<br>
+            или Lottie JSON (.json) для анимации
+          </div>
 
-          <div class="bg"><img id="bgImg" alt=""></div><!-- [ANCHOR:BG_IMG] -->
+          <!-- [ANCHOR:BG_IMG] -->
+          <div class="bg"><img id="bgImg" alt=""></div>
 
-          <div class="lottie-layer"><!-- [ANCHOR:LOTTIE_LAYER_NODE] -->
-            <div id="lotStage" class="lot-stage"><!-- [ANCHOR:LOT_STAGE] -->
-              <div id="lottie" class="lottie-mount"></div><!-- [ANCHOR:LOTTIE_MOUNT] -->
+          <!-- [ANCHOR:LOTTIE_LAYER_NODE] -->
+          <div class="lottie-layer">
+            <div id="lotStage" class="lot-stage"><!-- фикс. сцена с номиналом композиции -->
+              <div id="lottie" class="lottie-mount"></div>
             </div>
           </div>
 
         </div>
       </div>
 
-      <!-- [ANCHOR:CONTROL_PANEL] -->
-      <div class="mode" id="mode">
-        <button class="btn" id="sizeBtn">Ширина: 360px</button>
-        <button class="btn" id="heightBtn">Высота: 800px</button>
+      <!-- [ANCHOR:CONTROL_PANEL] — панель в стилистике старого проекта -->
+      <div id="mode" class="controls panel-like">
+        <div class="buttons">
+          <button class="primary" id="sizeBtn">Ширина: 360px</button>
+          <button class="primary" id="heightBtn">Высота: 800px</button>
+          <button class="secondary" id="restartBtn" title="Повторить анимацию">Повтор</button>
+          <label class="chk" title="Играть зацикленно"><input type="checkbox" id="loopChk"> Зацикленно</label>
+          <button class="accent" id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
+        </div>
+      </div>
 
-        <button class="btn" id="restartBtn" title="Повторить анимацию">Повтор</button>
-        <label class="chk" title="Играть зацикленно"><input type="checkbox" id="loopChk"> Зацикленно</label>
-
-        <button class="btn" id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
+      <!-- [ANCHOR:STATUS_STRIP] — статус/подпись в стилистике -->
+      <div class="container-like">
+        <div id="status" class="status">Готово</div>
       </div>
     </div>
   </div>
@@ -165,7 +73,7 @@
   <!-- [ANCHOR:DRAGNDROP_OVERLAY] -->
   <div id="dropOverlay" class="drop-overlay"><div class="box">Отпустите файл здесь</div></div>
 
-  <!-- [ANCHOR:SCRIPT_INCLUDE] -->
-  <script src="app.js?v=51"></script>
+  <!-- [ANCHOR:SCRIPTS] -->
+  <script src="app.js"></script>
 </body>
 </html>
