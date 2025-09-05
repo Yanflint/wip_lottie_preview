@@ -166,7 +166,7 @@ body.dragging .drop-overlay{ display:flex; }
 
 /* ===================== М О Б И Л Ь Н Ы Й  Р Е Ж И М ===================== */
 body.is-mobile .page{ padding:0; }
-body.is-mobile .app{ max-width:none; }
+body.is-mobile .app{ max_width:none; }
 body.is-mobile .controls{ display:none !important; }
 body.is-mobile{ overflow:hidden; }
 body.is-mobile .wrapper{

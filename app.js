@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v56-rollback + share-fallback';
+const VERSION = 'v56-rollback-no-click-upload';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* ---------------- Share: сервер → запасной локальный ---------------- */
+  /* ---------------- Share (как раньше) ---------------- */
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -287,41 +287,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function buildLocalShareLink(){
-    const payload = {
-      v:1,
-      lot:lastLottieJSON || null,
-      bg:bgImg && bgImg.src ? bgImg.src : null,
-      opts:{ loop:!!loopOn, wide:!!wide, fullH:!!fullH }
-    };
-    const json = JSON.stringify(payload);
-    // сжимаем в URI-safe строку
-    const packed = (window.LZString && LZString.compressToEncodedURIComponent)
-      ? LZString.compressToEncodedURIComponent(json)
-      : encodeURIComponent(json);
-    return location.origin + location.pathname + '?d=' + packed;
-  }
-
   if (shareBtn){
     shareBtn.addEventListener('click', async function(){
-      if (!lastLottieJSON && !bgImg.src){ showToastNear(shareBtn, 'Загрузите фон или Lottie'); return; }
+      if (!lastLottieJSON){ showToastNear(shareBtn, 'Загрузи Lottie'); return; }
       await withLoading(shareBtn, async ()=>{
-        // 1) пробуем короткий серверный вариант
-        try {
-          const payload = { v:1, lot:lastLottieJSON, bg:bgImg.src || null, opts:{ loop:loopOn, wide:!!wide, fullH:!!fullH } };
-          const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
-          if (!resp.ok) throw new Error('share failed');
-          const data = await resp.json();
-          const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id);
-          await copyText(link);
-          showToastNear(shareBtn, 'Ссылка скопирована');
-          return;
-        } catch(e){
-          // 2) падение → локальная ссылка
-          const link = buildLocalShareLink();
-          await copyText(link);
-          showToastNear(shareBtn, 'Ссылка скопирована (локальный режим)');
+        const payload = { v:1, lot:lastLottieJSON, bg:bgImg.src || null, opts:{ loop:loopOn, wide:!!wide, fullH:!!fullH } };
+        const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
+        if (!resp.ok) throw new Error('share failed');
+        const data = await resp.json();
+        const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id);
+
+        try { await navigator.clipboard.writeText(link); }
+        catch(_){
+          const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta);
+          ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
         }
+        showToastNear(shareBtn, 'Ссылка скопирована');
       }).catch(err=>{
         console.error(err);
         showToastNear(shareBtn, 'Ошибка при шаринге');
@@ -329,50 +310,23 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  async function copyText(text){
-    try { await navigator.clipboard.writeText(text); }
-    catch(_){
-      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
-      ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    }
-  }
-
-  /* ---------------- Загрузка из ссылки ---------------- */
+  /* ---------------- Load from link ---------------- */
   (async function loadIfLinked(){
-    const qs = new URLSearchParams(location.search);
-    const id = qs.get('id');
-    const d  = qs.get('d'); // локально сжатые данные
-    if (!id && !d) { layout(); return; }
-
+    const id = new URLSearchParams(location.search).get('id');
+    if (!id) { layout(); return; }
     try {
-      if (id){
-        const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
-        if (!resp.ok) throw new Error('404');
-        const snap = await resp.json();
-        if (snap.opts && typeof snap.opts.loop === 'boolean') {
-          loopOn = !!snap.opts.loop;
-          if (loopChk) loopChk.checked = loopOn;
-        }
-        if (snap.bg)  { await setBackgroundFromSrc(snap.bg); }
-        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
-        else { layout(); }
-        return;
+      const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
+      if (!resp.ok) throw new Error('404');
+      const snap = await resp.json();
+
+      if (snap.opts && typeof snap.opts.loop === 'boolean') {
+        loopOn = !!snap.opts.loop;
+        if (loopChk) loopChk.checked = loopOn;
       }
 
-      if (d){
-        const json = (window.LZString && LZString.decompressFromEncodedURIComponent)
-          ? LZString.decompressFromEncodedURIComponent(d)
-          : decodeURIComponent(d);
-        const snap = JSON.parse(json);
-
-        if (snap.opts && typeof snap.opts.loop === 'boolean') {
-          loopOn = !!snap.opts.loop;
-          if (loopChk) loopChk.checked = loopOn;
-        }
-        if (snap.bg)  { await setBackgroundFromSrc(snap.bg); }
-        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
-        else { layout(); }
-      }
+      if (snap.bg) { await setBackgroundFromSrc(snap.bg); }
+      if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
+      else { layout(); }
     } catch(e){
       console.error(e);
       layout();
