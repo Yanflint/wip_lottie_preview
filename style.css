@@ -4,12 +4,18 @@
   --accent:#6ee7b7; --accent-orange:#FF7700;
   --preview-bg:#0b0f1a;
 
-  /* компактные контролы — заданные параметры */
+  /* UI-параметры */
   --ctl-h: 36px;           /* высота кнопки */
   --btn-font: 13px;        /* размер шрифта в кнопке */
-  --btn-pad-y: 8px;        /* вертикальный паддинг (страховочный, min-height фиксирует 36px) */
-  --btn-pad-x: 12px;       /* горизонтальный паддинг */
-  --btn-radius: 12px;      /* скругление кнопок */
+  --btn-pad-y: 8px;
+  --btn-pad-x: 12px;
+  --btn-radius: 12px;
+
+  /* радиус короба превью — используем и для рамки */
+  --wrap-r: 16px;
+
+  /* цвет «размерных» кнопок */
+  --btn-dim-bg: #525b72;
 }
 
 *{box-sizing:border-box}
@@ -32,18 +38,28 @@ body{
 /* ===================== П Р Е В Ь Ю  L O T T I E ===================== */
 .app{ width:100%; max-width:1000px; display:flex; flex-direction:column; align-items:center; gap:12px; }
 
-/* Только пунктирная обводка вокруг превью.
-   — убираем внутренние бордеры, используем outline (не клипается overflow и повторяет радиус) */
+/* Коробка превью: без бордеров/outline.
+   Единственная пунктирная рамка рисуется псевдо-элементом ::after, вынесенным наружу. */
 .wrapper{
   position:relative; width:360px; height:800px;
-  /* было: border:1px solid #1f2638; */
-  border:none;
-  outline:2px dashed #2b334a;         /* ← единственная рамка */
-  outline-offset:0;
-  border-radius:16px;
-  overflow:visible;                    /* чтобы рамку точно не клипало */
+  border:none; outline:none;
+  border-radius:var(--wrap-r);
+  overflow:visible;              /* чтобы рамку не клипало */
 }
-.preview{ position:absolute; inset:0; overflow:hidden; } /* клипим только содержимое, не рамку */
+
+/* Пунктирная рамка — один раз, красиво по углам, поверх содержимого */
+.wrapper::after{
+  content:"";
+  position:absolute;
+  inset:-6px;                    /* вынос рамки за коробку */
+  border:2px dashed #2b334a;
+  border-radius: calc(var(--wrap-r) + 6px);
+  pointer-events:none;
+  z-index:2;
+}
+
+/* Содержимое клипим внутри, рамку не трогаем */
+.preview{ position:absolute; inset:0; overflow:hidden; z-index:1; }
 
 .bg, .lottie-layer{ position:absolute; inset:0; }
 .bg{ overflow:hidden; display:flex; align-items:center; justify-content:center; }
@@ -57,24 +73,20 @@ body{
 }
 .lottie-mount{ width:100%; height:100%; }
 
-/* Плейсхолдер — без обводки, чтобы не было «рамки под рамкой» */
+/* Плейсхолдер — без рамок, чтобы не было «второй обводки» */
 .placeholder{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   color:var(--muted); font-size:13px; letter-spacing:.2px; background:var(--preview-bg);
-  /* было: border:2px dashed #2b334a; — убрали */
   border:none; border-radius:12px; text-align:center; padding:12px;
 }
 .placeholder.hidden{ display:none; }
 
 /* ===================== К Н О П К И  И  Ч Е К Б О К С ===================== */
-
-/* Контейнер без подложки */
 .controls{
   display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
   background:transparent; padding:0; border:none;
 }
 
-/* Унифицированные кнопки — параметры из задачи */
 .btn{
   cursor:pointer; border:none; border-radius:var(--btn-radius);
   padding:var(--btn-pad-y) var(--btn-pad-x);
@@ -82,20 +94,20 @@ body{
   min-height:var(--ctl-h);
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
   transition:transform .05s ease, opacity .2s ease, filter .2s ease;
-  color:#0b0c10; background:var(--accent);  /* базовый стиль для несовпадающих */
+  color:#0b0c10; background:var(--accent);
 }
 .btn:disabled{opacity:.5; cursor:not-allowed}
 .btn:active{transform:translateY(1px)}
 .btn:hover:not(:disabled){ filter:brightness(1.05); }
 
-/* Специфические варианты */
-.btn.secondary { background:#273046;            color:#dce3ef; border:1px solid #2e374f; }
+/* Варианты */
+.btn.secondary { background:#273046; color:#dce3ef; border:1px solid #2e374f; }
 .btn.accent    { background:var(--accent-orange); color:#fff; }
 
-/* Требование: «Ширина» и «Высота» — #525b72 (белый текст) */
-#sizeBtn, #heightBtn { background:#525b72; color:#fff; }
+/* Требование: кнопки «Ширина» и «Высота» */
+#sizeBtn, #heightBtn { background:var(--btn-dim-bg); color:#fff; }
 
-/* Чекбокс контейнер — та же высота/радиус */
+/* Чекбокс */
 .chk{
   display:inline-flex; align-items:center; gap:6px;
   color:#dce3ef; background:#273046; border:1px solid #2e374f;
@@ -150,9 +162,8 @@ body.is-mobile .controls{ display:none !important; }
 body.is-mobile{ overflow:hidden; }
 body.is-mobile .wrapper{
   position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
-  /* на мобиле пунктир можно скрыть, если мешает: закомментируй следующую строку по желанию */
-  outline:2px dashed #2b334a;
-  border-radius:0;
+  border-radius:0;               /* радиус короба */
+  --wrap-r: 0px;                 /* и для рамки тоже */
 }
 body.is-mobile .preview{
   width:360px;
