@@ -1,29 +1,30 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v54-border-only-dashed-ctl-36px-13pt-sizeBtns-color';
+const VERSION = 'v55-click-to-pick-files-fs-access-memo';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
 
   /* ---------------- DOM ---------------- */
-  const wrapper   = document.getElementById('wrapper');
-  const preview   = document.getElementById('preview');
-  const bgImg     = document.getElementById('bgImg');
-  const phEl      = document.getElementById('ph');
-  const toastEl   = document.getElementById('toast');
-  const verEl     = document.getElementById('ver');
+  const wrapper     = document.getElementById('wrapper');
+  const preview     = document.getElementById('preview');
+  const bgImg       = document.getElementById('bgImg');
+  const phEl        = document.getElementById('ph');
+  const toastEl     = document.getElementById('toast');
+  const verEl       = document.getElementById('ver');
 
-  const restartBtn= document.getElementById('restartBtn');
-  const loopChk   = document.getElementById('loopChk');
-  const sizeBtn   = document.getElementById('sizeBtn');
-  const heightBtn = document.getElementById('heightBtn');
-  const shareBtn  = document.getElementById('shareBtn');
-  const modeEl    = document.getElementById('mode');
+  const restartBtn  = document.getElementById('restartBtn');
+  const loopChk     = document.getElementById('loopChk');
+  const sizeBtn     = document.getElementById('sizeBtn');
+  const heightBtn   = document.getElementById('heightBtn');
+  const shareBtn    = document.getElementById('shareBtn');
+  const modeEl      = document.getElementById('mode');
 
-  const lotStage     = document.getElementById('lotStage');
-  const lottieMount  = document.getElementById('lottie');
-  const dropOverlay  = document.getElementById('dropOverlay');
+  const lotStage    = document.getElementById('lotStage');
+  const lottieMount = document.getElementById('lottie');
+  const dropOverlay = document.getElementById('dropOverlay');
+  const filePick    = document.getElementById('filePick');
 
   /* ---------------- STATE ---------------- */
   let anim = null, animName = null;
@@ -39,9 +40,13 @@ document.addEventListener('DOMContentLoaded', function () {
   // номинал композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
+  // File System Access API — запоминаем последний handle (в рамках сессии)
+  let lastFsHandle = null;
+
   /* ---------------- INIT ---------------- */
   if (verEl) verEl.textContent = VERSION;
   if (MOBILE) document.body.classList.add('is-mobile');
+  if (!MOBILE) wrapper.classList.add('clickable'); // курсор "pointer" на десктопе
 
   try { if (typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_){}
 
@@ -76,6 +81,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const r = modeEl.getBoundingClientRect();
     return Math.ceil(r.height);
   }
+
+  const setStatus = (msg) => { /* статусную строку мы убрали; функция оставлена на будущее */ };
 
   /* ---------------- LAYOUT CORE ---------------- */
 
@@ -141,16 +148,26 @@ document.addEventListener('DOMContentLoaded', function () {
     if (MOBILE) applyMobileScale(); else applyDesktopScale();
   }
 
-  /* ---------------- LISTENERS (desktop/mobile) ---------------- */
+  /* ---------------- CLICK-TO-PICK (desktop) ---------------- */
   if (!MOBILE) {
-    sizeBtn && sizeBtn.addEventListener('click', ()=>{ wide=!wide; layout(); });
-    heightBtn && heightBtn.addEventListener('click',()=>{ fullH=!fullH; layout(); });
-    window.addEventListener('resize', ()=>{ if (fullH) layout(); });
-  } else {
-    window.visualViewport && window.visualViewport.addEventListener('resize', layout);
-    window.addEventListener('resize', layout);
+    wrapper.addEventListener('click', async (e)=>{
+      // игнор, если клик по элементам управления (их нет внутри wrapper, но на всякий случай)
+      if (e.target.closest && e.target.closest('.controls')) return;
+      // открываем выбор файла
+      await chooseFileViaBestAPI();
+    });
 
-    // Тап по превью = повтор
+    // hidden input fallback
+    if (filePick){
+      filePick.addEventListener('change', async (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if (f) await processPickedFile(f);
+        // сбрасываем значение, чтобы можно было выбрать тот же файл повторно
+        e.target.value = '';
+      });
+    }
+  } else {
+    // На мобиле клик по превью — повтор анимации, как раньше
     wrapper.addEventListener('click', function(e){
       if (e.target.closest && e.target.closest('.controls')) return;
       if (!anim) return;
@@ -158,54 +175,59 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- LOADERS ---------------- */
-
-  // Полная очистка точки монтирования Lottie
-  function renewLottieRoot(){
-    try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
-    try { if (anim && anim.destroy) anim.destroy(); } catch(_){}
-    anim = null; animName = null;
-    while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
+  // Выбор файла: сначала пытаемся через File System Access API, иначе — скрытый input
+  async function chooseFileViaBestAPI(){
+    // File System Access API
+    if (window.showOpenFilePicker){
+      try{
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          excludeAcceptAllOption: false,
+          startIn: lastFsHandle || 'documents',
+          types: [
+            {
+              description: 'Images (PNG, JPEG, WebP)',
+              accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }
+            },
+            {
+              description: 'Lottie JSON',
+              accept: { 'application/json': ['.json'] }
+            }
+          ]
+        });
+        if (!handle) return;
+        lastFsHandle = handle; // запомним для следующего старта (в пределах сессии)
+        const file = await handle.getFile();
+        await processPickedFile(file);
+        return;
+      } catch(err){
+        // Пользователь мог отменить — тогда молча падаем к input
+      }
+    }
+    // Фоллбек: обычный input
+    if (filePick){
+      filePick.click();
+    }
   }
 
-  async function setBackgroundFromSrc(src){
-    await new Promise(res=>{
-      const meta = new Image();
-      meta.onload = function(){
-        bgNatW = meta.naturalWidth  || meta.width  || 0;
-        bgNatH = meta.naturalHeight || meta.height || 0;
-        bgImg.src = src;
-        phEl && phEl.classList.add('hidden');
-        res();
-      };
-      meta.src = src;
-    });
-    layout();
+  // Обработка файла (общая для dnd и click)
+  async function processPickedFile(file){
+    if (!file) return;
+    if (isImageFile(file)) {
+      const src = await readAsDataURL(file);
+      await setBackgroundFromSrc(src);
+      return;
+    }
+    if (isJsonFile(file)) {
+      const data = await readAsText(file);
+      try { loadLottieFromData(JSON.parse(String(data))); }
+      catch(_){ alert('Некорректный JSON Lottie.'); }
+      return;
+    }
+    alert('Поддерживаются PNG/JPEG/WebP (фон) или JSON (Lottie).');
   }
 
-  function loadLottieFromData(animationData){
-    renewLottieRoot();
-
-    lotNomW = Number(animationData.w) || 0;
-    lotNomH = Number(animationData.h) || 0;
-
-    animName = uid('anim_');
-    lastLottieJSON = animationData;
-
-    afterTwoFrames(function(){
-      anim = lottie.loadAnimation({
-        name: animName,
-        container: lottieMount,
-        renderer: 'svg',
-        loop: loopOn,
-        autoplay: true,
-        animationData: JSON.parse(JSON.stringify(animationData))
-      });
-      anim.addEventListener('DOMLoaded', layout);
-    });
-  }
-
-  /* ---------------- DnD: PNG/JPEG → фон, JSON → Lottie ---------------- */
+  /* ---------------- LISTENERS: DnD ---------------- */
   let dragDepth = 0;
   const isImageFile = (f) => f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name));
   const isJsonFile  = (f) => f && (f.type === 'application/json' || /\.json$/i.test(f.name));
@@ -255,6 +277,51 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  /* ---------------- Lottie + фон ---------------- */
+  function renewLottieRoot(){
+    try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
+    try { if (anim && anim.destroy) anim.destroy(); } catch(_){}
+    anim = null; animName = null;
+    while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
+  }
+
+  async function setBackgroundFromSrc(src){
+    await new Promise(res=>{
+      const meta = new Image();
+      meta.onload = function(){
+        bgNatW = meta.naturalWidth  || meta.width  || 0;
+        bgNatH = meta.naturalHeight || meta.height || 0;
+        bgImg.src = src;
+        phEl && phEl.classList.add('hidden');
+        res();
+      };
+      meta.src = src;
+    });
+    layout();
+  }
+
+  function loadLottieFromData(animationData){
+    renewLottieRoot();
+
+    lotNomW = Number(animationData.w) || 0;
+    lotNomH = Number(animationData.h) || 0;
+
+    animName = uid('anim_');
+    lastLottieJSON = animationData;
+
+    afterTwoFrames(function(){
+      anim = lottie.loadAnimation({
+        name: animName,
+        container: lottieMount,
+        renderer: 'svg',
+        loop: loopOn,
+        autoplay: true,
+        animationData: JSON.parse(JSON.stringify(animationData))
+      });
+      anim.addEventListener('DOMLoaded', layout);
+    });
+  }
+
   /* ---------------- Контролы ---------------- */
   restartBtn && restartBtn.addEventListener('click', function(){
     if (!anim) return;
@@ -269,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* ---------------- Share + яркий лоудер ---------------- */
+  /* ---------------- Share (без изменений логики) ---------------- */
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
