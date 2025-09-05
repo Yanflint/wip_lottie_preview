@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:VERSION_CONST] */
-const VERSION = 'v51-center-dd-indicator';
+const VERSION = 'v52-theme-from-old-project';
 
 /* [ANCHOR:BOOT] */
 document.addEventListener('DOMContentLoaded', function () {
@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const phEl      = document.getElementById('ph');
   const toastEl   = document.getElementById('toast');
   const verEl     = document.getElementById('ver');
+  const statusEl  = document.getElementById('status');
 
   const restartBtn= document.getElementById('restartBtn');
   const loopChk   = document.getElementById('loopChk');
@@ -21,8 +22,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const shareBtn  = document.getElementById('shareBtn');
   const modeEl    = document.getElementById('mode');
 
-  const lotStage     = document.getElementById('lotStage');   // сцена фиксированного номинала
-  const lottieMount  = document.getElementById('lottie');     // точка монтирования Lottie
+  const lotStage     = document.getElementById('lotStage');
+  const lottieMount  = document.getElementById('lottie');
   const dropOverlay  = document.getElementById('dropOverlay');
 
   /* ---------------- STATE ---------------- */
@@ -77,6 +78,8 @@ document.addEventListener('DOMContentLoaded', function () {
     return Math.ceil(r.height);
   }
 
+  const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg || ''; };
+
   /* ---------------- LAYOUT CORE ---------------- */
 
   // Масштабирует сцену Lottie (lotStage) по ВЫСОТЕ превью
@@ -120,6 +123,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (sizeBtn)   sizeBtn.textContent   = 'Ширина: ' + targetW + 'px';
     if (heightBtn) heightBtn.textContent = 'Высота: ' + targetH + 'px';
+
+    resizeLottieStage();
   }
 
   // Мобилка: коробочка 360×(высота фона). Масштаб по ширине экрана
@@ -130,12 +135,13 @@ document.addEventListener('DOMContentLoaded', function () {
     preview.style.width  = '360px';
     preview.style.height = basePreviewHeight() + 'px';
     preview.style.transform = `translate(-50%, -50%) scale(${s})`;
+
+    resizeLottieStage();
   }
 
   // Единая точка: пересчитать размеры и сцену Lottie
   function layout(){
     if (MOBILE) applyMobileScale(); else applyDesktopScale();
-    resizeLottieStage();
   }
 
   /* ---------------- LISTENERS (desktop/mobile) ---------------- */
@@ -149,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Тап по превью = повтор
     wrapper.addEventListener('click', function(e){
-      if (e.target.closest && e.target.closest('.mode')) return;
+      if (e.target.closest && e.target.closest('.controls')) return;
       if (!anim) return;
       try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
     });
@@ -165,7 +171,6 @@ document.addEventListener('DOMContentLoaded', function () {
     while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
   }
 
-  // Загрузка фонового изображения (dataURL)
   async function setBackgroundFromSrc(src){
     await new Promise(res=>{
       const meta = new Image();
@@ -181,7 +186,6 @@ document.addEventListener('DOMContentLoaded', function () {
     layout();
   }
 
-  // Загрузка Lottie из JSON-объекта
   function loadLottieFromData(animationData){
     renewLottieRoot();
 
@@ -194,72 +198,48 @@ document.addEventListener('DOMContentLoaded', function () {
     afterTwoFrames(function(){
       anim = lottie.loadAnimation({
         name: animName,
-        container: lottieMount,   // ← монтируем внутрь сцены фиксированного номинала
+        container: lottieMount,
         renderer: 'svg',
         loop: loopOn,
         autoplay: true,
-        animationData: JSON.parse(JSON.stringify(animationData)),
+        animationData: JSON.parse(JSON.stringify(animationData))
       });
-      anim.addEventListener('DOMLoaded', layout); // как только DOM готов — пересчёт
+      anim.addEventListener('DOMLoaded', layout);
     });
   }
 
-  // Повтор
-  restartBtn && restartBtn.addEventListener('click', function(){
-    if (!anim) return;
-    try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
-  });
-
-  // Цикл
-  loopChk && loopChk.addEventListener('change', function(){
-    loopOn = !!loopChk.checked;
-    if (anim) {
-      try { if (typeof anim.setLooping === 'function') anim.setLooping(loopOn); else anim.loop = loopOn; }
-      catch(_){ anim.loop = loopOn; }
-    }
-  });
-
-  /* ---------------- DRAG & DROP ---------------- */
-
-  // [ANCHOR:DRAGNDROP_HANDLERS]
+  /* ---------------- DnD: PNG/JPEG → фон, JSON → Lottie ---------------- */
   let dragDepth = 0;
-  function isImageFile(f){ return f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(f.name)); }
-  function isJsonFile(f){ return f && (f.type === 'application/json' || /\.json$/i.test(f.name)); }
+  const isImageFile = (f) => f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name));
+  const isJsonFile  = (f) => f && (f.type === 'application/json' || /\.json$/i.test(f.name));
 
-  document.addEventListener('dragenter', (e)=>{ e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
-  document.addEventListener('dragover',  (e)=>{ e.preventDefault(); });
-  document.addEventListener('dragleave', (e)=>{ e.preventDefault(); dragDepth=Math.max(0,dragDepth-1); if(!dragDepth) document.body.classList.remove('dragging'); });
-  document.addEventListener('drop', async (e)=>{
+  document.addEventListener('dragenter',(e)=>{ e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+  document.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+  document.addEventListener('dragleave',(e)=>{ e.preventDefault(); dragDepth=Math.max(0,dragDepth-1); if(!dragDepth) document.body.classList.remove('dragging'); });
+  document.addEventListener('drop',     async (e)=>{
     e.preventDefault(); dragDepth=0; document.body.classList.remove('dragging');
 
-    const dt = e.dataTransfer; if (!dt) return;
-    const files = dt.files && dt.files.length ? Array.from(dt.files) : [];
+    const files = (e.dataTransfer && e.dataTransfer.files) ? Array.from(e.dataTransfer.files) : [];
     if (!files.length) return;
 
-    // приоритет: первая картинка → фон, первый json → lottie
-    let imgFile = files.find(isImageFile);
+    let imgFile  = files.find(isImageFile);
     let jsonFile = files.find(isJsonFile);
-
-    // если перетащили одно — определяем по типу
     if (files.length === 1) {
-      const f = files[0];
-      if (isImageFile(f)) imgFile = f;
-      else if (isJsonFile(f)) jsonFile = f;
+      const f = files[0]; imgFile = isImageFile(f) ? f : null; jsonFile = isJsonFile(f) ? f : jsonFile;
     }
 
     try {
       if (imgFile) {
         const src = await readAsDataURL(imgFile);
         await setBackgroundFromSrc(src);
+        setStatus('Загружен фон: ' + imgFile.name);
       }
       if (jsonFile) {
         const data = await readAsText(jsonFile);
-        try { loadLottieFromData(JSON.parse(String(data))); }
+        try { loadLottieFromData(JSON.parse(String(data))); setStatus('Загружен Lottie: ' + jsonFile.name); }
         catch(_){ alert('Некорректный JSON Lottie.'); }
       }
-    } catch(err){
-      console.error(err);
-    }
+    } catch(err){ console.error(err); }
   });
 
   function readAsDataURL(file){
@@ -279,9 +259,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- SHARE ---------------- */
+  /* ---------------- Контролы ---------------- */
+  restartBtn && restartBtn.addEventListener('click', function(){
+    if (!anim) return;
+    try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
+  });
 
-  // [ANCHOR:TOAST_API]
+  loopChk && loopChk.addEventListener('change', function(){
+    loopOn = !!loopChk.checked;
+    if (anim) {
+      try { if (typeof anim.setLooping === 'function') anim.setLooping(loopOn); else anim.loop = loopOn; }
+      catch(_){ anim.loop = loopOn; }
+    }
+  });
+
+  /* ---------------- Share + индикатор ---------------- */
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -293,7 +285,6 @@ document.addEventListener('DOMContentLoaded', function () {
     showToastNear._t = setTimeout(()=> toastEl.classList.remove('show'), 1400);
   }
 
-  // [ANCHOR:SHARE_LOADING] — индикатор на кнопке
   async function withLoading(btn, fn){
     if (!btn) return fn();
     const original = btn.textContent;
@@ -329,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- LOAD FROM LINK ---------------- */
+  /* ---------------- Load from link (если используешь /api/shot) ---------------- */
   (async function loadIfLinked(){
     const id = new URLSearchParams(location.search).get('id');
     if (!id) { layout(); return; }
@@ -343,10 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (loopChk) loopChk.checked = loopOn;
       }
 
-      if (snap.bg) {
-        await setBackgroundFromSrc(snap.bg);
-      }
-
+      if (snap.bg) { await setBackgroundFromSrc(snap.bg); }
       if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
       else { layout(); }
     } catch(e){
