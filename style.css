@@ -90,6 +90,9 @@ body{
 .placeholder .ph-2{ color:var(--muted); }
 .placeholder.hidden{ display:none; }
 
+/* ВАЖНО: когда идёт drag-and-drop, скрываем плейсхолдер, чтобы не наслаивался текст */
+body.dragging .placeholder{ display:none !important; }
+
 /* ===================== К Н О П К И  И  Ч Е К Б О К С ===================== */
 .controls{
   display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
@@ -152,7 +155,7 @@ body{
   background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
 }
 
-/* DnD-затемнение */
+/* DnD-затемнение (центрировано по высоте/ширине) */
 .drop-overlay{
   position:fixed; inset:0; display:none; align-items:center; justify-content:center;
   background:rgba(255,255,255,.04);
