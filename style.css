@@ -1,4 +1,3 @@
-/* ===================== Т О К Е Н Ы ===================== */
 :root{
   --bg:#0b0c10; --muted:#9aa3b2;
   --accent:#6ee7b7; --accent-orange:#FF7700;
@@ -13,7 +12,7 @@
   --wrap-r: 16px;
   --btn-dim-bg: #525b72;
 
-  /* [ANCHOR:STACK_GAP] расстояние между превью и кнопками */
+  /* расстояние между превью и кнопками */
   --stack-gap: 24px;
 }
 
@@ -42,7 +41,7 @@ body{
   gap:var(--stack-gap);
 }
 
-/* ===================== П Р Е В Ь Ю ===================== */
+/* ==== превью-коробка ==== */
 .wrapper{
   position:relative; width:360px; height:800px;
   border:none; outline:none;
@@ -72,6 +71,7 @@ body{
 }
 .lottie-mount{ width:100%; height:100%; }
 
+/* подсветка Lottie */
 .lot-stage::after{
   content:"";
   position:absolute; inset:0;
@@ -82,11 +82,12 @@ body{
 .lot-stage.hover::after{ opacity:1; }
 .lot-stage.dragging::after{ opacity:1; background:rgba(255,255,255,.18); }
 
+/* overlay над всем */
 .overlay{ display:flex; align-items:center; justify-content:center; z-index:2; }
 .overlay img{ display:block; height:100%; width:auto; margin:0 auto; transition:opacity .15s ease; }
 .overlay.dim img{ opacity:.2; }
 
-/* Плейсхолдер */
+/* плейсхолдер */
 .placeholder{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   color:var(--muted); font-size:13px; letter-spacing:.2px; background:var(--preview-bg);
@@ -113,10 +114,10 @@ body{
 }
 body.dragging .drop-overlay{ display:flex; }
 
-/* ===================== К Н О П К И ===================== */
+/* ==== панель кнопок ==== */
 .controls{
   width:100%;
-  display:flex; align-items:center; justify-content:center; /* центрируем всегда */
+  display:flex; align-items:center; justify-content:center;
   gap:8px; flex-wrap:wrap;
   background:transparent; padding:0; border:none;
 }
@@ -139,7 +140,7 @@ body.dragging .drop-overlay{ display:flex; }
 .btn.ghost     { background:transparent; color:#dce3ef; border:1px dashed #2e374f; }
 .btn.subtle    { background:#1f2638; color:#dce3ef; border:1px solid #2a3350; }
 
-/* Лоудер на share */
+/* лоудер на share */
 .btn.loading{ opacity:.95; pointer-events:none; position:relative; }
 .btn.loading::after{
   content:""; width:14px; height:14px; margin-left:6px;
@@ -149,7 +150,7 @@ body.dragging .drop-overlay{ display:flex; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ===================== HUD ===================== */
+/* HUD */
 .pos-hud{
   position:absolute; left:8px; bottom:8px; z-index:6;
   font-size:12px; color:#e3e9f5; background:rgba(0,0,0,.5);
@@ -157,7 +158,7 @@ body.dragging .drop-overlay{ display:flex; }
   opacity:.9;
 }
 
-/* ===================== TOAST ===================== */
+/* тост */
 .toast{
   position:fixed; padding:8px 10px; background:rgba(0,0,0,.85); color:#fff; border-radius:8px;
   font-size:12px; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
@@ -166,17 +167,17 @@ body.dragging .drop-overlay{ display:flex; }
 }
 .toast.show{ opacity:1; }
 
-/* Версия */
+/* версия */
 .ver{
   position:fixed; right:8px; bottom:6px; z-index:1000;
   font-size:11px; line-height:1; padding:4px 6px; color:#bbb;
   background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
 }
 
-/* ===================== МОБИЛЬНЫЙ / PWA ===================== */
+/* ==== мобайл / PWA ==== */
 body.is-mobile .page{ padding:0; }
 body.is-mobile .app{ max-width:none; }
-body.is-mobile .controls{ display:none !important; } /* только просмотр */
+body.is-mobile .controls{ display:none !important; }
 body.is-mobile{ overflow:hidden; }
 body.is-mobile .wrapper{
   position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
