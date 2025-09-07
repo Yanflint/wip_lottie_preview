@@ -1,19 +1,9 @@
 {
-  "name": "lottie-preview-netlify",
+  "name": "lottie-preview",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "netlify dev",
-    "build": "echo \"static\""
-  },
   "dependencies": {
-    "@netlify/blobs": "^8.0.0",
-    "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "netlify-cli": "^17.0.0"
-  },
-  "dependencies": {
-    "@netlify/blobs": "^6.0.0"
+    "@netlify/blobs": "^6.5.0"
   }
 }
