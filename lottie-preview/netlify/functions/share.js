@@ -5,34 +5,42 @@ import { getStore } from '@netlify/blobs';
 
 export const handler = async (event) => {
   try {
-    if (event.httpMethod !== 'POST' && event.httpMethod !== 'PUT') {
+    const method = event.httpMethod || 'GET';
+    if (method !== 'POST' && method !== 'PUT') {
       return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
     const body = JSON.parse(event.body || '{}');
 
-    // нормализуем снапшот (важные поля)
+    // Нормализуем снапшот: храним только нужные поля
     const snap = {
       v: 3,
-      bg: body.bg || null,
-      overlay: body.overlay || null,
-      lot: body.lot || null,
-      pos: (body.pos && Number.isFinite(body.pos.dx) && Number.isFinite(body.pos.dy))
-            ? { dx: body.pos.dx|0, dy: body.pos.dy|0 } : { dx:0, dy:0 },
+      bg: typeof body.bg === 'string' ? body.bg : null,
+      overlay: typeof body.overlay === 'string' ? body.overlay : null,
+      lot: body.lot ?? null,
+      pos: body.pos && typeof body.pos === 'object'
+        ? { dx: body.pos.dx | 0, dy: body.pos.dy | 0 }
+        : { dx: 0, dy: 0 },
       opts: { loop: !!(body.opts && body.opts.loop) },
-      bgx: Math.max(1, Math.min(4, body.bgx|0 || 1)),
-      bgNatural: body.bgNatural || null
+      bgx: typeof body.bgx === 'number' ? body.bgx : null,
+      bgNatural: body.bgNatural && typeof body.bgNatural === 'object'
+        ? { w: body.bgNatural.w | 0, h: body.bgNatural.h | 0 }
+        : null,
     };
 
-    // id
+    // id: если не передан, создаём
     let id = event.queryStringParameters && event.queryStringParameters.id;
-    if (!id) id = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+    if (!id) id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-    const store = getStore('shots'); // имя стора — любое; одно для проекта
+    const store = getStore('shots'); // одно имя стора на проект
     await store.set(id, JSON.stringify(snap), { contentType: 'application/json' });
 
-    return { statusCode: 200, body: JSON.stringify({ id }) };
-  } catch (e) {
+    return {
+      statusCode: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id }),
+    };
+  } catch {
     return { statusCode: 500, body: 'share failed' };
   }
 };
