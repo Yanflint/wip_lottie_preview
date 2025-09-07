@@ -1,10 +1,19 @@
 'use strict';
 
-const VERSION = 'v72 owner default, loop label fix, readonly logic, dnd zones ok, @nx';
-const LS_SHARE_KEY = 'lp_share_id';
+/* =========================================================
+   v73  — fix:
+   - overlay + pos восстанавливаются надёжно (в любом порядке)
+   - зритель никогда не видит «Поделиться/Обновить»
+   - владелец определяется по списку owned_ids в localStorage
+   - HUD показывает размер композиции Lottie для проверки
+   ========================================================= */
+
+const VERSION = 'v73 pos+overlay share, strict viewer RO, owned-ids';
+const LS_OWNED_IDS = 'lp_owned_ids';   // JSON-массив id, которыми владелец владеет (создавал)
+const MOBILE_THRESHOLD_W = 920;
 
 document.addEventListener('DOMContentLoaded', () => {
-  /* DOM */
+  /* ---------- DOM ---------- */
   const wrapper     = document.getElementById('wrapper');
   const preview     = document.getElementById('preview');
   const bgImg       = document.getElementById('bgImg');
@@ -27,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const lotStage    = document.getElementById('lotStage');
   const lottieMount = document.getElementById('lottie');
 
-  /* STATE */
+  /* ---------- STATE ---------- */
   const MOBILE = isMobile();
   if (verEl) verEl.textContent = VERSION;
   if (MOBILE) document.body.classList.add('is-mobile');
@@ -35,44 +44,41 @@ document.addEventListener('DOMContentLoaded', () => {
   let anim = null, animName = null, lastLottieJSON = null;
   let loopOn = false;
 
+  // Фон (нативные размеры файла) и bgx (@2x/@3x/@4x → логический размер = nat / bgx)
   let bgNatW = 360, bgNatH = 800;
-  let bgx    = 1;   // 1|2|3|4; логика = nat / bgx
+  let bgx    = 1;
 
+  // Overlay dataURL (если есть)
   let overlaySrc = null;
 
+  // Номинальные размеры композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
-  let pos = { dx: 0, dy: 0 }; // смещение Lottie (логические px фона)
+  // Смещение Lottie относительно центра (в логических пикселях фона)
+  let pos = { dx: 0, dy: 0 };
 
-  let shareId = null;     // id снимка
-  let isOwner = false;    // владелец ссылки?
-  let readOnly = false;   // режим просмотра
+  // Sharing
+  let shareId = null;          // id снимка (?id=…)
+  let isOwner = false;         // владелец этого id?
+  let readOnly = false;        // режим «только просмотр»
 
-  /* UTILS */
+  /* ---------- UTILS ---------- */
   function isMobile(){
     const ua = navigator.userAgent || '';
-    const coarse = matchMediaSafe('(pointer: coarse)');
-    const touch  = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    const small  = Math.min(screen.width, screen.height) <= 820 || window.innerWidth <= 920;
-    const uaMob  = /iPhone|Android|Mobile|iPod|IEMobile|Windows Phone/i.test(ua);
-    return (coarse || touch || uaMob) && small;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const small = Math.min(screen.width, screen.height) <= 820 || window.innerWidth <= MOBILE_THRESHOLD_W;
+    const uaMob= /iPhone|Android|Mobile|iPod|IEMobile|Windows Phone/i.test(ua);
+    return (touch || uaMob) && small;
   }
   function matchMediaSafe(q){ try { return window.matchMedia && window.matchMedia(q).matches; } catch(_){ return false; } }
   function uid(p){ return (p||'id_') + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2); }
-
   function detectBgScaleFromName(name){
     if (!name) return 1;
     const m = /@([234])x(?=\.|$)/i.exec(name);
     return m ? Math.max(1, Math.min(4, parseInt(m[1],10))) : 1;
   }
-  function clampBgx(n){
-    if (!Number.isFinite(n)) return 0;
-    const k = Math.max(1, Math.min(4, n|0));
-    return k;
-  }
-  function logicalSize(){
-    return { w: Math.max(1, Math.round(bgNatW / bgx)), h: Math.max(1, Math.round(bgNatH / bgx)) };
-  }
+  function clampBgx(n){ if (!Number.isFinite(n)) return 0; return Math.max(1, Math.min(4, n|0)); }
+  function logicalSize(){ return { w: Math.max(1, Math.round(bgNatW / bgx)), h: Math.max(1, Math.round(bgNatH / bgx)) }; }
   function getPreviewScale(){
     const rectW = preview.getBoundingClientRect().width || 1;
     const logicalW = preview.clientWidth || rectW;
@@ -95,12 +101,29 @@ document.addEventListener('DOMContentLoaded', () => {
       ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     }
   }
-  function setDisplay(el, show){ if (!el) return; el.style.display = show ? '' : 'none'; }
+  function setDisplay(el, show){ if (el) el.style.display = show ? '' : 'none'; }
 
-  /* LAYOUT */
+  // Владелец id?
+  function getOwnedIds(){
+    try {
+      const raw = localStorage.getItem(LS_OWNED_IDS);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch(_){ return []; }
+  }
+  function addOwnedId(id){
+    try{
+      const arr = getOwnedIds();
+      if (!arr.includes(id)) { arr.push(id); localStorage.setItem(LS_OWNED_IDS, JSON.stringify(arr)); }
+    }catch(_){}
+  }
+  function isOwnedId(id){ return id && getOwnedIds().includes(id); }
+
+  /* ---------- LAYOUT ---------- */
   function layout(){
     const { w: lw, h: lh } = logicalSize();
 
+    // Контейнер превью: desktop — логический размер; mobile — вписываем по ширине экрана (масштабом)
     if (MOBILE){
       const vw = (window.visualViewport && window.visualViewport.width) ? visualViewport.width : window.innerWidth;
       const s = vw / lw;
@@ -110,14 +133,16 @@ document.addEventListener('DOMContentLoaded', () => {
       preview.style.top  = '50%';
       preview.style.transform = `translate(-50%, -50%) scale(${s})`;
     } else {
-      wrapper.style.width  = lw + 'px';
-      wrapper.style.height = lh + 'px';
+      const w = lw, h = lh;
+      wrapper.style.width  = w + 'px';
+      wrapper.style.height = h + 'px';
       preview.style.left = '0'; preview.style.top = '0';
       preview.style.width  = '100%';
       preview.style.height = '100%';
       preview.style.transform = 'none';
     }
 
+    // Lottie-этаж: без масштабирования — только позиция относительно центра
     if (lotNomW && lotNomH){
       lotStage.style.width  = lotNomW + 'px';
       lotStage.style.height = lotNomH + 'px';
@@ -127,12 +152,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (overlaySrc){ ovImg.src = overlaySrc; }
 
     if (posHud){
-      posHud.textContent = `x:${pos.dx>=0?'+':''}${Math.round(pos.dx)} y:${pos.dy>=0?'+':''}${Math.round(pos.dy)} px`;
+      const lotInfo = (lotNomW && lotNomH) ? ` | lot:${lotNomW}×${lotNomH}` : '';
+      posHud.textContent = `x:${pos.dx>=0?'+':''}${Math.round(pos.dx)} y:${pos.dy>=0?'+':''}${Math.round(pos.dy)} px${lotInfo}`;
       posHud.style.display = (MOBILE || readOnly) ? 'none' : 'block';
     }
   }
 
-  /* FILE HELPERS */
+  /* ---------- FILE HELPERS ---------- */
   function readAsDataURL(file){
     return new Promise((res, rej)=>{
       const r = new FileReader();
@@ -149,8 +175,16 @@ document.addEventListener('DOMContentLoaded', () => {
       r.readAsText(file, 'utf-8');
     });
   }
+  async function loadImageMeta(src){
+    return new Promise(res=>{
+      const im = new Image();
+      im.onload = ()=> res({ w: im.naturalWidth, h: im.naturalHeight });
+      im.onerror = ()=> res({ w:0,h:0 });
+      im.src = src;
+    });
+  }
 
-  /* SETTERS */
+  /* ---------- SETTERS: BG / OVERLAY / LOTTIE ---------- */
   async function setBackgroundFromFile(file){
     const src = await readAsDataURL(file);
     const detected = detectBgScaleFromName(file && file.name);
@@ -207,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
     while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
   }
 
-  /* PNG/Lottie кнопка */
+  /* ---------- PNG/Lottie кнопка ---------- */
   if (pickBtn && filePick){
     pickBtn.addEventListener('click', ()=> { if(!readOnly) filePick.click(); });
     filePick.addEventListener('change', async (e)=>{
@@ -240,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function isImageFile(f){ return f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name)); }
   function isJsonFile(f){ return f && (f.type === 'application/json' || /\.json$/i.test(f.name)); }
 
-  /* Drag&Drop */
+  /* ---------- Drag&Drop + маршрутизация ---------- */
   let dragDepth = 0;
   document.addEventListener('dragenter',(e)=>{ e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
   document.addEventListener('dragover', (e)=>{ e.preventDefault(); });
@@ -250,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const files = (e.dataTransfer && e.dataTransfer.files) ? Array.from(e.dataTransfer.files) : [];
     if (!files.length) { document.body.classList.remove('dragging'); dragDepth=0; return; }
 
-    // зона сначала!
+    // важно: определить зону ДО снятия класса
     const pt = { x: e.clientX, y: e.clientY };
     const zone = zoneAtPoint(pt);
     document.body.classList.remove('dragging'); dragDepth=0;
@@ -310,27 +344,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (x > 0.66) return 'overlay';
     return 'lottie';
   }
-  function loadImageMeta(src){
-    return new Promise(res=>{
-      const im = new Image();
-      im.onload = ()=> res({ w: im.naturalWidth, h: im.naturalHeight });
-      im.onerror = ()=> res({ w:0,h:0 });
-      im.src = src;
-    });
-  }
 
-  /* Позиционирование Lottie */
+  /* ---------- Интерактивное позиционирование Lottie ---------- */
   let drag = null;
+
   function startDrag(e){
     if (readOnly) return;
     if (!lotNomW || !lotNomH) return;
     e.preventDefault();
     const scale = getPreviewScale();
-    drag = {
-      startX: e.clientX, startY: e.clientY,
-      startDx: pos.dx, startDy: pos.dy,
-      scale
-    };
+    drag = { startX: e.clientX, startY: e.clientY, startDx: pos.dx, startDy: pos.dy, scale };
     lotStage.classList.add('dragging');
     document.querySelector('.overlay')?.classList.add('dim');
     window.addEventListener('pointermove', onDragMove);
@@ -350,11 +373,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.overlay')?.classList.remove('dim');
     drag = null;
   }
+
   lotStage.addEventListener('pointerdown', startDrag);
   lotStage.addEventListener('mouseenter', ()=> !readOnly && lotStage.classList.add('hover'));
   lotStage.addEventListener('mouseleave', ()=> lotStage.classList.remove('hover'));
 
-  // клавиатура
+  // Клавиатура: стрелки, Shift=×10, R=reset
   window.addEventListener('keydown', (e)=>{
     if (readOnly || MOBILE) return;
     if (/input|textarea|select/i.test((e.target && e.target.tagName) || '')) return;
@@ -369,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (used){ e.preventDefault(); layout(); }
   });
 
-  // мобайл: тап = повтор
+  // Мобайл: тап = повтор
   if (MOBILE) {
     wrapper.addEventListener('click', ()=>{
       if (!anim) return;
@@ -377,13 +401,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* Контролы */
+  /* ---------- Контролы ---------- */
   restartBtn?.addEventListener('click', ()=>{
     if (!anim) return;
     try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
   });
   loopChk?.addEventListener('change', ()=>{
-    if (readOnly) { loopChk.checked = loopOn; return; }
+    const loopLabel = loopChk?.closest('label');
+    if (readOnly) { if(loopLabel) loopLabel.style.display='none'; return; }
     loopOn = !!loopChk.checked;
     if (anim) {
       try { if (typeof anim.setLooping === 'function') anim.setLooping(loopOn); else anim.loop = loopOn; }
@@ -395,12 +420,12 @@ document.addEventListener('DOMContentLoaded', () => {
     pos.dx = 0; pos.dy = 0; layout();
   });
 
-  /* Share */
+  /* ---------- SHARE ---------- */
   function snapshot(){
     return {
       v: 3,
       bg: bgImg.src || null,
-      overlay: overlaySrc || null,
+      overlay: overlaySrc || null,   // может быть большим dataURL
       lot: lastLottieJSON || null,
       pos: { dx: pos.dx, dy: pos.dy },
       opts: { loop: !!loopOn },
@@ -427,30 +452,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (readOnly) return;
     await withLoading(shareBtn, async ()=>{
       if (!bgImg.src && !lastLottieJSON){ showToastNear(shareBtn, 'Загрузите фон или Lottie'); return; }
-
       try {
-        if (!shareId){
+        let id = shareId;
+        if (!id){
+          // Создание
           const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(snapshot()) });
           if (!resp.ok) throw new Error('share failed');
           const data = await resp.json();
-          shareId = String(data.id || '');
-          localStorage.setItem(LS_SHARE_KEY, shareId);
-          copyBtn.disabled = false;
+          id = String(data.id || '');
+          shareId = id;
+          addOwnedId(id);
+          copyBtn && (copyBtn.disabled = false);
           shareBtn.textContent = 'Обновить';
-          isOwner = true; readOnly = false;
+          isOwner = true;
+          readOnly = false;
           applyOwnershipUI();
         } else {
-          const resp = await fetch('/api/share?id=' + encodeURIComponent(shareId), { method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(snapshot()) });
+          // Обновление
+          const resp = await fetch('/api/share?id=' + encodeURIComponent(id), { method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(snapshot()) });
           if (!resp.ok) throw new Error('update failed');
         }
         const link = location.origin + location.pathname + '?id=' + encodeURIComponent(shareId);
         await copyText(link);
-        showToastNear(copyBtn, 'Скопировано');
+        showToastNear(copyBtn || shareBtn, 'Скопировано');
       } catch(e){
+        // Fallback: локальная ссылка
         const link = localPackedLink();
         await copyText(link);
-        copyBtn.disabled = false;
-        showToastNear(copyBtn, 'Скопировано (локально)');
+        copyBtn && (copyBtn.disabled = false);
+        showToastNear(copyBtn || shareBtn, 'Скопировано (локально)');
       }
     });
   });
@@ -466,17 +496,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyOwnershipUI(){
     const loopLabel = loopChk ? loopChk.closest('label') : null;
 
-    // Владелец ИЛИ локальный режим (нет shareId) — полный доступ
     if (!shareId || isOwner){
+      // Режим редактирования (локально или владелец id)
       [pickBtn, resetPosBtn, shareBtn, copyBtn, restartBtn].forEach(el=> setDisplay(el, true));
       setDisplay(loopLabel, true);
       readOnly = false;
-      if (!shareId && copyBtn) { copyBtn.disabled = true; }
-      if (!shareId && shareBtn) { shareBtn.textContent = 'Поделиться'; }
+      if (!shareId && copyBtn) copyBtn.disabled = true;
+      if (!shareId && shareBtn) shareBtn.textContent = 'Поделиться';
       return;
     }
 
-    // Зритель: только просмотр, оставляем только «Повтор»
+    // Зритель: только просмотр (оставляем только «Плей»)
     [pickBtn, resetPosBtn, shareBtn, copyBtn].forEach(el=> setDisplay(el, false));
     setDisplay(loopLabel, false);
     setDisplay(restartBtn, true);
@@ -484,15 +514,13 @@ document.addEventListener('DOMContentLoaded', () => {
     layout();
   }
 
-  /* Загрузка из ссылки — порядок фикс + режимы */
+  /* ---------- LOAD FROM LINK (порядок и совместимость ключей) ---------- */
   (async function loadFromLink(){
     const qs = new URLSearchParams(location.search);
     const id = qs.get('id');
     const d  = qs.get('d');
 
-    const ownerId = localStorage.getItem(LS_SHARE_KEY) || '';
-
-    // БЕЗ id/d: по умолчанию — режим РЕДАКТИРОВАНИЯ (владелец локальной сессии)
+    // Нет id/d → локальный редактируемый режим
     if (!id && !d){
       shareId = null;
       isOwner = true;
@@ -505,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       if (id){
         shareId = String(id);
-        isOwner = (shareId && shareId === ownerId);
+        isOwner = isOwnedId(shareId);
         readOnly = !isOwner;
         applyOwnershipUI();
 
@@ -513,26 +541,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!resp.ok) throw new Error('404');
         const snap = await resp.json();
 
-        // 1) pos и bgx сначала
-        if (snap.pos && Number.isFinite(snap.pos.dx) && Number.isFinite(snap.pos.dy)){
-          pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0;
+        // Совместимость: принимаем overlay под ключами overlay/ov; pos под pos/position
+        const snapPos = snap.pos || snap.position || null;
+        if (snapPos && Number.isFinite(snapPos.dx) && Number.isFinite(snapPos.dy)){
+          pos.dx = snapPos.dx|0; pos.dy = snapPos.dy|0;
         } else { pos.dx = 0; pos.dy = 0; }
+
         const sx = clampBgx(snap.bgx); if (sx) bgx = sx;
 
-        // 2) overlay сразу
-        if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
+        const ov = snap.overlay || snap.ov || null;
+        if (ov){ overlaySrc = ov; ovImg.src = overlaySrc; }
 
-        // 3) фон и лотти
         if (snap.bg)  await setBackgroundFromSrc(snap.bg, bgx);
         if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
 
-        // 4) loop
         if (snap.opts && typeof snap.opts.loop === 'boolean'){
           loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn;
         }
 
         layout();
-        if (isOwner){ shareBtn.textContent = 'Обновить'; copyBtn.disabled = false; }
+        if (isOwner){ shareBtn.textContent = 'Обновить'; copyBtn && (copyBtn.disabled = false); }
         return;
       }
 
@@ -542,34 +570,44 @@ document.addEventListener('DOMContentLoaded', () => {
           : decodeURIComponent(d);
         const snap = JSON.parse(json);
 
-        if (snap.pos && Number.isFinite(snap.pos.dx) && Number.isFinite(snap.pos.dy)){
-          pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0;
+        const snapPos = snap.pos || snap.position || null;
+        if (snapPos && Number.isFinite(snapPos.dx) && Number.isFinite(snapPos.dy)){
+          pos.dx = snapPos.dx|0; pos.dy = snapPos.dy|0;
         } else { pos.dx = 0; pos.dy = 0; }
         const sx = clampBgx(snap.bgx); if (sx) bgx = sx;
 
-        if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
+        const ov = snap.overlay || snap.ov || null;
+        if (ov){ overlaySrc = ov; ovImg.src = overlaySrc; }
+
         if (snap.bg)  await setBackgroundFromSrc(snap.bg, bgx);
         if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
         if (snap.opts && typeof snap.opts.loop === 'boolean'){
           loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn;
         }
 
-        // Локальный packed — редактируемый
+        // packed d-ссылка — редактируемая (локально)
         shareId = null; isOwner = true; readOnly = false;
         applyOwnershipUI();
         layout();
       }
     } catch(e){
-      console.error(e);
-      // На ошибке — оставляем редактируемый режим, чтобы можно было продолжить локально
-      shareId = null; isOwner = true; readOnly = false;
-      applyOwnershipUI();
-      layout();
+      console.error('[loadFromLink]', e);
+      // Если сломалось получение по id — оставляем режим зрителя (без кнопок), чтобы не было «Обновить»
+      if (shareId){
+        isOwner = false; readOnly = true;
+        applyOwnershipUI();
+        layout();
+      } else {
+        // для packed d — оставляем редактирование
+        shareId = null; isOwner = true; readOnly = false;
+        applyOwnershipUI();
+        layout();
+      }
     }
   })();
 
-  /* misc */
-  window.addEventListener('resize', ()=>{ layout(); });
+  /* ---------- MISC ---------- */
+  window.addEventListener('resize', ()=> layout());
   window.visualViewport && window.visualViewport.addEventListener('resize', layout);
 
   // init
