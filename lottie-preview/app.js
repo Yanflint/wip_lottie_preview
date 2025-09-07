@@ -1,95 +1,52 @@
-/* v74 — viewer/owner, pos+overlay in share, retina @nx, canonical link, Netlify functions
-   Автор: обновление под простую статическую структуру (index.html + app.js + style.css)
+/* app.js — v75
+   Статический редактор/просмотр Lottie:
+   - фон @nx → логический размер = natural / nx
+   - позиция Lottie (dx,dy) в логических px
+   - overlay поверх всего
+   - share/update через Netlify Functions (/.netlify/functions/share, /.netlify/functions/shot)
+   - fallback: длинная ?d=… (LZString, если подключён), только просмотр
 */
 
 'use strict';
 
-const VERSION = 'v74';
-const LS_OWNED_IDS = 'lp_owned_ids'; // список id, которые вы создавали → вы «владелец»
+// ====== ГЛОБАЛЫ / DOM ======
+const VERSION = 'v75';
+const LS_OWNED_IDS = 'lp_owned_ids';
 
-// --- DOM ---
 const $ = (sel) => document.querySelector(sel);
+
 let wrapper, preview, bgImg, ovImg, phEl, dropOverlay, posHud;
 let pickBtn, filePick, restartBtn, loopChk, resetPosBtn, shareBtn, copyBtn, verEl;
 let lotStage, lottieMount;
 
-// --- STATE ---
 let MOBILE = false;
-let readOnly = false;  // «просмотр» при открытии чужой ссылки
-let isOwner = true;    // владелец ли текущего снимка
-let shareId = null;    // id снимка в Netlify Blobs
 
-// фон
-let bgNatW = 0, bgNatH = 0;
-let bgx = 1; // bg fit: 0 — contain, 1 — cover (default)
-let overlaySrc = null;
-
-// позиция смещения контента (drag)
-const pos = { dx: 0, dy: 0 };
-
-// лотти
-let anim = null;
+// ====== СОСТОЯНИЕ ======
+let anim = null, animName = null, lastLottieJSON = null;
 let loopOn = true;
-let lastLottieJSON = null;
 
-// retina масштаб
-let nx = 1;
+let bgNatW = 360, bgNatH = 800;  // натуральные размеры фона
+let bgx    = 1;                  // DPR из имени: @2x/@3x/@4x → 2/3/4
 
-// --- utils DOM ---
-function setDisplay(el, on){ if (!el) return; el.style.display = on ? '' : 'none'; }
-function setClass(el, cls, on){ if (!el) return; el.classList.toggle(cls, !!on); }
-function showToastNear(anchor, text){
-  if (!anchor) return alert(text);
-  const div = document.createElement('div');
-  div.className = 'toast';
-  div.textContent = text;
-  document.body.appendChild(div);
-  const rect = anchor.getBoundingClientRect();
-  const x = rect.left + rect.width/2 - div.offsetWidth/2;
-  const y = rect.top - 8 - div.offsetHeight;
-  div.style.left = Math.max(8, Math.min(window.innerWidth - div.offsetWidth - 8, x)) + 'px';
-  div.style.top  = Math.max(8, y) + 'px';
-  setTimeout(()=> div.remove(), 1500);
-}
+let overlaySrc = null;           // dataURL overlay
 
-async function copyText(text){
-  try{
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch(_){
-    try{
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.setAttribute('readonly', '');
-      ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta);
-      return true;
-    } catch(_){
-      return false;
-    }
-  }
-}
+let lotNomW = 0, lotNomH = 0;    // размеры композиции Lottie (из JSON)
+let pos = { dx: 0, dy: 0 };      // смещение от центра в логических px
 
-function canonicalOrigin(){
-  // Приводим origin к каноническому виду без параметров, чтобы ссылки сгенерились стабильно
-  try{
-    const u = new URL(location.href);
-    return u.origin;
-  } catch(_){
-    return location.origin || '';
-  }
-}
+let shareId = null;              // id снимка (share)
+let isOwner = false;             // владелец ли текущий пользователь
+let readOnly = false;            // режим просмотра (без редактирования)
 
-function clampBgx(x){ x = +x; if (!Number.isFinite(x)) return 1; return Math.max(0, Math.min(1, x)); }
+// ====== ИНИЦИАЛИЗАЦИЯ ======
+document.addEventListener('DOMContentLoaded', init);
 
-// --- init ---
-function bindDom(){
+function init(){
   wrapper     = $('#wrapper');
   preview     = $('#preview');
-  bgImg       = $('#bg');
-  ovImg       = $('#overlay');
+  bgImg       = $('#bgImg');
+  ovImg       = $('#ovImg');
   phEl        = $('#ph');
-  dropOverlay = $('#drop');
+  dropOverlay = $('#dropOverlay');
   posHud      = $('#posHud');
 
   pickBtn     = $('#pickBtn');
@@ -105,35 +62,334 @@ function bindDom(){
   lottieMount = $('#lottie');
 
   MOBILE = isMobile();
-  verEl && (verEl.textContent = VERSION);
-  MOBILE && document.body.classList.add('is-mobile');
+  if (verEl) verEl.textContent = VERSION;
+  if (MOBILE) document.body.classList.add('is-mobile');
 
-  // drag drop
-  ['dragenter','dragover'].forEach(evt => {
-    document.addEventListener(evt, (e)=>{
-      e.preventDefault(); e.stopPropagation();
-      dropOverlay && (dropOverlay.style.display = 'flex');
-    });
+  bindUI();
+  loadFromLink();   // определит owner/viewer и поднимет снапшот
+  layout();
+
+  window.addEventListener('resize', layout);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', layout);
+}
+
+// ====== УТИЛИТЫ ======
+function isMobile(){
+  const ua = navigator.userAgent || '';
+  const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const small = Math.min(screen.width, screen.height) <= 820 || window.innerWidth <= 920;
+  const uaMob = /iPhone|Android|Mobile|iPod|IEMobile|Windows Phone/i.test(ua);
+  return (touch || uaMob) && small;
+}
+
+function uid(p){ return (p||'id_') + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2); }
+
+function setDisplay(el, show){ if(el) el.style.display = show ? '' : 'none'; }
+
+function showToastNear(el, msg){
+  const toast = $('#toast'); if (!toast) return;
+  toast.textContent = msg;
+  const r = el?.getBoundingClientRect?.();
+  if (r){ toast.style.left = (r.left + r.width/2) + 'px'; toast.style.top = (r.top - 12) + 'px'; }
+  else { toast.style.left = '50%'; toast.style.top = (window.innerHeight - 24) + 'px'; }
+  toast.classList.add('show');
+  clearTimeout(showToastNear._t);
+  showToastNear._t = setTimeout(()=>toast.classList.remove('show'), 1400);
+}
+
+async function copyText(s){
+  try { await navigator.clipboard.writeText(s); }
+  catch(_){
+    const ta = document.createElement('textarea'); ta.value = s;
+    ta.style.position='fixed'; ta.style.left='-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+function getOwnedIds(){
+  try { const raw = localStorage.getItem(LS_OWNED_IDS); const arr = raw?JSON.parse(raw):[]; return Array.isArray(arr)?arr:[]; }
+  catch(_){ return []; }
+}
+function addOwnedId(id){
+  try {
+    const arr = getOwnedIds(); if(!arr.includes(id)){ arr.push(id); localStorage.setItem(LS_OWNED_IDS, JSON.stringify(arr)); }
+  } catch(_){}
+}
+function isOwnedId(id){ return !!id && getOwnedIds().includes(id); }
+
+function detectBgScaleFromName(name){
+  if (!name) return 1;
+  const m = /@([234])x(?=\.|$)/i.exec(name);
+  if (!m) return 1;
+  const n = +m[1]; return (n===2||n===3||n===4)?n:1;
+}
+function clampBgx(n){ if(!Number.isFinite(n)) return 1; n|=0; return Math.max(1, Math.min(4, n)); }
+function logicalSize(){ return { w: Math.max(1, Math.round(bgNatW / bgx)), h: Math.max(1, Math.round(bgNatH / bgx)) }; }
+
+function getPreviewScale(){
+  const rectW = preview.getBoundingClientRect().width || 1;
+  const logicalW = preview.clientWidth || rectW;
+  return rectW / logicalW;
+}
+
+function canonicalOrigin(){ return location.origin; }
+
+// ====== ВЫЧИСЛЕНИЕ МАКЕТА ======
+function layout(){
+  const { w: lw, h: lh } = logicalSize();
+
+  if (MOBILE){
+    const vw = (window.visualViewport?.width) || window.innerWidth;
+    const s = vw / lw;
+    preview.style.width  = lw + 'px';
+    preview.style.height = lh + 'px';
+    preview.style.left = '50%';
+    preview.style.top  = '50%';
+    preview.style.transform = `translate(-50%, -50%) scale(${s})`;
+  } else {
+    wrapper.style.width  = lw + 'px';
+    wrapper.style.height = lh + 'px';
+    preview.style.left = '0'; preview.style.top = '0';
+    preview.style.width  = '100%';
+    preview.style.height = '100%';
+    preview.style.transform = 'none';
+  }
+
+  if (lotNomW && lotNomH){
+    lotStage.style.width  = lotNomW + 'px';
+    lotStage.style.height = lotNomH + 'px';
+    lotStage.style.transform = `translate(-50%, -50%) translate(${pos.dx}px, ${pos.dy}px)`;
+  }
+
+  if (overlaySrc) ovImg.src = overlaySrc;
+
+  if (posHud){
+    const lotInfo = (lotNomW && lotNomH) ? ` | lot:${lotNomW}×${lotNomH}` : '';
+    posHud.textContent = `x:${pos.dx>=0?'+':''}${pos.dx} y:${pos.dy>=0?'+':''}${pos.dy} px · dpr:${bgx}x${lotInfo}`;
+    posHud.style.display = (MOBILE || readOnly) ? 'none' : 'block';
+  }
+}
+
+// ====== FILE I/O ======
+function readAsDataURL(file){
+  return new Promise((res, rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(String(r.result));
+    r.onerror = rej;
+    r.readAsDataURL(file);
   });
-  ['dragleave','drop'].forEach(evt => {
-    document.addEventListener(evt, (e)=>{
-      e.preventDefault(); e.stopPropagation();
-      if (evt==='drop'){
-        const dt = e.dataTransfer;
-        if (dt && dt.files && dt.files.length){
-          handleFiles(dt.files);
+}
+function readAsText(file){
+  return new Promise((res, rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(String(r.result));
+    r.onerror = rej;
+    r.readAsText(file, 'utf-8');
+  });
+}
+function loadImageMeta(src){
+  return new Promise((res)=>{
+    const im = new Image();
+    im.onload = ()=> res({ w: im.naturalWidth, h: im.naturalHeight });
+    im.onerror = ()=> res({ w:0,h:0 });
+    im.src = src;
+  });
+}
+
+// ====== BG / OVERLAY / LOTTIE ======
+async function setBackgroundFromFile(file){
+  const src = await readAsDataURL(file);
+  const detected = detectBgScaleFromName(file?.name);
+  await setBackgroundFromSrc(src, detected || 1);
+}
+async function setBackgroundFromSrc(src, scaleHint=1){
+  const meta = await loadImageMeta(src);
+  bgNatW = meta.w || 0;
+  bgNatH = meta.h || 0;
+  bgx    = clampBgx(scaleHint || 1);
+  bgImg.src = src;
+  if (phEl) phEl.classList.add('hidden');
+  layout();
+}
+async function setOverlayFromFile(file){
+  const src = await readAsDataURL(file);
+  overlaySrc = src;
+  ovImg.src  = src;
+  layout();
+}
+
+function loadLottieFromData(animationData){
+  renewLottieRoot();
+  lotNomW = Number(animationData.w) || 0;
+  lotNomH = Number(animationData.h) || 0;
+  animName = uid('anim_');
+  lastLottieJSON = animationData;
+
+  try { if (typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_){}
+
+  requestAnimationFrame(()=>{
+    anim = lottie.loadAnimation({
+      name: animName,
+      container: lottieMount,
+      renderer: 'svg',
+      loop: loopOn,
+      autoplay: true,
+      animationData: JSON.parse(JSON.stringify(animationData))
+    });
+    anim.addEventListener('DOMLoaded', layout);
+  });
+}
+
+function renewLottieRoot(){
+  try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
+  try { anim?.destroy?.(); } catch(_){}
+  anim = null; animName = null;
+  while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
+}
+
+// ====== UI / BINDINGS ======
+function bindUI(){
+  // PNG/Lottie кнопка
+  if (pickBtn && filePick){
+    pickBtn.addEventListener('click', ()=> { if(!readOnly) filePick.click(); });
+    filePick.addEventListener('change', async (e)=>{
+      if (readOnly) { e.target.value=''; return; }
+      const f = e.target.files?.[0]; if (!f) return;
+      try{
+        if (isImageFile(f)) {
+          const lower = f.name.toLowerCase();
+          if (!bgImg.src || /(^|[_\-\.])(bg|1)(@[\d]x)?\./i.test(lower)) {
+            await setBackgroundFromFile(f);
+          } else if (/overlay|ov|2(\@[\d]x)?\./i.test(lower)) {
+            await setOverlayFromFile(f);
+          } else if (!overlaySrc) {
+            await setOverlayFromFile(f);
+          } else {
+            await setOverlayFromFile(f);
+          }
+        } else if (isJsonFile(f)) {
+          const data = await readAsText(f);
+          loadLottieFromData(JSON.parse(String(data)));
+        } else {
+          alert('Поддерживаются PNG/JPEG/WebP (фон/overlay) и JSON (Lottie).');
         }
-      }
-      dropOverlay && (dropOverlay.style.display = 'none');
+      } finally { e.target.value = ''; }
     });
+  }
+
+  // Drag & Drop (три зоны)
+  let dragDepth = 0;
+  document.addEventListener('dragenter',(e)=>{ e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+  document.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+  document.addEventListener('dragleave',(e)=>{ e.preventDefault(); dragDepth=Math.max(0,dragDepth-1); if(!dragDepth) document.body.classList.remove('dragging'); });
+  document.addEventListener('drop',     async (e)=>{
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files.length) { document.body.classList.remove('dragging'); dragDepth=0; return; }
+    const pt = { x: e.clientX, y: e.clientY };
+    const zone = zoneAtPoint(pt);
+    document.body.classList.remove('dragging'); dragDepth=0;
+    if (readOnly) return;
+
+    if (files.length === 1){
+      const f = files[0];
+      if (isJsonFile(f)) { const data = await readAsText(f); loadLottieFromData(JSON.parse(String(data))); return; }
+      if (isImageFile(f)) {
+        if (zone === 'bg')      return await setBackgroundFromFile(f);
+        if (zone === 'overlay') return await setOverlayFromFile(f);
+        const lower = f.name.toLowerCase();
+        if (/(^|[_\-\.])(bg|1)(@[\d]x)?\./i.test(lower)) return await setBackgroundFromFile(f);
+        if (/(overlay|ov|2)(@[\d]x)?\./i.test(lower))    return await setOverlayFromFile(f);
+        if (!bgImg.src) return await setBackgroundFromFile(f);
+        return await setOverlayFromFile(f);
+      }
+      return;
+    }
+
+    const imgs  = files.filter(isImageFile);
+    const jsons = files.filter(isJsonFile);
+
+    if (jsons.length) {
+      const f = jsons[0]; const data = await readAsText(f);
+      try { loadLottieFromData(JSON.parse(String(data))); } catch(_){ alert('Некорректный JSON Lottie'); }
+    }
+
+    if (imgs.length === 1) {
+      const f = imgs[0];
+      const lower = f.name.toLowerCase();
+      if (/overlay|ov|2/.test(lower)) await setOverlayFromFile(f);
+      else await setBackgroundFromFile(f);
+    } else if (imgs.length >= 2) {
+      // самая большая → фон, вторая → overlay
+      const metas = await Promise.all(imgs.map(async f=>{
+        const src = await readAsDataURL(f);
+        const m = await loadImageMeta(src);
+        return { f, area:(m.w||0)*(m.h||0) };
+      }));
+      metas.sort((a,b)=>b.area-a.area);
+      if (metas[0]) await setBackgroundFromFile(metas[0].f);
+      if (metas[1]) await setOverlayFromFile(metas[1].f);
+    }
   });
 
-  // files
-  pickBtn?.addEventListener('click', ()=> filePick?.click());
-  filePick?.addEventListener('change', ()=> handleFiles(filePick.files || []));
+  function zoneAtPoint(pt){
+    const r = dropOverlay.getBoundingClientRect();
+    if (!r || !document.body.classList.contains('dragging')) return null;
+    const x = (pt.x - r.left) / Math.max(1, r.width);
+    if (x < 0.33) return 'bg';
+    if (x > 0.66) return 'overlay';
+    return 'lottie';
+  }
 
-  // buttons
-  restartBtn?.addEventListener('click', restart);
+  // Перетаскивание Lottie
+  let drag = null;
+  lotStage.addEventListener('pointerdown', (e)=>{
+    if (readOnly || !lotNomW || !lotNomH) return;
+    e.preventDefault();
+    const scale = getPreviewScale();
+    drag = { startX:e.clientX, startY:e.clientY, startDx:pos.dx, startDy:pos.dy, scale };
+    lotStage.classList.add('dragging'); $('.overlay')?.classList.add('dim');
+    window.addEventListener('pointermove', onDragMove);
+    window.addEventListener('pointerup', onDragEnd, { once:true });
+  });
+  function onDragMove(e){
+    if (!drag) return;
+    const dx = (e.clientX - drag.startX) / drag.scale;
+    const dy = (e.clientY - drag.startY) / drag.scale;
+    pos.dx = Math.round(drag.startDx + dx);
+    pos.dy = Math.round(drag.startDy + dy);
+    layout();
+  }
+  function onDragEnd(){
+    window.removeEventListener('pointermove', onDragMove);
+    lotStage.classList.remove('dragging'); $('.overlay')?.classList.remove('dim');
+    drag = null;
+  }
+
+  // Клавиатура
+  window.addEventListener('keydown', (e)=>{
+    if (readOnly || MOBILE) return;
+    if (/input|textarea|select/i.test(e.target?.tagName||'')) return;
+    let step = e.shiftKey ? 10 : 1, used=false;
+    if (e.key==='ArrowLeft')  { pos.dx -= step; used=true; }
+    if (e.key==='ArrowRight') { pos.dx += step; used=true; }
+    if (e.key==='ArrowUp')    { pos.dy -= step; used=true; }
+    if (e.key==='ArrowDown')  { pos.dy += step; used=true; }
+    if (e.key.toLowerCase()==='r') { pos.dx=0; pos.dy=0; used=true; }
+    if (used){ e.preventDefault(); layout(); }
+  });
+
+  // Мобайл: тап = повтор
+  if (MOBILE) {
+    wrapper.addEventListener('click', ()=>{
+      if (!anim) return;
+      try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
+    });
+  }
+
+  restartBtn?.addEventListener('click', ()=>{
+    if (!anim) return; try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
+  });
   loopChk?.addEventListener('change', ()=>{
     if (readOnly){ loopChk.checked = loopOn; return; }
     loopOn = !!loopChk.checked;
@@ -151,61 +407,65 @@ function bindDom(){
   });
 }
 
-// ---------- SHARE ----------
+// ====== SNAPSHOT / SHARE ======
 function snapshot(){
   return {
     v: 3,
     bg: bgImg.src || null,
     overlay: overlaySrc || null,
     lot: lastLottieJSON || null,
-    pos: { dx: pos.dx, dy: pos.dy },
+    pos: { dx: pos.dx|0, dy: pos.dy|0 },
     opts: { loop: !!loopOn },
-    bgx: bgx,
-    bgNatural: { w: bgNatW, h: bgNatH }
+    bgx: Math.max(1, Math.min(4, bgx|0)) || 1,
+    bgNatural: { w: bgNatW|0, h: bgNatH|0 }
   };
 }
+
 function localPackedLink(){
   const json = JSON.stringify(snapshot());
   const packed = (window.LZString?.compressToEncodedURIComponent)
       ? window.LZString.compressToEncodedURIComponent(json)
       : encodeURIComponent(json);
-  // КЛЮЧЕВАЯ ПРАВКА: используем hash (#d=...), чтобы ссылка реже ломалась
-  return canonicalOrigin() + location.pathname + '#d=' + packed;
+  return canonicalOrigin() + location.pathname + '?d=' + packed;
 }
 
 async function doShareOrUpdate(){
-  if (!shareBtn) return;
-  const original = shareBtn.textContent;
-  shareBtn.classList.add('loading');
-  shareBtn.textContent = shareId ? 'Обновляю…' : 'Публикую…';
-  try{
-    // подготовим снимок
-    const body = snapshot();
+  if (readOnly) return;
+  if (!bgImg.src && !lastLottieJSON){ showToastNear(shareBtn, 'Загрузите фон или Lottie'); return; }
 
+  shareBtn.classList.add('loading');
+  const original = shareBtn.textContent;
+  shareBtn.textContent = shareId ? 'Обновление…' : 'Ссылка…';
+
+  try{
     if (!shareId){
-      // создаём новый
+      // create
       const resp = await fetch('/.netlify/functions/share', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body)
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify(snapshot())
       });
-      if (!resp.ok) throw new Error('create failed');
-      const { id } = await resp.json();
-      shareId = String(id);
+      if (!resp.ok) throw new Error('share failed');
+      const data = await resp.json();
+      shareId = String(data.id || '');
       addOwnedId(shareId);
+      shareBtn.textContent = 'Обновить';
+      copyBtn && (copyBtn.disabled = false);
+      isOwner = true; readOnly = false;
+      applyOwnershipUI();
     } else {
-      // обновляем существующий
+      // update
       const resp = await fetch('/.netlify/functions/share?id=' + encodeURIComponent(shareId), {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body)
+        method:'PUT',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify(snapshot())
       });
       if (!resp.ok) throw new Error('update failed');
     }
     const link = canonicalOrigin() + location.pathname + '?id=' + encodeURIComponent(shareId);
     await copyText(link); showToastNear(copyBtn||shareBtn, 'Скопировано');
   } catch(e){
-    // fallback: локальная d-ссылка (но с корректным origin!)
+    // fallback: локальная длинная
     const link = localPackedLink();
     await copyText(link);
     copyBtn && (copyBtn.disabled = false);
@@ -216,21 +476,7 @@ async function doShareOrUpdate(){
   }
 }
 
-// ---------- ownership ----------
-function addOwnedId(id){
-  try{
-    const list = JSON.parse(localStorage.getItem(LS_OWNED_IDS) || '[]');
-    if (!Array.isArray(list)) return localStorage.removeItem(LS_OWNED_IDS);
-    if (!list.includes(id)){ list.push(id); localStorage.setItem(LS_OWNED_IDS, JSON.stringify(list)); }
-  } catch(_){}
-}
-function isOwnedId(id){
-  try{
-    const list = JSON.parse(localStorage.getItem(LS_OWNED_IDS) || '[]');
-    return Array.isArray(list) && list.includes(id);
-  } catch(_){ return false; }
-}
-
+// ====== OWNER / VIEWER ======
 function applyOwnershipUI(){
   const loopLabel = loopChk?.closest('label');
   if (!shareId || isOwner){
@@ -241,167 +487,21 @@ function applyOwnershipUI(){
     if (!shareId && shareBtn) shareBtn.textContent = 'Поделиться';
     return;
   }
-  // зритель чужого снимка
-  [pickBtn, resetPosBtn, shareBtn, restartBtn].forEach(el=> setDisplay(el, false));
-  setDisplay(copyBtn, true);
-  setDisplay(loopLabel, true);
+  // зритель
+  [pickBtn, resetPosBtn, shareBtn, copyBtn].forEach(el=> setDisplay(el, false));
+  setDisplay(loopLabel, false);
+  setDisplay(restartBtn, true);
   readOnly = true;
-}
-
-// ---------- files ----------
-function isImageFile(f){ return f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name)); }
-function isJsonFile(f){ return f && (f.type==='application/json' || /\.json$/i.test(f.name)); }
-
-async function handleFiles(fileList){
-  if (!fileList || !fileList.length) return;
-  // определим, что принесли — фон/оверлей или лотти
-  const imgFiles = []; const jsonFiles = [];
-  for (const f of fileList){
-    if (isImageFile(f)) imgFiles.push(f);
-    else if (isJsonFile(f)) jsonFiles.push(f);
-  }
-  for (const f of imgFiles) await setBackgroundFromFile(f);
-  for (const f of jsonFiles) await loadLottieFromFile(f);
   layout();
 }
 
-function restart(){
-  shareId = null; isOwner = true; readOnly = false;
-  overlaySrc = null;
-  bgImg.src = ''; bgNatW = bgNatH = 0; bgx = 1;
-  pos.dx = 0; pos.dy = 0;
-  lastLottieJSON = null;
-  if (anim){ try { anim.destroy?.(); } catch(_){ /* noop */ } anim = null; }
-  loopOn = true; if (loopChk){ loopChk.checked = true; }
-  applyOwnershipUI(); layout();
-}
-
-// ---------- background / overlay ----------
-async function setBackgroundFromFile(file){
-  const url = URL.createObjectURL(file);
-  await setBackgroundFromSrc(url, bgx);
-}
-async function setBackgroundFromSrc(src, x){
-  return new Promise((resolve)=>{
-    bgImg.onload = ()=>{
-      bgNatW = bgImg.naturalWidth  || bgImg.width  || 0;
-      bgNatH = bgImg.naturalHeight || bgImg.height || 0;
-      bgx = clampBgx(x);
-      layout();
-      resolve();
-    };
-    bgImg.onerror = ()=> resolve();
-    bgImg.src = src || '';
-  });
-}
-function setOverlayFromSrc(src){
-  overlaySrc = src || null;
-  ovImg.src = overlaySrc || '';
-  layout();
-}
-
-// ---------- lottie ----------
-function ensureLottie(){
-  if (window.lottie) return window.lottie;
-  throw new Error('Lottie is not loaded');
-}
-async function loadLottieFromFile(file){
-  try{
-    const text = await file.text();
-    const json = JSON.parse(text);
-    lastLottieJSON = json;
-    loadLottieFromData(json);
-  } catch(e){ console.error(e); }
-}
-function loadLottieFromData(json){
-  try{
-    const lottie = ensureLottie();
-    if (anim){ try { anim.destroy?.(); } catch(_){ /* noop */ } anim = null; }
-    lottieMount.innerHTML = '';
-    anim = lottie.loadAnimation({
-      container: lottieMount,
-      renderer: 'svg',
-      loop: loopOn,
-      autoplay: true,
-      animationData: json
-    });
-    try { anim.setLooping?.(loopOn); } catch(_){ anim.loop = loopOn; }
-  } catch(e){ console.error(e); }
-}
-
-// ---------- layout / drag ----------
-function isMobile(){
-  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
-}
-function layout(){
-  const w = wrapper.clientWidth;
-  const h = wrapper.clientHeight;
-
-  // ретина коэффициент (простой): 1x до 900px, иначе 2x
-  nx = (Math.max(w,h) > 900 ? 2 : 1);
-  document.documentElement.style.setProperty('--nx', String(nx));
-
-  // фон
-  const mode = bgx<0.5 ? 'contain' : 'cover';
-  bgImg.style.objectFit = mode;
-
-  // позиция смещения
-  const tx = Math.round(pos.dx);
-  const ty = Math.round(pos.dy);
-  const t = `translate(${tx}px, ${ty}px)`;
-  lottieMount.style.transform = t;
-  ovImg.style.transform = t;
-
-  // HUD
-  posHud.textContent = `${tx}, ${ty}px`;
-  setDisplay(phEl, !(bgImg.src || lastLottieJSON));
-}
-function beginDrag(e){
-  if (readOnly) return;
-  const startX = e.clientX;
-  const startY = e.clientY;
-  const baseX = pos.dx;
-  const baseY = pos.dy;
-
-  function mm(ev){
-    ev.preventDefault();
-    pos.dx = baseX + (ev.clientX - startX);
-    pos.dy = baseY + (ev.clientY - startY);
-    layout();
-  }
-  function up(){
-    window.removeEventListener('mousemove', mm);
-    window.removeEventListener('mouseup', up);
-  }
-  window.addEventListener('mousemove', mm);
-  window.addEventListener('mouseup', up);
-}
-
-preview?.addEventListener('mousedown', (e)=>{
-  if (e.button!==0) return;
-  if (e.target===filePick) return;
-  beginDrag(e);
-});
-
-// колесо меняет режим bg-fit (contain/cover)
-preview?.addEventListener('wheel', (e)=>{
-  if (readOnly) return;
-  if (e.ctrlKey || e.metaKey) return; // не мешаем системному зуму
-  if (!bgImg.src) return; // без фона — нечего крутить
-  const delta = Math.sign(e.deltaY);
-  const next = clampBgx(bgx + (delta>0 ? 1 : -1));
-  if (next !== bgx){ bgx = next; layout(); }
-});
-
-// ---------- link handling ----------
+// ====== ВОССТАНОВЛЕНИЕ ИЗ ССЫЛКИ ======
 async function loadFromLink(){
   const qs = new URLSearchParams(location.search);
   const id = qs.get('id');
-  // читаем d и из query, и из hash (#d=...)
-  const hashParams = new URLSearchParams((location.hash || '').replace(/^#/, ''));
-  const d  = qs.get('d') || hashParams.get('d');
+  const d  = qs.get('d');
 
-  // d=… → всегда «просмотр» (только Play)
+  // d=… → всегда «просмотр»
   if (d && !id){
     try{
       const json = (window.LZString?.decompressFromEncodedURIComponent)
@@ -409,43 +509,40 @@ async function loadFromLink(){
         : decodeURIComponent(d);
       const snap = JSON.parse(json);
 
-      // порядок: pos/bgx → overlay → фон → лотти → loop
-      if (snap.pos){ pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0; }
+      // порядок: pos/bgx → overlay → bg → lottie → loop
+      if (snap.pos){ pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0; } else { pos.dx=0; pos.dy=0; }
       if (snap.bgx){ bgx = clampBgx(snap.bgx); }
-      if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
-      if (snap.bg){ await setBackgroundFromSrc(snap.bg, bgx); }
-      if (snap.lot){ lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
+
+      if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; } else { overlaySrc=null; ovImg.removeAttribute('src'); }
+      if (snap.bg){ await setBackgroundFromSrc(snap.bg, bgx); } else { bgImg.removeAttribute('src'); }
+      if (snap.lot){ lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { lastLottieJSON=null; renewLottieRoot(); }
       if (snap.opts && typeof snap.opts.loop === 'boolean'){ loopOn = !!snap.opts.loop; loopChk && (loopChk.checked = loopOn); }
     } catch(_){}
     shareId = null; isOwner = false; readOnly = true;
-    applyOwnershipUI();
-    layout();
-    // очищаем адресную строку от #d=..., чтобы ссылка стала аккуратной
-    history.replaceState(null, '', location.pathname);
-    return;
+    applyOwnershipUI(); layout(); return;
   }
 
-  // id=… → владелец если id в localStorage
+  // id=… → владелец, если id в localStorage
   if (id){
     shareId = String(id);
     isOwner = isOwnedId(shareId);
     readOnly = !isOwner;
+    applyOwnershipUI();
 
     try{
-      const resp = await fetch('/.netlify/functions/shot?id=' + encodeURIComponent(shareId));
-      if (resp.ok){
-        const snap = await resp.json();
-        // порядок: pos/bgx → overlay → фон → лотти → loop
-        if (snap.pos){ pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0; }
-        if (snap.bgx){ bgx = clampBgx(snap.bgx); }
-        if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
-        if (snap.bg){ await setBackgroundFromSrc(snap.bg, bgx); }
-        if (snap.lot){ lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
-        if (snap.opts && typeof snap.opts.loop === 'boolean'){ loopOn = !!snap.opts.loop; loopChk && (loopChk.checked = loopOn); }
-      }
-      applyOwnershipUI();
+      const resp = await fetch('/.netlify/functions/shot?id=' + encodeURIComponent(id));
+      if (!resp.ok) throw new Error('404');
+      const snap = await resp.json();
+
+      if (snap.pos){ pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0; } else { pos.dx=0; pos.dy=0; }
+      if (snap.bgx){ bgx = clampBgx(snap.bgx); }
+
+      if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; } else { overlaySrc=null; ovImg.removeAttribute('src'); }
+      if (snap.bg){ await setBackgroundFromSrc(snap.bg, bgx); } else { bgImg.removeAttribute('src'); }
+      if (snap.lot){ lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { lastLottieJSON=null; renewLottieRoot(); }
+      if (snap.opts && typeof snap.opts.loop === 'boolean'){ loopOn = !!snap.opts.loop; loopChk && (loopChk.checked = loopOn); }
     } catch(e){
-      // если не нашли снимок — переключим в локальный редактор
+      // если не нашли снимок — вернёмся в локальный редактор
       shareId = null; isOwner = true; readOnly = false; applyOwnershipUI();
     }
     layout(); return;
@@ -456,16 +553,6 @@ async function loadFromLink(){
   applyOwnershipUI(); layout();
 }
 
-// ---------- helpers ----------
+// ====== ХЕЛПЕРЫ ТИПОВ ======
 function isImageFile(f){ return f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name)); }
 function isJsonFile(f){ return f && (f.type==='application/json' || /\.json$/i.test(f.name)); }
-
-// ---------- boot ----------
-async function boot(){
-  bindDom();
-  applyOwnershipUI();
-  await loadFromLink();
-  layout();
-}
-
-document.addEventListener('DOMContentLoaded', boot);
