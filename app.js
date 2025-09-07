@@ -1,15 +1,10 @@
 'use strict';
 
-/* ===================== VERSION ===================== */
 const VERSION = 'v71 owner/read-only, pos fix, dnd zones, overlay restore, @nx';
-
-/* Keys */
 const LS_SHARE_KEY = 'lp_share_id';
 
-/* ===================== BOOT ===================== */
 document.addEventListener('DOMContentLoaded', () => {
-
-  /* ---------- DOM ---------- */
+  /* DOM */
   const wrapper     = document.getElementById('wrapper');
   const preview     = document.getElementById('preview');
   const bgImg       = document.getElementById('bgImg');
@@ -20,11 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const pickBtn     = document.getElementById('pickBtn');
   const filePick    = document.getElementById('filePick');
-
   const restartBtn  = document.getElementById('restartBtn');
   const loopChk     = document.getElementById('loopChk');
   const resetPosBtn = document.getElementById('resetPosBtn');
-
   const shareBtn    = document.getElementById('shareBtn');
   const copyBtn     = document.getElementById('copyBtn');
 
@@ -34,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const lotStage    = document.getElementById('lotStage');
   const lottieMount = document.getElementById('lottie');
 
-  /* ---------- STATE [ANCHOR:STATE] ---------- */
+  /* STATE */
   const MOBILE = isMobile();
   if (verEl) verEl.textContent = VERSION;
   if (MOBILE) document.body.classList.add('is-mobile');
@@ -42,25 +35,20 @@ document.addEventListener('DOMContentLoaded', () => {
   let anim = null, animName = null, lastLottieJSON = null;
   let loopOn = false;
 
-  // Фон: физ. размеры и @nx
   let bgNatW = 360, bgNatH = 800;
-  let bgx    = 1;            // 1|2|3|4; логические размеры = nat / bgx
+  let bgx    = 1;   // 1|2|3|4; логика = nat / bgx
 
-  // Overlay src
   let overlaySrc = null;
 
-  // Нативные размеры композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
-  // Смещение Lottie относительно центра (логические px фона)
-  let pos = { dx: 0, dy: 0 };
+  let pos = { dx: 0, dy: 0 }; // смещение Lottie (логические px фона)
 
-  // Режимы
-  let shareId = null;          // фактический id из URL или после первого POST
-  let isOwner = false;         // владелец этой ссылки?
-  let readOnly = false;        // режим просмотра без прав редактирования
+  let shareId = null;     // id снимка
+  let isOwner = false;    // владелец ссылки?
+  let readOnly = false;   // режим просмотра
 
-  /* ---------- UTILS ---------- */
+  /* UTILS */
   function isMobile(){
     const ua = navigator.userAgent || '';
     const coarse = matchMediaSafe('(pointer: coarse)');
@@ -82,17 +70,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const k = Math.max(1, Math.min(4, n|0));
     return k;
   }
-
   function logicalSize(){
     return { w: Math.max(1, Math.round(bgNatW / bgx)), h: Math.max(1, Math.round(bgNatH / bgx)) };
   }
-
   function getPreviewScale(){
     const rectW = preview.getBoundingClientRect().width || 1;
     const logicalW = preview.clientWidth || rectW;
     return rectW / logicalW;
   }
-
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -103,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(showToastNear._t);
     showToastNear._t = setTimeout(()=> toastEl.classList.remove('show'), 1400);
   }
-
   async function copyText(text){
     try { await navigator.clipboard.writeText(text); }
     catch(_){
@@ -112,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ---------- LAYOUT ---------- */
+  /* LAYOUT */
   function layout(){
     const { w: lw, h: lh } = logicalSize();
 
@@ -139,9 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lotStage.style.transform = `translate(-50%, -50%) translate(${pos.dx}px, ${pos.dy}px)`;
     }
 
-    if (overlaySrc){
-      ovImg.src = overlaySrc;
-    }
+    if (overlaySrc){ ovImg.src = overlaySrc; }
 
     if (posHud){
       posHud.textContent = `x:${pos.dx>=0?'+':''}${Math.round(pos.dx)} y:${pos.dy>=0?'+':''}${Math.round(pos.dy)} px`;
@@ -149,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ---------- FILE HELPERS ---------- */
+  /* FILE HELPERS */
   function readAsDataURL(file){
     return new Promise((res, rej)=>{
       const r = new FileReader();
@@ -167,13 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------- SETTERS: BG / OVERLAY / LOTTIE ---------- */
+  /* SETTERS */
   async function setBackgroundFromFile(file){
     const src = await readAsDataURL(file);
     const detected = detectBgScaleFromName(file && file.name);
     await setBackgroundFromSrc(src, detected || 1);
   }
-
   async function setBackgroundFromSrc(src, scaleHint = 1){
     await new Promise(res=>{
       const meta = new Image();
@@ -189,14 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     layout();
   }
-
   async function setOverlayFromFile(file){
     const src = await readAsDataURL(file);
     overlaySrc = src;
-    ovImg.src = src;
+    ovImg.src  = src;
     layout();
   }
-
   function loadLottieFromData(animationData){
     renewLottieRoot();
 
@@ -220,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
       anim.addEventListener('DOMLoaded', layout);
     });
   }
-
   function renewLottieRoot(){
     try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
     try { if (anim && anim.destroy) anim.destroy(); } catch(_){}
@@ -228,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
   }
 
-  /* ---------- PNG/Lottie кнопка ---------- */
+  /* PNG/Lottie кнопка */
   if (pickBtn && filePick){
     pickBtn.addEventListener('click', ()=> { if(!readOnly) filePick.click(); });
     filePick.addEventListener('change', async (e)=>{
@@ -258,13 +236,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
   function isImageFile(f){ return f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name)); }
   function isJsonFile(f){ return f && (f.type === 'application/json' || /\.json$/i.test(f.name)); }
 
-  /* ---------- Drag&Drop + маршрутизация ---------- */
+  /* Drag&Drop */
   let dragDepth = 0;
-
   document.addEventListener('dragenter',(e)=>{ e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
   document.addEventListener('dragover', (e)=>{ e.preventDefault(); });
   document.addEventListener('dragleave',(e)=>{ e.preventDefault(); dragDepth=Math.max(0,dragDepth-1); if(!dragDepth) document.body.classList.remove('dragging'); });
@@ -273,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const files = (e.dataTransfer && e.dataTransfer.files) ? Array.from(e.dataTransfer.files) : [];
     if (!files.length) { document.body.classList.remove('dragging'); dragDepth=0; return; }
 
-    // ВАЖНО: зона до снятия 'dragging'
+    // зона сначала!
     const pt = { x: e.clientX, y: e.clientY };
     const zone = zoneAtPoint(pt);
     document.body.classList.remove('dragging'); dragDepth=0;
@@ -325,7 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ovFile) await setOverlayFromFile(ovFile);
     }
   });
-
   function zoneAtPoint(pt){
     const r = dropOverlay.getBoundingClientRect();
     if (!r || !document.body.classList.contains('dragging')) return null;
@@ -334,7 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (x > 0.66) return 'overlay';
     return 'lottie';
   }
-
   function loadImageMeta(src){
     return new Promise(res=>{
       const im = new Image();
@@ -344,9 +318,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------- Интерактивное позиционирование ---------- */
+  /* Позиционирование Lottie */
   let drag = null;
-
   function startDrag(e){
     if (readOnly) return;
     if (!lotNomW || !lotNomH) return;
@@ -376,12 +349,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.overlay')?.classList.remove('dim');
     drag = null;
   }
-
   lotStage.addEventListener('pointerdown', startDrag);
   lotStage.addEventListener('mouseenter', ()=> !readOnly && lotStage.classList.add('hover'));
   lotStage.addEventListener('mouseleave', ()=> lotStage.classList.remove('hover'));
 
-  // Клавиатура
+  // клавиатура
   window.addEventListener('keydown', (e)=>{
     if (readOnly || MOBILE) return;
     if (/input|textarea|select/i.test((e.target && e.target.tagName) || '')) return;
@@ -396,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (used){ e.preventDefault(); layout(); }
   });
 
-  // Tap-to-restart на мобиле
+  // мобайл: тап = повтор
   if (MOBILE) {
     wrapper.addEventListener('click', ()=>{
       if (!anim) return;
@@ -404,12 +376,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------- Контролы ---------- */
+  /* Контролы */
   restartBtn?.addEventListener('click', ()=>{
     if (!anim) return;
     try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
   });
-
   loopChk?.addEventListener('change', ()=>{
     if (readOnly) { loopChk.checked = loopOn; return; }
     loopOn = !!loopChk.checked;
@@ -418,13 +389,12 @@ document.addEventListener('DOMContentLoaded', () => {
       catch(_){ anim.loop = loopOn; }
     }
   });
-
   resetPosBtn?.addEventListener('click', ()=>{
     if (readOnly) return;
     pos.dx = 0; pos.dy = 0; layout();
   });
 
-  /* ---------- SHARE API ---------- */
+  /* Share */
   function snapshot(){
     return {
       v: 3,
@@ -436,7 +406,6 @@ document.addEventListener('DOMContentLoaded', () => {
       bgx: bgx
     };
   }
-
   function localPackedLink(){
     const json = JSON.stringify(snapshot());
     const packed = (window.LZString && LZString.compressToEncodedURIComponent)
@@ -444,7 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
       : encodeURIComponent(json);
     return location.origin + location.pathname + '?d=' + packed;
   }
-
   async function withLoading(btn, fn){
     if (!btn) return fn();
     const original = btn.textContent;
@@ -461,7 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         if (!shareId){
-          // first publish
           const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(snapshot()) });
           if (!resp.ok) throw new Error('share failed');
           const data = await resp.json();
@@ -472,7 +439,6 @@ document.addEventListener('DOMContentLoaded', () => {
           isOwner = true; readOnly = false;
           applyOwnershipUI();
         } else {
-          // update same id
           const resp = await fetch('/api/share?id=' + encodeURIComponent(shareId), { method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(snapshot()) });
           if (!resp.ok) throw new Error('update failed');
         }
@@ -480,7 +446,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await copyText(link);
         showToastNear(copyBtn, 'Скопировано');
       } catch(e){
-        // fallback: local d-link
         const link = localPackedLink();
         await copyText(link);
         copyBtn.disabled = false;
@@ -498,19 +463,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function applyOwnershipUI(){
-    // владелец: всё видно
     if (isOwner){
       [pickBtn, loopChk, resetPosBtn, shareBtn, copyBtn].forEach(el=> el && (el.style.display=''));
       readOnly = false;
       return;
     }
-    // зритель (read-only)
     [pickBtn, loopChk, resetPosBtn, shareBtn, copyBtn].forEach(el=> el && (el.style.display='none'));
     readOnly = true;
     layout();
   }
 
-  /* ---------- LOAD FROM LINK (исправил порядок) ---------- */
+  /* Загрузка из ссылки — порядок фикс */
   (async function loadFromLink(){
     const qs = new URLSearchParams(location.search);
     const id = qs.get('id');
@@ -531,17 +494,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!resp.ok) throw new Error('404');
         const snap = await resp.json();
 
-        // 1) сначала pos/bgx (важно!)
+        // 1) pos и bgx сначала
         if (snap.pos && Number.isFinite(snap.pos.dx) && Number.isFinite(snap.pos.dy)){
           pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0;
         } else { pos.dx = 0; pos.dy = 0; }
-
         const sx = clampBgx(snap.bgx); if (sx) bgx = sx;
 
-        // 2) overlay (до layout)
+        // 2) overlay сразу
         if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
 
-        // 3) фон → лотти
+        // 3) фон и лотти
         if (snap.bg)  await setBackgroundFromSrc(snap.bg, bgx);
         if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
 
@@ -550,11 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
           loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn;
         }
 
-        // финальный layout (на случай, если ни один из сеттеров его не вызвал позже)
         layout();
-        // Кнопку «Обновить» показываем только владельцу
         if (isOwner){ shareBtn.textContent = 'Обновить'; copyBtn.disabled = false; }
-
         return;
       }
 
@@ -564,7 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
           : decodeURIComponent(d);
         const snap = JSON.parse(json);
 
-        // pos/bgx сначала
         if (snap.pos && Number.isFinite(snap.pos.dx) && Number.isFinite(snap.pos.dy)){
           pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0;
         } else { pos.dx = 0; pos.dy = 0; }
@@ -577,9 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
           loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn;
         }
 
-        // d-режим: нет владельца/обновления
         shareId = null; isOwner = false; readOnly = false;
-        applyOwnershipUI(); // покажет «Поделиться»
+        applyOwnershipUI();
         layout();
       }
     } catch(e){
@@ -589,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })();
 
-  /* ---------- LISTENERS MISC ---------- */
+  /* misc */
   window.addEventListener('resize', ()=>{ layout(); });
   window.visualViewport && window.visualViewport.addEventListener('resize', layout);
 
