@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 'v71 owner/read-only, pos fix, dnd zones, overlay restore, @nx';
+const VERSION = 'v72 owner default, loop label fix, readonly logic, dnd zones ok, @nx';
 const LS_SHARE_KEY = 'lp_share_id';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     }
   }
+  function setDisplay(el, show){ if (!el) return; el.style.display = show ? '' : 'none'; }
 
   /* LAYOUT */
   function layout(){
@@ -463,17 +464,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function applyOwnershipUI(){
-    if (isOwner){
-      [pickBtn, loopChk, resetPosBtn, shareBtn, copyBtn].forEach(el=> el && (el.style.display=''));
+    const loopLabel = loopChk ? loopChk.closest('label') : null;
+
+    // Владелец ИЛИ локальный режим (нет shareId) — полный доступ
+    if (!shareId || isOwner){
+      [pickBtn, resetPosBtn, shareBtn, copyBtn, restartBtn].forEach(el=> setDisplay(el, true));
+      setDisplay(loopLabel, true);
       readOnly = false;
+      if (!shareId && copyBtn) { copyBtn.disabled = true; }
+      if (!shareId && shareBtn) { shareBtn.textContent = 'Поделиться'; }
       return;
     }
-    [pickBtn, loopChk, resetPosBtn, shareBtn, copyBtn].forEach(el=> el && (el.style.display='none'));
+
+    // Зритель: только просмотр, оставляем только «Повтор»
+    [pickBtn, resetPosBtn, shareBtn, copyBtn].forEach(el=> setDisplay(el, false));
+    setDisplay(loopLabel, false);
+    setDisplay(restartBtn, true);
     readOnly = true;
     layout();
   }
 
-  /* Загрузка из ссылки — порядок фикс */
+  /* Загрузка из ссылки — порядок фикс + режимы */
   (async function loadFromLink(){
     const qs = new URLSearchParams(location.search);
     const id = qs.get('id');
@@ -481,7 +492,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const ownerId = localStorage.getItem(LS_SHARE_KEY) || '';
 
-    if (!id && !d){ applyOwnershipUI(); layout(); return; }
+    // БЕЗ id/d: по умолчанию — режим РЕДАКТИРОВАНИЯ (владелец локальной сессии)
+    if (!id && !d){
+      shareId = null;
+      isOwner = true;
+      readOnly = false;
+      applyOwnershipUI();
+      layout();
+      return;
+    }
 
     try {
       if (id){
@@ -535,12 +554,15 @@ document.addEventListener('DOMContentLoaded', () => {
           loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn;
         }
 
-        shareId = null; isOwner = false; readOnly = false;
+        // Локальный packed — редактируемый
+        shareId = null; isOwner = true; readOnly = false;
         applyOwnershipUI();
         layout();
       }
     } catch(e){
       console.error(e);
+      // На ошибке — оставляем редактируемый режим, чтобы можно было продолжить локально
+      shareId = null; isOwner = true; readOnly = false;
       applyOwnershipUI();
       layout();
     }
