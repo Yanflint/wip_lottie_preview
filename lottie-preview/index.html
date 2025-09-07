@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <!-- [VIEWPORT] -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Lottie-превью</title>
+
+  <!-- Библиотеки -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js" defer></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="app">
+
+      <!-- Область превью -->
+      <div id="wrapper" class="wrapper" aria-label="Область превью">
+        <div id="preview" class="preview">
+
+          <!-- Плейсхолдер -->
+          <div id="ph" class="placeholder">
+            <div class="ph">
+              <div class="ph-1">Перетащите файл:</div>
+              <div class="ph-2">PNG / JSON</div>
+            </div>
+          </div>
+
+          <!-- Фон -->
+          <div class="bg"><img id="bgImg" alt=""></div>
+
+          <!-- Lottie -->
+          <div class="lottie-layer">
+            <div id="lotStage" class="lot-stage">
+              <div id="lottie" class="lottie-mount"></div>
+            </div>
+          </div>
+
+          <!-- Overlay -->
+          <div class="overlay"><img id="ovImg" alt=""></div>
+        </div>
+
+        <!-- DnD зоны -->
+        <div id="dropOverlay" class="drop-overlay">
+          <div class="grid">
+            <div class="zone z-bg">Фон</div>
+            <div class="zone z-lottie">Lottie JSON</div>
+            <div class="zone z-ov">Поверх</div>
+          </div>
+        </div>
+
+        <!-- HUD координат -->
+        <div id="posHud" class="pos-hud" aria-hidden="true">x:+0 y:+0 px</div>
+      </div>
+
+      <!-- Контролы -->
+      <div id="controls" class="controls">
+        <button class="btn secondary" id="pickBtn"   title="Загрузить PNG/JPEG/WebP или Lottie JSON">PNG/Lottie</button>
+        <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
+        <label class="chk" title="Играть зацикленно">
+          <input type="checkbox" id="loopChk"> Зацикленно
+        </label>
+        <button class="btn subtle"   id="resetPosBtn" title="Сбросить позицию Lottie">Сброс поз.</button>
+
+        <button class="btn accent" id="shareBtn" title="Сохранить/обновить ссылку">Поделиться</button>
+        <button class="btn ghost"  id="copyBtn"  title="Скопировать ссылку" disabled>📎</button>
+      </div>
+
+      <!-- Скрытый input -->
+      <input id="filePick" type="file" accept="image/*,application/json,.json" hidden>
+    </div>
+  </div>
+
+  <!-- Тост -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Версия -->
+  <div id="ver" class="ver"></div>
+
+  <script src="app.js?v=72_owner_ro_bgx"></script>
+</body>
+</html>
