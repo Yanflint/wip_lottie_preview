@@ -2,11 +2,11 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <!-- [ANCHOR:VIEWPORT] -->
+  <!-- [VIEWPORT] -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lottie-превью</title>
 
-  <!-- [ANCHOR:LIBS] -->
+  <!-- Библиотеки -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js" defer></script>
 
@@ -14,13 +14,13 @@
 </head>
 <body>
   <div class="page">
-    <div class="app"><!-- [ANCHOR:APP_ROOT] -->
+    <div class="app">
 
-      <!-- [ANCHOR:WRAPPER] -->
+      <!-- Область превью -->
       <div id="wrapper" class="wrapper" aria-label="Область превью">
         <div id="preview" class="preview">
 
-          <!-- [ANCHOR:PLACEHOLDER] -->
+          <!-- Плейсхолдер -->
           <div id="ph" class="placeholder">
             <div class="ph">
               <div class="ph-1">Перетащите файл:</div>
@@ -28,22 +28,21 @@
             </div>
           </div>
 
-          <!-- [ANCHOR:BG] -->
+          <!-- Фон -->
           <div class="bg"><img id="bgImg" alt=""></div>
 
-          <!-- [ANCHOR:LOTTIE] -->
+          <!-- Lottie -->
           <div class="lottie-layer">
             <div id="lotStage" class="lot-stage">
               <div id="lottie" class="lottie-mount"></div>
             </div>
           </div>
 
-          <!-- [ANCHOR:OVERLAY_IMG] -->
+          <!-- Overlay -->
           <div class="overlay"><img id="ovImg" alt=""></div>
-
         </div>
 
-        <!-- [ANCHOR:DROP_ZONES] -->
+        <!-- DnD зоны -->
         <div id="dropOverlay" class="drop-overlay">
           <div class="grid">
             <div class="zone z-bg">Фон</div>
@@ -52,35 +51,32 @@
           </div>
         </div>
 
-        <!-- [ANCHOR:POS_HUD] -->
+        <!-- HUD координат -->
         <div id="posHud" class="pos-hud" aria-hidden="true">x:+0 y:+0 px</div>
       </div>
 
-      <!-- [ANCHOR:CONTROLS] -->
+      <!-- Контролы -->
       <div id="controls" class="controls">
-        <button class="btn secondary" id="pickBtn" title="Загрузить PNG/JPEG/WebP или Lottie JSON">PNG/Lottie</button>
-
+        <button class="btn secondary" id="pickBtn"   title="Загрузить PNG/JPEG/WebP или Lottie JSON">PNG/Lottie</button>
         <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
         <label class="chk" title="Играть зацикленно">
           <input type="checkbox" id="loopChk"> Зацикленно
         </label>
+        <button class="btn subtle"   id="resetPosBtn" title="Сбросить позицию Lottie">Сброс поз.</button>
 
-        <button class="btn subtle" id="resetPosBtn" title="Сбросить позицию Lottie">Сброс поз.</button>
-
-        <!-- [ANCHOR:SHARE_CLUSTER] -->
         <button class="btn accent" id="shareBtn" title="Сохранить/обновить ссылку">Поделиться</button>
-        <button class="btn ghost" id="copyBtn" title="Скопировать текущую ссылку" disabled>📎</button>
+        <button class="btn ghost"  id="copyBtn"  title="Скопировать ссылку" disabled>📎</button>
       </div>
 
-      <!-- [ANCHOR:HIDDEN_INPUT] -->
+      <!-- Скрытый input -->
       <input id="filePick" type="file" accept="image/*,application/json,.json" hidden>
     </div>
   </div>
 
-  <!-- [ANCHOR:TOAST] -->
+  <!-- Тост -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <!-- [ANCHOR:VERSION] -->
+  <!-- Версия -->
   <div id="ver" class="ver"></div>
 
   <script src="app.js?v=71_owner_ro_bgx"></script>
