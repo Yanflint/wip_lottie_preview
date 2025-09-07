@@ -14,9 +14,9 @@ export const handler = async (event) => {
     return {
       statusCode: 200,
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(snap)
+      body: JSON.stringify(snap),
     };
-  } catch (e) {
+  } catch {
     return { statusCode: 500, body: 'shot failed' };
   }
 };
