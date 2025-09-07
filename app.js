@@ -1,7 +1,10 @@
 'use strict';
 
 /* ===================== VERSION ===================== */
-const VERSION = 'v70 @nx-normalization, no-scale Lottie, overlay, drag-pos, share+update';
+const VERSION = 'v71 owner/read-only, pos fix, dnd zones, overlay restore, @nx';
+
+/* Keys */
+const LS_SHARE_KEY = 'lp_share_id';
 
 /* ===================== BOOT ===================== */
 document.addEventListener('DOMContentLoaded', () => {
@@ -43,17 +46,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let bgNatW = 360, bgNatH = 800;
   let bgx    = 1;            // 1|2|3|4; логические размеры = nat / bgx
 
-  // Overlay src (полноэкранная картинка поверх)
+  // Overlay src
   let overlaySrc = null;
 
   // Нативные размеры композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
-  // Смещение Lottie относительно центра (в логических px фона)
+  // Смещение Lottie относительно центра (логические px фона)
   let pos = { dx: 0, dy: 0 };
 
-  // Share id (для обновления той же ссылки)
-  let shareId = null;
+  // Режимы
+  let shareId = null;          // фактический id из URL или после первого POST
+  let isOwner = false;         // владелец этой ссылки?
+  let readOnly = false;        // режим просмотра без прав редактирования
 
   /* ---------- UTILS ---------- */
   function isMobile(){
@@ -72,13 +77,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const m = /@([234])x(?=\.|$)/i.exec(name);
     return m ? Math.max(1, Math.min(4, parseInt(m[1],10))) : 1;
   }
+  function clampBgx(n){
+    if (!Number.isFinite(n)) return 0;
+    const k = Math.max(1, Math.min(4, n|0));
+    return k;
+  }
 
   function logicalSize(){
     return { w: Math.max(1, Math.round(bgNatW / bgx)), h: Math.max(1, Math.round(bgNatH / bgx)) };
   }
 
   function getPreviewScale(){
-    // коэффициент визуального масштабирования превью (для мобилы)
     const rectW = preview.getBoundingClientRect().width || 1;
     const logicalW = preview.clientWidth || rectW;
     return rectW / logicalW;
@@ -103,23 +112,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ---------- LAYOUT (основа) ---------- */
+  /* ---------- LAYOUT ---------- */
   function layout(){
     const { w: lw, h: lh } = logicalSize();
 
     if (MOBILE){
-      // центрируем и масштабируем контейнер по ширине экрана
       const vw = (window.visualViewport && window.visualViewport.width) ? visualViewport.width : window.innerWidth;
       const s = vw / lw;
-
-      // задать логические размеры превью
       preview.style.width  = lw + 'px';
       preview.style.height = lh + 'px';
       preview.style.left = '50%';
       preview.style.top  = '50%';
       preview.style.transform = `translate(-50%, -50%) scale(${s})`;
     } else {
-      // десктоп: 1:1 логика
       wrapper.style.width  = lw + 'px';
       wrapper.style.height = lh + 'px';
       preview.style.left = '0'; preview.style.top = '0';
@@ -128,22 +133,19 @@ document.addEventListener('DOMContentLoaded', () => {
       preview.style.transform = 'none';
     }
 
-    // Lottie: нативный размер, центр + смещения
     if (lotNomW && lotNomH){
       lotStage.style.width  = lotNomW + 'px';
       lotStage.style.height = lotNomH + 'px';
       lotStage.style.transform = `translate(-50%, -50%) translate(${pos.dx}px, ${pos.dy}px)`;
     }
 
-    // Overlay: просто высота 100% (по логическому контейнеру)
     if (overlaySrc){
       ovImg.src = overlaySrc;
     }
 
-    // HUD
     if (posHud){
       posHud.textContent = `x:${pos.dx>=0?'+':''}${Math.round(pos.dx)} y:${pos.dy>=0?'+':''}${Math.round(pos.dy)} px`;
-      posHud.style.display = MOBILE ? 'none' : 'block';
+      posHud.style.display = (MOBILE || readOnly) ? 'none' : 'block';
     }
   }
 
@@ -166,12 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* ---------- SETTERS: BG / OVERLAY / LOTTIE ---------- */
-  // [ANCHOR:BG_DETECT_SCALE] + установка
   async function setBackgroundFromFile(file){
     const src = await readAsDataURL(file);
-    const forced = readBgxFromURLParam(); // ручной override ?bgx=2
     const detected = detectBgScaleFromName(file && file.name);
-    await setBackgroundFromSrc(src, forced || detected || 1);
+    await setBackgroundFromSrc(src, detected || 1);
   }
 
   async function setBackgroundFromSrc(src, scaleHint = 1){
@@ -206,7 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
     animName = uid('anim_');
     lastLottieJSON = animationData;
 
-    // disable cache just in case
     try { if (typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_){}
 
     requestAnimationFrame(()=>{
@@ -231,13 +230,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ---------- PNG/Lottie кнопка ---------- */
   if (pickBtn && filePick){
-    pickBtn.addEventListener('click', ()=> filePick.click());
+    pickBtn.addEventListener('click', ()=> { if(!readOnly) filePick.click(); });
     filePick.addEventListener('change', async (e)=>{
+      if (readOnly) { e.target.value=''; return; }
       const f = e.target.files && e.target.files[0];
       if (!f) return;
       try{
         if (isImageFile(f)) {
-          // эвристика: если фона нет — это фон, иначе — overlay (если не подсказали именем)
           const lower = f.name.toLowerCase();
           if (!bgImg.src || /(^|[_\-\.])(bg|1)(@[\d]x)?\./i.test(lower)) {
             await setBackgroundFromFile(f);
@@ -246,14 +245,13 @@ document.addEventListener('DOMContentLoaded', () => {
           } else if (!overlaySrc) {
             await setOverlayFromFile(f);
           } else {
-            // по умолчанию заменим overlay
             await setOverlayFromFile(f);
           }
         } else if (isJsonFile(f)) {
           const data = await readAsText(f);
           loadLottieFromData(JSON.parse(String(data)));
         } else {
-          alert('Поддерживаются PNG/JPEG/WebP (фон или overlay) и JSON (Lottie).');
+          alert('Поддерживаются PNG/JPEG/WebP (фон/overlay) и JSON (Lottie).');
         }
       } finally {
         e.target.value = '';
@@ -264,21 +262,23 @@ document.addEventListener('DOMContentLoaded', () => {
   function isImageFile(f){ return f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name)); }
   function isJsonFile(f){ return f && (f.type === 'application/json' || /\.json$/i.test(f.name)); }
 
-  /* ---------- Drag&Drop + маршрутизация [ANCHOR:DND_ROUTER] ---------- */
+  /* ---------- Drag&Drop + маршрутизация ---------- */
   let dragDepth = 0;
 
   document.addEventListener('dragenter',(e)=>{ e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
   document.addEventListener('dragover', (e)=>{ e.preventDefault(); });
   document.addEventListener('dragleave',(e)=>{ e.preventDefault(); dragDepth=Math.max(0,dragDepth-1); if(!dragDepth) document.body.classList.remove('dragging'); });
   document.addEventListener('drop',     async (e)=>{
-    e.preventDefault(); dragDepth=0; document.body.classList.remove('dragging');
-
+    e.preventDefault();
     const files = (e.dataTransfer && e.dataTransfer.files) ? Array.from(e.dataTransfer.files) : [];
-    if (!files.length) return;
+    if (!files.length) { document.body.classList.remove('dragging'); dragDepth=0; return; }
 
-    // если один файл — попытаемся понять по зоне
+    // ВАЖНО: зона до снятия 'dragging'
     const pt = { x: e.clientX, y: e.clientY };
     const zone = zoneAtPoint(pt);
+    document.body.classList.remove('dragging'); dragDepth=0;
+
+    if (readOnly) return;
 
     if (files.length === 1){
       const f = files[0];
@@ -286,18 +286,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isImageFile(f)) {
         if (zone === 'bg')      return await setBackgroundFromFile(f);
         if (zone === 'overlay') return await setOverlayFromFile(f);
-        // автоэвристика по имени
         const lower = f.name.toLowerCase();
         if (/(^|[_\-\.])(bg|1)(@[\d]x)?\./i.test(lower)) return await setBackgroundFromFile(f);
         if (/(overlay|ov|2)(@[\d]x)?\./i.test(lower))    return await setOverlayFromFile(f);
-        // fallback: если нет фона — фон, иначе overlay
         if (!bgImg.src) return await setBackgroundFromFile(f);
         return await setOverlayFromFile(f);
       }
       return;
     }
 
-    // несколько файлов — разложим:
     const imgs  = files.filter(isImageFile);
     const jsons = files.filter(isJsonFile);
 
@@ -312,11 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (/overlay|ov|2/.test(lower)) await setOverlayFromFile(f);
       else await setBackgroundFromFile(f);
     } else if (imgs.length >= 2) {
-      // приоритет по имени
       let bgFile = imgs.find(f=>/(^|[_\-\.])(bg|1)(@[\d]x)?\./i.test(f.name.toLowerCase()));
       let ovFile = imgs.find(f=>/(overlay|ov|2)(@[\d]x)?\./i.test(f.name.toLowerCase()));
       if (!bgFile || !ovFile){
-        // эвристика по площади
         const withArea = await Promise.all(imgs.map(async f=>{
           const src = await readAsDataURL(f);
           const meta = await loadImageMeta(src);
@@ -349,10 +344,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------- Интерактивное позиционирование [ANCHOR:DRAG_LOTTIE] ---------- */
+  /* ---------- Интерактивное позиционирование ---------- */
   let drag = null;
 
   function startDrag(e){
+    if (readOnly) return;
     if (!lotNomW || !lotNomH) return;
     e.preventDefault();
     const scale = getPreviewScale();
@@ -374,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
     pos.dy = Math.round(drag.startDy + dy);
     layout();
   }
-  function onDragEnd(e){
+  function onDragEnd(){
     window.removeEventListener('pointermove', onDragMove);
     lotStage.classList.remove('dragging');
     document.querySelector('.overlay')?.classList.remove('dim');
@@ -382,12 +378,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   lotStage.addEventListener('pointerdown', startDrag);
-  lotStage.addEventListener('mouseenter', ()=> lotStage.classList.add('hover'));
+  lotStage.addEventListener('mouseenter', ()=> !readOnly && lotStage.classList.add('hover'));
   lotStage.addEventListener('mouseleave', ()=> lotStage.classList.remove('hover'));
 
-  // Клавиатура [ANCHOR:KEYBOARD_MOVE]
+  // Клавиатура
   window.addEventListener('keydown', (e)=>{
-    if (MOBILE) return;
+    if (readOnly || MOBILE) return;
     if (/input|textarea|select/i.test((e.target && e.target.tagName) || '')) return;
 
     let step = e.shiftKey ? 10 : 1;
@@ -415,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   loopChk?.addEventListener('change', ()=>{
+    if (readOnly) { loopChk.checked = loopOn; return; }
     loopOn = !!loopChk.checked;
     if (anim) {
       try { if (typeof anim.setLooping === 'function') anim.setLooping(loopOn); else anim.loop = loopOn; }
@@ -423,10 +420,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   resetPosBtn?.addEventListener('click', ()=>{
+    if (readOnly) return;
     pos.dx = 0; pos.dy = 0; layout();
   });
 
-  /* ---------- SHARE API [ANCHOR:SHARE_API] ---------- */
+  /* ---------- SHARE API ---------- */
   function snapshot(){
     return {
       v: 3,
@@ -457,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   shareBtn?.addEventListener('click', async ()=>{
+    if (readOnly) return;
     await withLoading(shareBtn, async ()=>{
       if (!bgImg.src && !lastLottieJSON){ showToastNear(shareBtn, 'Загрузите фон или Lottie'); return; }
 
@@ -467,8 +466,11 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!resp.ok) throw new Error('share failed');
           const data = await resp.json();
           shareId = String(data.id || '');
+          localStorage.setItem(LS_SHARE_KEY, shareId);
           copyBtn.disabled = false;
           shareBtn.textContent = 'Обновить';
+          isOwner = true; readOnly = false;
+          applyOwnershipUI();
         } else {
           // update same id
           const resp = await fetch('/api/share?id=' + encodeURIComponent(shareId), { method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(snapshot()) });
@@ -488,7 +490,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   copyBtn?.addEventListener('click', async ()=>{
-    // если уже есть id — копируем короткую; иначе локальную
     const link = shareId
       ? (location.origin + location.pathname + '?id=' + encodeURIComponent(shareId))
       : localPackedLink();
@@ -496,43 +497,64 @@ document.addEventListener('DOMContentLoaded', () => {
     showToastNear(copyBtn, 'Скопировано');
   });
 
-  /* ---------- LOAD FROM LINK [ANCHOR:LOAD_LINK] ---------- */
+  function applyOwnershipUI(){
+    // владелец: всё видно
+    if (isOwner){
+      [pickBtn, loopChk, resetPosBtn, shareBtn, copyBtn].forEach(el=> el && (el.style.display=''));
+      readOnly = false;
+      return;
+    }
+    // зритель (read-only)
+    [pickBtn, loopChk, resetPosBtn, shareBtn, copyBtn].forEach(el=> el && (el.style.display='none'));
+    readOnly = true;
+    layout();
+  }
+
+  /* ---------- LOAD FROM LINK (исправил порядок) ---------- */
   (async function loadFromLink(){
     const qs = new URLSearchParams(location.search);
     const id = qs.get('id');
     const d  = qs.get('d');
 
-    // override bgx через URL (ручной редкий случай)
-    const urlBgx = readBgxFromURLParam();
+    const ownerId = localStorage.getItem(LS_SHARE_KEY) || '';
 
-    if (!id && !d){ layout(); return; }
+    if (!id && !d){ applyOwnershipUI(); layout(); return; }
 
     try {
       if (id){
+        shareId = String(id);
+        isOwner = (shareId && shareId === ownerId);
+        readOnly = !isOwner;
+        applyOwnershipUI();
+
         const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
         if (!resp.ok) throw new Error('404');
         const snap = await resp.json();
 
-        // порядок важен: bgx → фон → overlay → lottie → pos → loop
-        const sx = clampBgx(snap.bgx);
-        if (sx) bgx = sx;
-        if (urlBgx) bgx = urlBgx; // URL имеет высший приоритет
-
-        if (snap.bg) await setBackgroundFromSrc(snap.bg, bgx);
-        if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
-        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
+        // 1) сначала pos/bgx (важно!)
         if (snap.pos && Number.isFinite(snap.pos.dx) && Number.isFinite(snap.pos.dy)){
           pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0;
-        }
+        } else { pos.dx = 0; pos.dy = 0; }
+
+        const sx = clampBgx(snap.bgx); if (sx) bgx = sx;
+
+        // 2) overlay (до layout)
+        if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
+
+        // 3) фон → лотти
+        if (snap.bg)  await setBackgroundFromSrc(snap.bg, bgx);
+        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
+
+        // 4) loop
         if (snap.opts && typeof snap.opts.loop === 'boolean'){
           loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn;
         }
 
-        shareId = id; // чтобы «Обновить» шло в тот же id
-        shareBtn.textContent = 'Обновить';
-        copyBtn.disabled = false;
-
+        // финальный layout (на случай, если ни один из сеттеров его не вызвал позже)
         layout();
+        // Кнопку «Обновить» показываем только владельцу
+        if (isOwner){ shareBtn.textContent = 'Обновить'; copyBtn.disabled = false; }
+
         return;
       }
 
@@ -542,39 +564,30 @@ document.addEventListener('DOMContentLoaded', () => {
           : decodeURIComponent(d);
         const snap = JSON.parse(json);
 
-        const sx = clampBgx(snap.bgx);
-        if (sx) bgx = sx;
-        if (urlBgx) bgx = urlBgx;
-
-        if (snap.bg) await setBackgroundFromSrc(snap.bg, bgx);
-        if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
-        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
+        // pos/bgx сначала
         if (snap.pos && Number.isFinite(snap.pos.dx) && Number.isFinite(snap.pos.dy)){
           pos.dx = snap.pos.dx|0; pos.dy = snap.pos.dy|0;
-        }
+        } else { pos.dx = 0; pos.dy = 0; }
+        const sx = clampBgx(snap.bgx); if (sx) bgx = sx;
+
+        if (snap.overlay){ overlaySrc = snap.overlay; ovImg.src = overlaySrc; }
+        if (snap.bg)  await setBackgroundFromSrc(snap.bg, bgx);
+        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
         if (snap.opts && typeof snap.opts.loop === 'boolean'){
           loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn;
         }
 
-        // локальный режим — shareId нет
+        // d-режим: нет владельца/обновления
+        shareId = null; isOwner = false; readOnly = false;
+        applyOwnershipUI(); // покажет «Поделиться»
         layout();
       }
     } catch(e){
       console.error(e);
+      applyOwnershipUI();
       layout();
     }
   })();
-
-  function readBgxFromURLParam(){
-    const q = new URLSearchParams(location.search);
-    const n = parseInt(q.get('bgx'), 10);
-    return clampBgx(n);
-  }
-  function clampBgx(n){
-    if (!Number.isFinite(n)) return 0;
-    const k = Math.max(1, Math.min(4, n|0));
-    return k;
-  }
 
   /* ---------- LISTENERS MISC ---------- */
   window.addEventListener('resize', ()=>{ layout(); });
