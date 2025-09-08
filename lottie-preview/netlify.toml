@@ -1,9 +1,4 @@
-# [ANCHOR:NETLIFY_TOML]
-[build]
-  publish = "."
-  functions = "netlify/functions"
-
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  from = "/s/*"
+  to = "/index.html"
   status = 200

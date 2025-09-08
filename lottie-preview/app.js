@@ -1,7 +1,23 @@
 'use strict';
 
+/* Early redirect from root using cookie (works for A2HS base URL) */
+(function () {
+  try {
+    var p = location.pathname;
+    var onRoot = (p === '/' || p.endsWith('/index.html'));
+    var noDeep = !/[?]id=|#|\/(?:s|shot)\//i.test(location.href);
+    if (onRoot && noDeep) {
+      var m = document.cookie.match(/(?:^|;\s*)lastShotId=([^;]+)/);
+      if (m && m[1]) {
+        var id = decodeURIComponent(m[1]);
+        if (id) location.replace('/s/' + encodeURIComponent(id));
+      }
+    }
+  } catch (_e) {}
+})();
+
 /* [ANCHOR:CODE_VERSION] */
-const CODE_VERSION = 'v61-dnd-stable';
+const CODE_VERSION = 'v64-path-cookie-redirect';
 
 document.addEventListener('DOMContentLoaded', function () {
   /* ---------------- DOM ---------------- */
@@ -109,7 +125,6 @@ document.addEventListener('DOMContentLoaded', function () {
   async function setBackgroundFromSrc(src, dpr = 1){
     await new Promise(res=>{
       const im = new Image();
-      im.crossOrigin = 'anonymous';
       im.onload = function(){
         bgNatW = im.naturalWidth  || im.width  || 0;
         bgNatH = im.naturalHeight || im.height || 0;
@@ -165,31 +180,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* ---------------- DnD: bulletproof ---------------- */
-  // Make page a drop target
+  /* ---------------- DnD ---------------- */
   ;['dragenter','dragover','dragleave','drop'].forEach(evt => {
     window.addEventListener(evt, (e)=>{ e.preventDefault(); }, false);
     document.addEventListener(evt, (e)=>{ e.preventDefault(); }, false);
   });
-  if (wrapper) wrapper.setAttribute('dropzone','copy');
 
-  let dragDepth = 0;
   function isImageFile(f){ return !!(f && ((f.type && f.type.startsWith('image/')) || /\.(png|jpe?g|webp|gif)$/i.test(f.name||''))); }
   function isJsonFile(f){ return !!(f && (f.type === 'application/json' || /\.json$/i.test(f.name||''))); }
 
-  document.addEventListener('dragenter', (e)=>{ dragDepth++; document.body.classList.add('dragging'); }, false);
-  document.addEventListener('dragleave', (e)=>{ dragDepth = Math.max(0, dragDepth-1); if(!dragDepth) document.body.classList.remove('dragging'); }, false);
-
-  const handleDrop = async (e) => {
-    document.body.classList.remove('dragging'); dragDepth = 0;
+  document.addEventListener('drop', async (e)=>{
     let files = (e.dataTransfer && e.dataTransfer.files) ? Array.from(e.dataTransfer.files) : [];
-    // Safari sometimes returns empty FileList but has items
     if ((!files || !files.length) && e.dataTransfer && e.dataTransfer.items) {
       const its = Array.from(e.dataTransfer.items);
       const fs = its.map(it => (it && it.kind === 'file' && it.getAsFile) ? it.getAsFile() : null).filter(Boolean);
       if (fs.length) files = fs;
     }
-    // URL fallback
     if ((!files || !files.length) && e.dataTransfer) {
       const droppedURL = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || '';
       if (droppedURL && /^https?:\/\//i.test(droppedURL) && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(droppedURL)) {
@@ -216,11 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
         catch(_ ){ alert('Некорректный JSON Lottie.'); }
       }
     } catch(err){ console.error(err); }
-  };
-
-  document.addEventListener('drop', handleDrop, false);
-  if (wrapper) wrapper.addEventListener('drop', handleDrop, false);
-  if (preview) preview.addEventListener('drop', handleDrop, false);
+  }, false);
 
   function readAsDataURL(file){
     return new Promise((res, rej)=>{
@@ -239,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Share (unchanged) ---------------- */
+  /* ---------------- Share: path-based deep link + cookie ---------------- */
   if (shareBtn){
     shareBtn.addEventListener('click', async function(){
       if (!lastLottieJSON){ showToastNear(shareBtn, 'Загрузи Lottie'); return; }
@@ -260,8 +262,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = await resp.json();
 
         try { localStorage.setItem('lastShotId', String(data.id)); localStorage.setItem('lastSnap', JSON.stringify(payload)); } catch(_ ){}
-        const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id) + '#id=' + encodeURIComponent(data.id);
+        try { document.cookie = 'lastShotId=' + encodeURIComponent(String(data.id)) + '; Path=/; Max-Age=2592000; SameSite=Lax'; } catch(_ ){}
 
+        const link = location.origin + '/s/' + encodeURIComponent(data.id);
         try { await navigator.clipboard.writeText(link); }
         catch(_ ){ const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta);
                    ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); try { document.execCommand('copy'); } catch(_ ){}
@@ -271,13 +274,18 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Load by id (browser blank by default) ---------------- */
+  /* ---------------- Load by id: supports /s/<id>, ?id, #id; set cookie ---------------- */
   function getShareId(){
+    const m = location.pathname.match(/\/(?:s|shot)\/([^\/]+)/i);
+    if (m && m[1]) return m[1];
     const qs = new URLSearchParams(location.search);
     const fromSearch = qs.get('id');
+    if (fromSearch) return fromSearch;
     const h = String(location.hash||'').replace(/^#/, '');
-    const idFromHash = h ? (h.startsWith('id=') ? h.slice(3) : (h.split(/[\/?=&]/).filter(Boolean)[0]||null)) : null;
-    return fromSearch || idFromHash || null;
+    if (h.startsWith('id=')) return h.slice(3);
+    const seg = h.split(/[\/?=&]/).filter(Boolean)[0];
+    if (seg) return seg;
+    return null;
   }
 
   (async function loadIfLinked(){
@@ -287,6 +295,9 @@ document.addEventListener('DOMContentLoaded', function () {
       const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
       if (!resp.ok) throw new Error('404');
       const snap = await resp.json();
+
+      // Remember id in cookie as well (covers A2HS-from-this-page)
+      try { document.cookie = 'lastShotId=' + encodeURIComponent(String(id)) + '; Path=/; Max-Age=2592000; SameSite=Lax'; } catch(_ ){}
       try { localStorage.setItem('lastShotId', String(id)); localStorage.setItem('lastSnap', JSON.stringify(snap)); } catch(_ ){}
 
       if (snap.opts && typeof snap.opts.loop === 'boolean') { loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn; }
@@ -316,6 +327,4 @@ document.addEventListener('DOMContentLoaded', function () {
     try { return await fn(); }
     finally { btn.classList.remove('loading'); btn.textContent = original; }
   }
-
-  // No SW / HUD here to avoid interference while we stabilize DnD
 });
