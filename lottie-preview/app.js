@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:CODE_VERSION] */
-const CODE_VERSION = 'v57-editor-blank-standalone-persist';
+const CODE_VERSION = 'v58-standalone-cache-last';
 
 document.addEventListener('DOMContentLoaded', function () {
   /* ---------------- DOM ---------------- */
@@ -246,10 +246,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!resp.ok) throw new Error('share failed');
         const data = await resp.json();
 
-        // Сохраним снап для standalone (A2HS)
+        // Save last for standalone via SW and localStorage
         try { localStorage.setItem('lastShotId', String(data.id)); localStorage.setItem('lastSnap', JSON.stringify(payload)); } catch(_ ){}
+        try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type:'SAVE_LAST', id:data.id, snap: payload }); } catch(_ ){}
 
-        // Ссылка с дублированием id и в hash (для iOS A2HS)
+        // Use both search and hash id to survive A2HS
         const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id) + '#id=' + encodeURIComponent(data.id);
 
         try { await navigator.clipboard.writeText(link); }
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Load by id (query/hash; localStorage only in standalone) ---------------- */
+  /* ---------------- Load by id (query/hash; SW/offline fallback only for standalone) ---------------- */
   function getShareId(){
     const qs = new URLSearchParams(location.search);
     const fromSearch = qs.get('id');
@@ -276,6 +277,10 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
+  async function saveToSW(snap, id){
+    try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type:'SAVE_LAST', id, snap }); } catch(_ ){}
+  }
+
   (async function loadIfLinked(){
     const standalone = isStandalone();
     let id = getShareId();
@@ -286,8 +291,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!resp.ok) throw new Error('404');
         const snap = await resp.json();
 
-        // Память для standalone/офлайн
+        // Remember last (SW + localStorage) for standalone
         try { localStorage.setItem('lastShotId', String(id)); localStorage.setItem('lastSnap', JSON.stringify(snap)); } catch(_ ){}
+        saveToSW(snap, id);
 
         if (snap.opts && typeof snap.opts.loop === 'boolean') { loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn; }
         if (snap.opts && snap.opts.version && verEl) { try{ verEl.textContent = String(snap.opts.version) + ' · ' + CODE_VERSION; }catch(_ ){} }
@@ -300,7 +306,23 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (standalone) {
-      // В установленном приложении пробуем восстановить локально
+      // 1) Try SW cache endpoint
+      try {
+        const r = await fetch('/offline-last', { cache: 'reload' });
+        if (r.ok) {
+          const snap = await r.json();
+          if (snap && (snap.bg || snap.lot)) {
+            if (snap.opts && typeof snap.opts.loop === 'boolean') { loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn; }
+            if (snap.opts && snap.opts.version && verEl) { try{ verEl.textContent = String(snap.opts.version) + ' · ' + CODE_VERSION; }catch(_ ){} }
+            if (snap.opts && (snap.opts.bgDpr!=null)) { bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1); }
+            if (snap.bg)  { await setBackgroundFromSrc(snap.bg, bgDpr); }
+            if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { layout(); }
+            return;
+          }
+        }
+      } catch(_ ){}
+
+      // 2) Fallback: localStorage (if same-origin storage is shared)
       let snap = null;
       try { snap = JSON.parse(localStorage.getItem('lastSnap') || 'null'); } catch(_ ){}
       if (snap && (snap.bg || snap.lot)) {
