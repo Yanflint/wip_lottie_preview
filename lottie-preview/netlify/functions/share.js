@@ -1,46 +1,22 @@
-// /.netlify/functions/share
-// POST  -> создать снимок, вернуть { id }
-// PUT ?id=... -> обновить существующий снимок тем же id
+// [ANCHOR:FN_SHARE]
 import { getStore } from '@netlify/blobs';
+import { v4 as uuid } from 'uuid';
 
-export const handler = async (event) => {
+export default async (req) => {
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
   try {
-    const method = event.httpMethod || 'GET';
-    if (method !== 'POST' && method !== 'PUT') {
-      return { statusCode: 405, body: 'Method Not Allowed' };
-    }
+    const { lot, bg, opts } = await req.json();
+    if (!lot) return new Response('Missing lot', { status: 400 });
 
-    const body = JSON.parse(event.body || '{}');
+    const id = uuid();
+    const store = getStore({ name: 'shots', consistency: 'strong' });
 
-    // Нормализуем снапшот: храним только нужные поля
-    const snap = {
-      v: 3,
-      bg: typeof body.bg === 'string' ? body.bg : null,
-      overlay: typeof body.overlay === 'string' ? body.overlay : null,
-      lot: body.lot ?? null,
-      pos: body.pos && typeof body.pos === 'object'
-        ? { dx: body.pos.dx | 0, dy: body.pos.dy | 0 }
-        : { dx: 0, dy: 0 },
-      opts: { loop: !!(body.opts && body.opts.loop) },
-      bgx: typeof body.bgx === 'number' ? body.bgx : null,
-      bgNatural: body.bgNatural && typeof body.bgNatural === 'object'
-        ? { w: body.bgNatural.w | 0, h: body.bgNatural.h | 0 }
-        : null,
-    };
+    await store.set(`${id}/anim.json`, JSON.stringify(lot), { metadata: { contentType: 'application/json' } });
+    if (bg) await store.set(`${id}/bg.txt`, String(bg), { metadata: { contentType: 'text/plain' } });
+    await store.set(`${id}/meta.json`, JSON.stringify({ opts: opts || {} }), { metadata: { contentType: 'application/json' } });
 
-    // id: если не передан, создаём
-    let id = event.queryStringParameters && event.queryStringParameters.id;
-    if (!id) id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-
-    const store = getStore('shots'); // одно имя стора на проект
-    await store.set(id, JSON.stringify(snap), { contentType: 'application/json' });
-
-    return {
-      statusCode: 200,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id }),
-    };
-  } catch {
-    return { statusCode: 500, body: 'share failed' };
+    return new Response(JSON.stringify({ id }), { headers: { 'content-type': 'application/json' } });
+  } catch (e) {
+    return new Response('Bad Request', { status: 400 });
   }
 };

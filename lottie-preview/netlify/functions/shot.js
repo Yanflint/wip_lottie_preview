@@ -1,22 +1,22 @@
-// /.netlify/functions/shot?id=...
+// [ANCHOR:FN_SHOT]
 import { getStore } from '@netlify/blobs';
 
-export const handler = async (event) => {
-  try {
-    const id = event.queryStringParameters && event.queryStringParameters.id;
-    if (!id) return { statusCode: 400, body: 'missing id' };
+export default async (req) => {
+  const url = new URL(req.url);
+  const id = url.searchParams.get('id');
+  if (!id) return new Response('Missing id', { status: 400 });
 
-    const store = getStore('shots');
-    const snap = await store.get(id, { type: 'json' });
+  const store = getStore({ name: 'shots', consistency: 'strong' });
 
-    if (!snap) return { statusCode: 404, body: 'not found' };
+  const lotText  = await store.get(`${id}/anim.json`, { type: 'text' });
+  const metaText = await store.get(`${id}/meta.json`, { type: 'text' });
+  const bgText   = await store.get(`${id}/bg.txt`,    { type: 'text' });
 
-    return {
-      statusCode: 200,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(snap),
-    };
-  } catch {
-    return { statusCode: 500, body: 'shot failed' };
-  }
+  if (!lotText || !metaText) return new Response('Not found', { status: 404 });
+
+  return new Response(JSON.stringify({
+    lot: JSON.parse(lotText),
+    bg:  bgText || null,
+    opts: JSON.parse(metaText).opts || {}
+  }), { headers: { 'content-type': 'application/json' } });
 };
