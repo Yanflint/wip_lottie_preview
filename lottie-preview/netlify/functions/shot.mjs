@@ -1,1 +1,0 @@
-export default async () => new Response('missing', {status:404});

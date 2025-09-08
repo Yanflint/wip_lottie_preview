@@ -1,19 +1,9 @@
-# SPA rewrite only for deep-link path
+# [ANCHOR:NETLIFY_TOML]
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
 [[redirects]]
-  from = "/s/*"
-  to = "/index.html"
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
   status = 200
-
-# Enable edge redirect from root using cookie (server-side)
-[[edge_functions]]
-  function = "redirect-root"
-  path = "/"
-
-[[edge_functions]]
-  function = "redirect-root"
-  path = "/index.html"
-
-[[redirects]]
-from="/api/*"
-to="/.netlify/functions/:splat"
-status=200

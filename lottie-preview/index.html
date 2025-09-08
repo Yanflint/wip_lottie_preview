@@ -2,50 +2,73 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <base href="/" />
-  <title>Preview</title>
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="stylesheet" href="/style.css" />
+  <!-- [ANCHOR:VIEWPORT] -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Lottie-превью</title>
 
-  <!-- EARLY: cookie redirect before any JS -->
-  <script>
-  (function() {
-    try {
-      var p = location.pathname;
-      var onRoot = (p === '/' || p.endsWith('/index.html'));
-      var noDeep = !(/[?]id=|#|\/(?:s|shot)\//i).test(location.href);
-      if (onRoot && noDeep) {
-        var m = document.cookie.match(/(?:^|;\s*)lastShotId=([^;]+)/);
-        if (m && m[1]) {
-          var id = decodeURIComponent(m[1]);
-          if (id) location.replace('/s/' + encodeURIComponent(id));
-        }
-      }
-    } catch(e) {}
-  })();
-  </script>
+  <!-- [ANCHOR:SCRIPTS_INCLUDE] Lottie Web -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+
+  <!-- [ANCHOR:STYLESHEET] -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="wrapper">
-    <div id="preview">
-      <img id="bgImg" alt="" />
-      <div id="ph">Перетащите PNG / JSON сюда</div>
-      <div id="lotStage"><div id="lottie"></div></div>
-    </div>
+  <!-- [ANCHOR:PAGE_CENTER] — центр по экрану -->
+  <div class="page">
+    <div class="app"><!-- [ANCHOR:APP_ROOT] -->
 
-    <div class="controls" id="mode">
-      <button id="restartBtn" title="С начала">▶</button>
-      <label><input type="checkbox" id="loopChk" /> Зациклено</label>
-      <button id="shareBtn">Поделиться</button>
+      <!-- [ANCHOR:WRAPPER_NODE] -->
+      <div id="wrapper" class="wrapper" aria-label="Область превью">
+        <div id="preview" class="preview"><!-- [ANCHOR:PREVIEW_NODE] -->
+
+          <!-- [ANCHOR:PLACEHOLDER_NODE] — двухстрочный центрированный текст -->
+          <div id="ph" class="placeholder">
+            <div class="ph">
+              <div class="ph-1">Перетащите файл:</div>
+              <div class="ph-2">PNG / JSON</div>
+            </div>
+          </div>
+
+          <!-- [ANCHOR:BG_IMG] -->
+          <div class="bg"><img id="bgImg" alt=""></div>
+
+          <!-- [ANCHOR:LOTTIE_LAYER_NODE] -->
+          <div class="lottie-layer">
+            <div id="lotStage" class="lot-stage"><!-- [ANCHOR:LOT_STAGE] -->
+              <div id="lottie" class="lottie-mount"></div><!-- [ANCHOR:LOTTIE_MOUNT] -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- [ANCHOR:DRAGNDROP_OVERLAY] — внутри wrapper, центр по высоте/ширине -->
+        <div id="dropOverlay" class="drop-overlay">
+          <div class="box">Отпустите файл здесь</div>
+        </div>
+      </div>
+
+      <!-- [ANCHOR:CONTROL_PANEL] — без подложки -->
+      <div id="mode" class="controls">
+        <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
+        <button class="btn primary"  id="heightBtn">Высота: 800px</button>
+
+        <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
+        <label class="chk" title="Играть зацикленно">
+          <input type="checkbox" id="loopChk"> Зацикленно
+        </label>
+
+        <button class="btn accent"   id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
+      </div>
     </div>
   </div>
 
-  <div id="toast"></div>
-  <div id="ver"></div>
+  <!-- [ANCHOR:TOAST_NODE] -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="/app.js"></script>
+  <!-- [ANCHOR:VERSION_NODE] -->
+  <div id="ver" class="ver"></div>
+
+  <!-- [ANCHOR:SCRIPTS] -->
+  <script src="app.js?v=56"></script>
 </body>
 </html>
