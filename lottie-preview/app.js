@@ -345,4 +345,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // первичный рендер
   layout();
+  // === PWA bootstrap ===
+(function pwaSetup(){
+  // регистрируем SW
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  // определяем, открыто ли как standalone (iOS: navigator.standalone)
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches
+           || window.navigator.standalone === true;
+  }
+
+  function applyStandaloneClass(){
+    if (isStandalone()) {
+      document.documentElement.classList.add('standalone');
+      document.body.classList.add('standalone');
+    } else {
+      document.documentElement.classList.remove('standalone');
+      document.body.classList.remove('standalone');
+    }
+  }
+
+  applyStandaloneClass();
+  window.addEventListener('visibilitychange', applyStandaloneClass);
+})();
+
 });
