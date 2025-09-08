@@ -1,5 +1,14 @@
-# Only rewrite deep-link path /s/* to index.html for SPA
+# SPA rewrite only for deep-link path
 [[redirects]]
   from = "/s/*"
   to = "/index.html"
   status = 200
+
+# Enable edge redirect from root using cookie (server-side)
+[[edge_functions]]
+  function = "redirect-root"
+  path = "/"
+
+[[edge_functions]]
+  function = "redirect-root"
+  path = "/index.html"
