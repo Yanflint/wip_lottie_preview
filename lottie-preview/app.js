@@ -17,7 +17,7 @@
 })();
 
 /* [ANCHOR:CODE_VERSION] */
-const CODE_VERSION = 'v64-path-cookie-redirect';
+const CODE_VERSION = 'v65-share-fallback';
 
 document.addEventListener('DOMContentLoaded', function () {
   /* ---------------- DOM ---------------- */
@@ -31,15 +31,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const restartBtn  = document.getElementById('restartBtn');
   const loopChk     = document.getElementById('loopChk');
   const shareBtn    = document.getElementById('shareBtn');
-  const modeEl      = document.getElementById('mode');
 
   const lotStage    = document.getElementById('lotStage');
   const lottieMount = document.getElementById('lottie');
 
   /* ---------------- STATE ---------------- */
-  let anim = null, animName = null;
-  let wide = false;
-  let fullH = false;
+  let anim = null;
   let lastLottieJSON = null;
   let loopOn = false;
 
@@ -55,12 +52,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function matchMediaSafe(q){ try{ return window.matchMedia(q).matches; } catch(_ ){ return false; } }
   const MOBILE = (function(){
-    const ua = navigator.userAgent || '';
     const coarse = matchMediaSafe('(pointer: coarse)');
     const touch  = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     const small  = Math.min(screen.width, screen.height) <= 820 || window.innerWidth <= 920;
-    const uaMob  = /iPhone|Android|Mobile|iPod|IEMobile|Windows Phone/i.test(ua);
-    return (coarse || touch || uaMob) && small;
+    return (coarse || touch) && small;
   })();
   if (MOBILE) document.body.classList.add('is-mobile');
 
@@ -76,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function uid(p){ return (p||'id_') + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2); }
   function afterTwoFrames(cb){ requestAnimationFrame(()=>requestAnimationFrame(cb)); }
 
   function basePreviewWidth(){ return 360; }
@@ -143,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function renewLottieRoot(){
     if (!lottieMount) return;
     while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
-    anim = null; animName = null;
+    anim = null;
   }
 
   function loadLottieFromData(animationData){
@@ -151,13 +145,12 @@ document.addEventListener('DOMContentLoaded', function () {
     renewLottieRoot();
     lotNomW = Number(animationData && animationData.w) || 0;
     lotNomH = Number(animationData && animationData.h) || 0;
-    animName = uid('anim_');
     lastLottieJSON = animationData;
     afterTwoFrames(function(){
       try{
         if (typeof lottie === 'undefined') throw new Error('lottie-not-loaded');
         anim = lottie.loadAnimation({
-          name: animName, container: lottieMount, renderer: 'svg',
+          container: lottieMount, renderer: 'svg',
           loop: loopOn, autoplay: true,
           animationData: JSON.parse(JSON.stringify(animationData))
         });
@@ -241,40 +234,55 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Share: path-based deep link + cookie ---------------- */
+  /* ---------------- Share with fallback endpoints ---------------- */
+  async function postJSON(url, body) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' @ ' + url);
+    return resp.json();
+  }
+
+  async function tryShare(payload) {
+    const endpoints = ['/api/share', '/.netlify/functions/share', '/share'];
+    let lastErr = null, data = null;
+    for (const ep of endpoints) {
+      try { data = await postJSON(ep, payload); if (data && data.id) return { data, used: ep }; }
+      catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('no-endpoint');
+  }
+
   if (shareBtn){
     shareBtn.addEventListener('click', async function(){
       if (!lastLottieJSON){ showToastNear(shareBtn, 'Загрузи Lottie'); return; }
-      await withLoading(shareBtn, async ()=>{
-        const payload = {
-          v: 1,
-          lot: lastLottieJSON,
-          bg: bgImg ? (bgImg.src || null) : null,
-          opts: { loop: loopOn, wide: !!wide, fullH: !!fullH, bgDpr: (bgDpr||1), version: CODE_VERSION }
-        };
-
-        const resp = await fetch('/api/share', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!resp.ok) throw new Error('share failed');
-        const data = await resp.json();
-
+      const payload = {
+        v: 1,
+        lot: lastLottieJSON,
+        bg: bgImg ? (bgImg.src || null) : null,
+        opts: { loop: loopOn, bgDpr: (bgDpr||1), version: CODE_VERSION }
+      };
+      try {
+        const { data, used } = await tryShare(payload);
         try { localStorage.setItem('lastShotId', String(data.id)); localStorage.setItem('lastSnap', JSON.stringify(payload)); } catch(_ ){}
         try { document.cookie = 'lastShotId=' + encodeURIComponent(String(data.id)) + '; Path=/; Max-Age=2592000; SameSite=Lax'; } catch(_ ){}
-
         const link = location.origin + '/s/' + encodeURIComponent(data.id);
         try { await navigator.clipboard.writeText(link); }
         catch(_ ){ const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta);
                    ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); try { document.execCommand('copy'); } catch(_ ){}
                    document.body.removeChild(ta); }
         showToastNear(shareBtn, 'Ссылка скопирована');
-      }).catch(err=>{ console.error(err); showToastNear(shareBtn, 'Ошибка при шаринге'); });
+        console.log('[share] OK via', used);
+      } catch(err) {
+        console.error('[share] failed', err);
+        showToastNear(shareBtn, 'Ошибка при шаринге: ' + (err && err.message ? err.message : 'unknown'));
+      }
     });
   }
 
-  /* ---------------- Load by id: supports /s/<id>, ?id, #id; set cookie ---------------- */
+  /* ---------------- Load by id ---------------- */
   function getShareId(){
     const m = location.pathname.match(/\/(?:s|shot)\/([^\/]+)/i);
     if (m && m[1]) return m[1];
@@ -293,14 +301,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!id) { layout(); return; } // editor starts blank
     try {
       const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
-      if (!resp.ok) throw new Error('404');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const snap = await resp.json();
-
-      // Remember id in cookie as well (covers A2HS-from-this-page)
       try { document.cookie = 'lastShotId=' + encodeURIComponent(String(id)) + '; Path=/; Max-Age=2592000; SameSite=Lax'; } catch(_ ){}
       try { localStorage.setItem('lastShotId', String(id)); localStorage.setItem('lastSnap', JSON.stringify(snap)); } catch(_ ){}
-
-      if (snap.opts && typeof snap.opts.loop === 'boolean') { loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn; }
       if (snap.opts && (snap.opts.bgDpr!=null)) { bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1); }
       if (snap.bg)  { await setBackgroundFromSrc(snap.bg, bgDpr); }
       if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { layout(); }
@@ -316,15 +320,6 @@ document.addEventListener('DOMContentLoaded', function () {
     else { toastEl.style.left = '50%'; toastEl.style.top = (window.innerHeight - 24) + 'px'; }
     toastEl.classList.add('show');
     clearTimeout(showToastNear._t);
-    showToastNear._t = setTimeout(()=> toastEl.classList.remove('show'), 1400);
-  }
-
-  async function withLoading(btn, fn){
-    if (!btn) return fn();
-    const original = btn.textContent;
-    btn.classList.add('loading');
-    btn.textContent = 'Ссылка…';
-    try { return await fn(); }
-    finally { btn.classList.remove('loading'); btn.textContent = original; }
+    showToastNear._t = setTimeout(()=> toastEl.classList.remove('show'), 1800);
   }
 });
