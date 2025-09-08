@@ -17,7 +17,7 @@
 })();
 
 /* [ANCHOR:CODE_VERSION] */
-const CODE_VERSION = 'v65-share-fallback';
+const CODE_VERSION = 'v66-path-base-fix';
 
 document.addEventListener('DOMContentLoaded', function () {
   /* ---------------- DOM ---------------- */
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Share with fallback endpoints ---------------- */
+  /* ---------------- Share with fallback endpoints + cookie ---------------- */
   async function postJSON(url, body) {
     const resp = await fetch(url, {
       method: 'POST',

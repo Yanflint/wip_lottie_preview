@@ -1,3 +1,4 @@
+# Only rewrite deep-link path /s/* to index.html for SPA
 [[redirects]]
   from = "/s/*"
   to = "/index.html"
