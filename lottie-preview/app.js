@@ -167,14 +167,31 @@ resizeLottieStage();
 
   /* ---------------- LISTENERS: DnD ---------------- */
   let dragDepth = 0;
-  const isImageFile = (f) => f && (f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name));
-  const isJsonFile  = (f) => f && (f.type === 'application/json' || /\.json$/i.test(f.name));
 
-  document.addEventListener('dragenter',(e)=>{ e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
-  document.addEventListener('dragover', (e)=>{ e.preventDefault(); });
-  document.addEventListener('dragleave',(e)=>{ e.preventDefault(); dragDepth=Math.max(0,dragDepth-1); if(!dragDepth) document.body.classList.remove('dragging'); });
-  document.addEventListener('drop',     async (e)=>{
-    e.preventDefault(); dragDepth=0; document.body.classList.remove('dragging');
+  function isImageFile(f){
+    return !!(f && ( (f.type && f.type.startsWith('image/')) || /\.(png|jpe?g|webp|gif)$/i.test(f.name||'') ));
+  }
+  function isJsonFile(f){
+    return !!(f && (f.type === 'application/json' || /\.json$/i.test(f.name||'')));
+  }
+
+  document.addEventListener('dragenter', (e)=>{
+    e.preventDefault(); dragDepth++;
+    document.body.classList.add('dragging');
+  }, false);
+
+  document.addEventListener('dragover', (e)=>{
+    e.preventDefault();
+  }, false);
+
+  document.addEventListener('dragleave', (e)=>{
+    e.preventDefault(); dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) document.body.classList.remove('dragging');
+  }, false);
+
+  document.addEventListener('drop', async (e)=>{
+    e.preventDefault(); dragDepth = 0;
+    document.body.classList.remove('dragging');
 
     const files = (e.dataTransfer && e.dataTransfer.files) ? Array.from(e.dataTransfer.files) : [];
     if (!files.length) return;
@@ -199,7 +216,7 @@ resizeLottieStage();
         catch(_){ alert('Некорректный JSON Lottie.'); }
       }
     } catch(err){ console.error(err); }
-  });
+  }, false);
 
   function readAsDataURL(file){
     return new Promise((res, rej)=>{
@@ -217,70 +234,7 @@ resizeLottieStage();
       r.readAsText(file, 'utf-8');
     });
   }
-
-  /* ---------------- Lottie + фон ---------------- */
-  function renewLottieRoot(){
-    try { if (anim && animName && typeof lottie.destroy === 'function') lottie.destroy(animName); } catch(_){}
-    try { if (anim && anim.destroy) anim.destroy(); } catch(_){}
-    anim = null; animName = null;
-    while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
-  }
-
-  async function setBackgroundFromSrc(src, dpr = 1){
-    await new Promise(res=>{
-      const meta = new Image();
-      meta.onload = function(){
-        bgNatW = meta.naturalWidth  || meta.width  || 0;
-        bgNatH = meta.naturalHeight || meta.height || 0;
-        bgImg.src = src;
-        phEl && phEl.classList.add('hidden');
-        res();
-      };
-      bgDpr = dpr || 1;
-      meta.src = src;
-    });
-    layout();
-  }
-
-  function loadLottieFromData(animationData){
-    renewLottieRoot();
-
-    lotNomW = Number(animationData.w) || 0;
-    lotNomH = Number(animationData.h) || 0;
-
-    animName = uid('anim_');
-    lastLottieJSON = animationData;
-
-    afterTwoFrames(function(){
-      anim = lottie.loadAnimation({
-        name: animName,
-        container: lottieMount,
-        renderer: 'svg',
-        loop: loopOn,
-        autoplay: true,
-        animationData: JSON.parse(JSON.stringify(animationData))
-      });
-      anim.addEventListener('DOMLoaded', layout);
-    });
-  }
-
-  /* ---------------- Контролы ---------------- */
-  /* sizeBtn removed */
-  /* heightBtn removed */
-restartBtn && restartBtn.addEventListener('click', function(){
-    if (!anim) return;
-    try { anim.stop(); anim.goToAndPlay(0, true); } catch(_){}
-  });
-
-  loopChk && loopChk.addEventListener('change', function(){
-    loopOn = !!loopChk.checked;
-    if (anim) {
-      try { if (typeof anim.setLooping === 'function') anim.setLooping(loopOn); else anim.loop = loopOn; }
-      catch(_){ anim.loop = loopOn; }
-    }
-  });
-
-  /* ---------------- Share (как раньше) ---------------- */
+/* ---------------- Share (как раньше) ---------------- */
   function showToastNear(el, msg){
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -308,16 +262,38 @@ restartBtn && restartBtn.addEventListener('click', function(){
     shareBtn.addEventListener('click', async function(){
       if (!lastLottieJSON){ showToastNear(shareBtn, 'Загрузи Lottie'); return; }
       await withLoading(shareBtn, async ()=>{
-        const payload = { v:1, lot:lastLottieJSON, bg:bgImg.src || null, opts:{ loop:loopOn, wide:!!wide, fullH:!!fullH, bgDpr:(bgDpr||1) } };
-        const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
+
+        /* VERSION BUMP */
+        let newDesc = null;
+        try {
+          const current = loadVersion();
+          newDesc = prompt('Описание версии:', current.desc || '');
+        } catch(_) {}
+        const nextVer = bumpVersion(newDesc || undefined);
+        if (verEl) verEl.textContent = nextVer;
+
+        const payload = {
+          v: 1,
+          lot: lastLottieJSON,
+          bg: bgImg.src || null,
+          opts: { loop: loopOn, wide: !!wide, fullH: !!fullH, bgDpr: (bgDpr||1), version: getCurrentVersion() }
+        };
+
+        const resp = await fetch('/api/share', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
         if (!resp.ok) throw new Error('share failed');
         const data = await resp.json();
-        \1
-        try { localStorage.setItem('lastShotId', String(data.id)); } catch(_) {}
-try { await navigator.clipboard.writeText(link); }
+        const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id);
+
+        try { localStorage.setItem('lastShotId', String(data.id)); } catch(_){}
+        try { await navigator.clipboard.writeText(link); }
         catch(_){
           const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta);
-          ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+          ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); try { document.execCommand('copy'); } catch(_){}
+          document.body.removeChild(ta);
         }
         showToastNear(shareBtn, 'Ссылка скопирована');
       }).catch(err=>{
