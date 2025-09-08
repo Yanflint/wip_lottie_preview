@@ -46,6 +46,22 @@ document.addEventListener('DOMContentLoaded', function () {
   try { if (typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_){}
 
   /* ---------------- UTILS ---------------- */
+
+  function getShareId(){
+    const qs = new URLSearchParams(location.search);
+    const fromSearch = qs.get('id');
+    if (fromSearch) return fromSearch;
+    // hash fallback: #id=..., #/id/xyz, or #xyz
+    let h = String(location.hash || '').replace(/^#/, '');
+    if (!h) return null;
+    if (h.startsWith('id=')) return h.slice(3);
+    const parts = h.split(/[\/=?&]/).filter(Boolean);
+    if (parts.length === 1) return parts[0];
+    const idIdx = parts.findIndex(p => p.toLowerCase() === 'id');
+    if (idIdx >= 0 && parts[idIdx+1]) return parts[idIdx+1];
+    return null;
+  }
+
   function uid(p){ return (p||'id_') + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2); }
   function afterTwoFrames(cb){ requestAnimationFrame(()=>requestAnimationFrame(cb)); }
   function isMobile(){
@@ -296,9 +312,9 @@ restartBtn && restartBtn.addEventListener('click', function(){
         const resp = await fetch('/api/share', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
         if (!resp.ok) throw new Error('share failed');
         const data = await resp.json();
-        const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id);
-
-        try { await navigator.clipboard.writeText(link); }
+        \1
+        try { localStorage.setItem('lastShotId', String(data.id)); } catch(_) {}
+try { await navigator.clipboard.writeText(link); }
         catch(_){
           const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta);
           ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
@@ -312,22 +328,30 @@ restartBtn && restartBtn.addEventListener('click', function(){
   }
 
   /* ---------------- Load from link ---------------- */
+  
   (async function loadIfLinked(){
-    const id = new URLSearchParams(location.search).get('id');
+    let id = getShareId();
+    if (!id) {
+      try { id = localStorage.getItem('lastShotId'); } catch(_) {}
+    }
     if (!id) { layout(); return; }
     try {
       const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
       if (!resp.ok) throw new Error('404');
       const snap = await resp.json();
 
+      // remember id for next PWA launches
+      try { localStorage.setItem('lastShotId', String(id)); } catch(_){}
+
       if (snap.opts && typeof snap.opts.loop === 'boolean') {
         loopOn = !!snap.opts.loop;
         if (loopChk) loopChk.checked = loopOn;
       }
+      if (snap.opts && (snap.opts.bgDpr!=null)) {
+        bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1);
+      }
 
-      
-      if (snap.opts && (snap.opts.bgDpr!=null)) { bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1); }
-if (snap.bg) { await setBackgroundFromSrc(snap.bg); }
+      if (snap.bg) { await setBackgroundFromSrc(snap.bg, bgDpr); }
       if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); }
       else { layout(); }
     } catch(e){
@@ -335,8 +359,7 @@ if (snap.bg) { await setBackgroundFromSrc(snap.bg); }
       layout();
     }
   })();
-
-  // первичный рендер
+// первичный рендер
   layout();
 
   // PWA: standalone detection (iOS Safari + others)
