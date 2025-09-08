@@ -1,7 +1,7 @@
 'use strict';
 
 /* [ANCHOR:CODE_VERSION] */
-const CODE_VERSION = 'v58-standalone-cache-last';
+const CODE_VERSION = 'v59-debug-hud';
 
 document.addEventListener('DOMContentLoaded', function () {
   /* ---------------- DOM ---------------- */
@@ -20,6 +20,71 @@ document.addEventListener('DOMContentLoaded', function () {
   const lotStage    = document.getElementById('lotStage');
   const lottieMount = document.getElementById('lottie');
 
+  /* ---------------- DEBUG HUD ---------------- */
+  const hud = (function createHUD(){
+    const hud = document.createElement('div');
+    hud.id = 'debugHUD';
+    hud.style.cssText = [
+      'position:fixed',
+      'left:50%','top:50%','transform:translate(-50%, -50%)',
+      'max-width:520px','width:90vw',
+      'background:rgba(0,0,0,0.78)','color:#fff',
+      'font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace',
+      'padding:12px 14px','border-radius:12px','z-index:100000',
+      'white-space:pre-wrap','text-align:left',
+      'box-shadow:0 8px 24px rgba(0,0,0,0.35)',
+      'display:none'
+    ].join(';');
+    const chip = document.createElement('div');
+    chip.id='debugHUDToggle';
+    chip.textContent='DBG';
+    chip.style.cssText=[
+      'position:fixed','right:10px','bottom:10px',
+      'width:42px','height:28px','border-radius:14px',
+      'background:rgba(0,0,0,0.65)','color:#fff','z-index:100001',
+      'display:flex','align-items:center','justify-content:center',
+      'font:12px/1 ui-monospace, SFMono-Regular, Menlo, monospace',
+      'letter-spacing:0.5px','user-select:none','-webkit-user-select:none',
+      'cursor:pointer'
+    ].join(';');
+    chip.addEventListener('click', ()=>{ toggle(); });
+    document.body.appendChild(hud);
+    document.body.appendChild(chip);
+
+    let data = { phase:'startup' };
+    function set(k,v){ data[k]=v; render(); }
+    function merge(obj){ Object.assign(data,obj||{}); render(); }
+    function visible(){ return hud.style.display !== 'none'; }
+    function show(){ hud.style.display='block'; render(); }
+    function hide(){ hud.style.display='none'; }
+    function toggle(){ visible()?hide():show(); }
+    function render(){
+      const rPrev = (preview && preview.getBoundingClientRect) ? preview.getBoundingClientRect() : {width:0,height:0,left:0,top:0};
+      const style = window.getComputedStyle(preview||document.body);
+      merge.now = Date.now();
+      const lines = [];
+      lines.push(`CODE: ${CODE_VERSION}`);
+      lines.push(`phase: ${data.phase||'-'}`);
+      lines.push(`url: ${location.href}`);
+      lines.push(`display-mode.standalone: ${data.standalone}  sw.supported: ${'serviceWorker' in navigator}  sw.controller: ${!!(navigator.serviceWorker && navigator.serviceWorker.controller)}`);
+      lines.push(`id.search: ${data.idSearch||'-'}  id.hash: ${data.idHash||'-'}  lastShotId.ls: ${data.lastShotId||'-'}`);
+      lines.push(`offline-last.fetch: ${data.offlineLast||'-'}  lastSnap.ls: ${data.lastSnapBytes||0} bytes`);
+      lines.push(`BG: loaded=${data.bgLoaded||false}  src=${(bgImg&&bgImg.src&&bgImg.src.length)?'yes':'no'} nat=${data.bgNatW||0}x${data.bgNatH||0} dpr=${data.bgDpr||1}`);
+      lines.push(`Preview: ${
+        w: Math.round(rPrev.width), h: Math.round(rPrev.height),
+        left: Math.round(rPrev.left), top: Math.round(rPrev.top)
+      } scaleInfo={css: style.transform}`);
+      lines.push(`Lottie: loaded=${data.lottieLoaded||false} nom=${data.lotNomW||0}x${data.lotNomH||0} anim=${!!data.anim} children=${(lottieMount&&lottieMount.childNodes)?lottieMount.childNodes.length:0}`);
+      hud.textContent = lines.join('\n');
+    }
+    window.__DBG__ = { set, merge, show, hide, toggle };
+    // Keyboard toggle on desktop
+    window.addEventListener('keydown', (e)=>{ if (e.key === '?' || e.key === 'h' || e.key==='H') toggle(); });
+    // Auto show if nothing visible after 1.2s
+    setTimeout(()=>{ if (!document.body.classList.contains('standalone')) return; if (!data.bgLoaded && !data.lottieLoaded) show(); }, 1200);
+    return { set, merge, show, hide, toggle };
+  })();
+
   /* ---------------- STATE ---------------- */
   let anim = null, animName = null;
   let wide = false;
@@ -29,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // фон
   let bgNatW = 0, bgNatH = 800;
-  let bgDpr  = 1; // DPR из имени файла @2x/@3x/@4x
+  let bgDpr  = 1;
 
   // номинал композиции Lottie
   let lotNomW = 0, lotNomH = 0;
@@ -48,6 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return (coarse || touch || uaMob) && small;
   })();
   if (MOBILE) document.body.classList.add('is-mobile');
+  hud.merge({ standalone: isStandalone() });
 
   try { if (typeof lottie !== 'undefined' && typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_ ){}
 
@@ -66,8 +132,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function basePreviewWidth(){ return 360; }
   function basePreviewHeight(){ return Math.max(1, Math.round((bgNatH || 800) / (bgDpr || 1))); }
-
-  function controlsH(){ if (!modeEl) return 0; const r = modeEl.getBoundingClientRect(); return Math.ceil(r.height); }
 
   /* ---------------- LAYOUT ---------------- */
   function resizeLottieStage(){
@@ -102,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function () {
     resizeLottieStage();
   }
 
-  function layout(){ (MOBILE ? applyMobileScale : applyDesktopScale)(); }
+  function layout(){ (MOBILE ? applyMobileScale : applyDesktopScale)(); hud.merge({phase:'layout', lotNomW, lotNomH, bgNatW, bgNatH, bgDpr}); }
   window.addEventListener('resize', layout);
 
   /* ---------------- ФОН ---------------- */
@@ -115,8 +179,10 @@ document.addEventListener('DOMContentLoaded', function () {
         bgImg.src = src;
         bgDpr = dpr || 1;
         if (phEl) phEl.classList.add('hidden');
+        hud.merge({ bgLoaded:true, bgNatW, bgNatH, bgDpr });
         res();
       };
+      im.onerror = function(e){ hud.merge({ bgLoaded:false, phase:'bg-error' }); res(); };
       im.src = src;
     });
     layout();
@@ -144,8 +210,8 @@ document.addEventListener('DOMContentLoaded', function () {
           loop: loopOn, autoplay: true,
           animationData: JSON.parse(JSON.stringify(animationData))
         });
-        anim.addEventListener('DOMLoaded', layout);
-      }catch(e){ console.error(e); }
+        anim.addEventListener('DOMLoaded', function(){ hud.merge({ lottieLoaded:true, anim:true, lotNomW, lotNomH, phase:'lottie-domloaded' }); layout(); });
+      }catch(e){ console.error(e); hud.merge({ lottieLoaded:false, phase:'lottie-error' }); }
     });
   }
 
@@ -246,11 +312,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!resp.ok) throw new Error('share failed');
         const data = await resp.json();
 
-        // Save last for standalone via SW and localStorage
         try { localStorage.setItem('lastShotId', String(data.id)); localStorage.setItem('lastSnap', JSON.stringify(payload)); } catch(_ ){}
         try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type:'SAVE_LAST', id:data.id, snap: payload }); } catch(_ ){}
 
-        // Use both search and hash id to survive A2HS
         const link = location.origin + location.pathname + '?id=' + encodeURIComponent(data.id) + '#id=' + encodeURIComponent(data.id);
 
         try { await navigator.clipboard.writeText(link); }
@@ -262,27 +326,20 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  /* ---------------- Load by id (query/hash; SW/offline fallback only for standalone) ---------------- */
+  /* ---------------- Load by id ---------------- */
   function getShareId(){
     const qs = new URLSearchParams(location.search);
     const fromSearch = qs.get('id');
-    if (fromSearch) return fromSearch;
-    let h = String(location.hash || '').replace(/^#/, '');
-    if (!h) return null;
-    if (h.startsWith('id=')) return h.slice(3);
-    const parts = h.split(/[\/?=&]/).filter(Boolean);
-    if (parts.length === 1) return parts[0];
-    const idIdx = parts.findIndex(p => p.toLowerCase() === 'id');
-    if (idIdx >= 0 && parts[idIdx+1]) return parts[idIdx+1];
-    return null;
-  }
-
-  async function saveToSW(snap, id){
-    try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type:'SAVE_LAST', id, snap }); } catch(_ ){}
+    const h = String(location.hash||'').replace(/^#/, '');
+    const idFromHash = h ? (h.startsWith('id=') ? h.slice(3) : (h.split(/[\/?=&]/).filter(Boolean)[0]||null)) : null;
+    hud.merge({ idSearch: fromSearch||null, idHash: idFromHash||null });
+    return fromSearch || idFromHash || null;
   }
 
   (async function loadIfLinked(){
     const standalone = isStandalone();
+    hud.merge({ phase: 'loadIfLinked', standalone });
+
     let id = getShareId();
 
     if (id) {
@@ -290,10 +347,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
         if (!resp.ok) throw new Error('404');
         const snap = await resp.json();
-
-        // Remember last (SW + localStorage) for standalone
         try { localStorage.setItem('lastShotId', String(id)); localStorage.setItem('lastSnap', JSON.stringify(snap)); } catch(_ ){}
-        saveToSW(snap, id);
+        hud.merge({ phase:'loaded:api/shot', lastShotId:id, offlineLast:'--' });
 
         if (snap.opts && typeof snap.opts.loop === 'boolean') { loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn; }
         if (snap.opts && snap.opts.version && verEl) { try{ verEl.textContent = String(snap.opts.version) + ' · ' + CODE_VERSION; }catch(_ ){} }
@@ -302,30 +357,38 @@ document.addEventListener('DOMContentLoaded', function () {
         if (snap.bg)  { await setBackgroundFromSrc(snap.bg, bgDpr); }
         if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { layout(); }
         return;
-      } catch(e){ console.error(e); /* fall through */ }
+      } catch(e){ console.error(e); hud.merge({ phase:'api/shot error' }); /* fall through */ }
     }
 
     if (standalone) {
-      // 1) Try SW cache endpoint
+      // Try SW cache endpoint
       try {
-        const r = await fetch('/offline-last', { cache: 'reload' });
+        const r = await fetch('/offline-last', { cache:'reload' });
         if (r.ok) {
           const snap = await r.json();
           if (snap && (snap.bg || snap.lot)) {
+            hud.merge({ phase:'loaded:/offline-last', offlineLast:'ok' });
             if (snap.opts && typeof snap.opts.loop === 'boolean') { loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn; }
             if (snap.opts && snap.opts.version && verEl) { try{ verEl.textContent = String(snap.opts.version) + ' · ' + CODE_VERSION; }catch(_ ){} }
             if (snap.opts && (snap.opts.bgDpr!=null)) { bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1); }
             if (snap.bg)  { await setBackgroundFromSrc(snap.bg, bgDpr); }
             if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { layout(); }
             return;
+          } else {
+            hud.merge({ phase:'offline-last empty', offlineLast:'empty' });
           }
+        } else {
+          hud.merge({ phase:'offline-last not ok', offlineLast:r.status });
         }
-      } catch(_ ){}
+      } catch(e){ hud.merge({ phase:'offline-last error', offlineLast:'error' }); }
 
-      // 2) Fallback: localStorage (if same-origin storage is shared)
-      let snap = null;
+      // Fallback: localStorage
+      let snap = null; let lsId = null;
+      try { lsId = localStorage.getItem('lastShotId'); } catch(_ ){}
       try { snap = JSON.parse(localStorage.getItem('lastSnap') || 'null'); } catch(_ ){}
+      hud.merge({ lastShotId: lsId || null, lastSnapBytes: snap ? JSON.stringify(snap).length : 0 });
       if (snap && (snap.bg || snap.lot)) {
+        hud.merge({ phase:'loaded:localStorage' });
         if (snap.opts && typeof snap.opts.loop === 'boolean') { loopOn = !!snap.opts.loop; if (loopChk) loopChk.checked = loopOn; }
         if (snap.opts && snap.opts.version && verEl) { try{ verEl.textContent = String(snap.opts.version) + ' · ' + CODE_VERSION; }catch(_ ){} }
         if (snap.opts && (snap.opts.bgDpr!=null)) { bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1); }
@@ -335,7 +398,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
 
-    // Editor (браузер): по умолчанию пусто
+    // Editor: blank
+    hud.merge({ phase:'editor blank' });
     layout();
   })();
 
