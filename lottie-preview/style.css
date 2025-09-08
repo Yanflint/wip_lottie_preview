@@ -179,3 +179,18 @@ body.is-mobile .preview{
   /* height и transform выставляет JS */
 }
 body.is-mobile .ver{ display:none !important; }
+
+
+/* === Patch: hide deprecated size/height controls === */
+#sizeBtn, #heightBtn { display: none !important; }
+
+/* === PWA standalone fullscreen (iOS target) === */
+body.standalone .controls { display: none !important; }
+body.standalone .ver { display: none !important; }
+body.standalone .wrapper{
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+}
