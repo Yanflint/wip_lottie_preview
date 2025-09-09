@@ -1,4 +1,10 @@
+# [ANCHOR:NETLIFY_TOML]
 [build]
-  publish='.'
-  functions='netlify/functions'
-  command=''
+  publish = "."
+  functions = "netlify/functions"
+
+  command = "npm run build"
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

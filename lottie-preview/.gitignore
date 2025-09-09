@@ -1,0 +1,12 @@
+# Build artifacts
+app.js
+node_modules/
+.netlify/
+dist/
+*.zip
+npm-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db

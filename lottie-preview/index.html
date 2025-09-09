@@ -2,64 +2,73 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
+  <!-- [ANCHOR:VIEWPORT] -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Lottie Preview</title>
+  <title>Lottie-превью</title>
+
+  <!-- [ANCHOR:SCRIPTS_INCLUDE] Lottie Web -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+
+  <!-- [ANCHOR:STYLESHEET] -->
   <link rel="stylesheet" href="style.css" />
-  <!-- PWA -->
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#000000">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <!-- lottie-web -->
-  <script src="https://unpkg.com/lottie-web/build/player/lottie.min.js"></script>
 </head>
 <body>
-  <div id="app">
-    <div id="wrapper">
-      <div id="preview" aria-label="preview">
-        <img id="bgImg" alt="" />
-        <div id="lotStage" title="Перетащите Lottie мышью">
-          <div id="lottie"></div>
-        </div>
-        <img id="ovImg" class="overlay" alt="" />
-        <div id="ph" class="placeholder">
-          <div class="ph-inner">
-            <div class="ph-line b">Кликните или перетащите:</div>
-            <div class="ph-line">PNG / JSON</div>
+  <!-- [ANCHOR:PAGE_CENTER] — центр по экрану -->
+  <div class="page">
+    <div class="app"><!-- [ANCHOR:APP_ROOT] -->
+
+      <!-- [ANCHOR:WRAPPER_NODE] -->
+      <div id="wrapper" class="wrapper" aria-label="Область превью">
+        <div id="preview" class="preview"><!-- [ANCHOR:PREVIEW_NODE] -->
+
+          <!-- [ANCHOR:PLACEHOLDER_NODE] — двухстрочный центрированный текст -->
+          <div id="ph" class="placeholder">
+            <div class="ph">
+              <div class="ph-1">Перетащите файл:</div>
+              <div class="ph-2">PNG / JSON</div>
+            </div>
           </div>
+
+          <!-- [ANCHOR:BG_IMG] -->
+          <div class="bg"><img id="bgImg" alt=""></div>
+
+          <!-- [ANCHOR:LOTTIE_LAYER_NODE] -->
+          <div class="lottie-layer">
+            <div id="lotStage" class="lot-stage"><!-- [ANCHOR:LOT_STAGE] -->
+              <div id="lottie" class="lottie-mount"></div><!-- [ANCHOR:LOTTIE_MOUNT] -->
+            </div>
+          </div>
+
         </div>
+
+        <!-- [ANCHOR:DRAGNDROP_OVERLAY] — внутри wrapper, центр по высоте/ширине -->
         <div id="dropOverlay" class="drop-overlay">
-          <div class="drop-msg">Отпустите файл здесь</div>
+          <div class="box">Отпустите файл здесь</div>
         </div>
       </div>
-    </div>
 
-    <div id="controls" class="controls">
-      <div class="left">
-        <button id="pickBtn" class="btn">PNG/Lottie</button>
-        <button id="resetPosBtn" class="btn ghost">Сброс поз.</button>
+      <!-- [ANCHOR:CONTROL_PANEL] — без подложки -->
+      <div id="mode" class="controls">
+        <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
+        <button class="btn primary"  id="heightBtn">Высота: 800px</button>
+
+        <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
+        <label class="chk" title="Играть зацикленно">
+          <input type="checkbox" id="loopChk"> Зацикленно
+        </label>
+
+        <button class="btn accent"   id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
       </div>
-      <div class="right">
-        <button id="restartBtn" class="btn ghost" title="Повтор воспроизведения">▶</button>
-        <label class="chk" title="Играть зацикленно"><input type="checkbox" id="loopChk" checked /> <span>зацикленно</span></label>
-        <button id="shareBtn" class="btn primary">Поделиться</button>
-        <button id="copyBtn" class="btn" title="Скопировать ссылку" disabled>📎</button>
-      </div>
     </div>
-
-    <div id="posHud" class="pos-hud"></div>
-    <div id="toast" class="toast"></div>
-    <div id="ver" class="ver"></div>
-
-    <input id="filePick" type="file" accept="image/png, image/jpeg, image/webp, application/json,.json" hidden />
   </div>
 
-  <script src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(()=>{});
-    }
-  </script>
+  <!-- [ANCHOR:TOAST_NODE] -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- [ANCHOR:VERSION_NODE] -->
+  <div id="ver" class="ver"></div>
+
+  <!-- [ANCHOR:SCRIPTS] -->
+  <script src="app.js?v=56"></script>
 </body>
 </html>
