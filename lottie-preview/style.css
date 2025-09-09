@@ -1,17 +1,196 @@
+/* ===================== Т О К Е Н Ы  И  Б А З А ===================== */
+:root{
+  --bg:#0b0c10; --muted:#9aa3b2;
+  --accent:#6ee7b7; --accent-orange:#FF7700;
+  --preview-bg:#0b0f1a;
 
-html,body{margin:0;padding:0;background:#111;color:#eee;font:14px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial}
-#wrapper{max-width:360px;margin:20px auto;padding:8px}
-#preview{position:relative;width:360px;height:800px;background:#000;overflow:hidden;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
-#bgImg{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover}
-#ph{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);opacity:.7}
-#lotStage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
-.controls{display:flex;gap:12px;align-items:center;margin:12px 4px}
-#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#000c;color:#fff;padding:8px 12px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none}
-#toast.show{opacity:1}
-#ver{position:fixed;right:8px;bottom:6px;opacity:.55;font:12px/1.2 ui-monospace,monospace}
-/* HUD */
-#hud{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#000d;color:#0f0;padding:10px 12px;border-radius:10px;
-     font:12px/1.35 ui-monospace,monospace;white-space:pre-wrap;max-width:90vw;display:none;z-index:99999}
-#hud.show{display:block}
-#hudToggle{position:fixed;right:10px;bottom:10px;background:#000c;color:#0f0;border:1px solid #0f0;padding:4px 7px;border-radius:8px;
-           font:11px ui-monospace,monospace;z-index:100000;cursor:pointer}
+  /* UI-параметры */
+  --ctl-h: 36px;           /* высота кнопки */
+  --btn-font: 13px;        /* размер шрифта в кнопке */
+  --btn-pad-y: 8px;
+  --btn-pad-x: 12px;
+  --btn-radius: 12px;
+  --wrap-r: 16px;          /* радиус короба превью */
+  --btn-dim-bg: #525b72;   /* цвет кнопок ширины/высоты */
+
+  /* [ANCHOR:STACK_GAP] — расстояние между превью и блоком кнопок */
+  --stack-gap: 24px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  background:linear-gradient(180deg,#0b0c10,#0f1117);
+  color:#eef2f8;
+}
+
+/* Центрирование контента по экрану */
+.page{
+  min-height:100dvh;
+  display:grid;
+  place-items:center;
+  padding:16px;
+}
+
+/* ===================== П Р Е В Ь Ю  L O T T I E ===================== */
+.app{
+  width:100%;
+  max-width:1000px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:var(--stack-gap);
+}
+
+/* Коробка превью */
+.wrapper{
+  position:relative; width:360px; height:800px;
+  border:none; outline:none;
+  border-radius:var(--wrap-r);
+  overflow:visible;              /* чтобы рамку не клипало */
+}
+
+/* Единственная пунктирная рамка */
+.wrapper::after{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border:2px dashed #2b334a;
+  border-radius: calc(var(--wrap-r) + 6px);
+  pointer-events:none;
+  z-index:2;
+}
+
+/* Внутреннее содержимое */
+.preview{ position:absolute; inset:0; overflow:hidden; z-index:1; }
+
+.bg, .lottie-layer{ position:absolute; inset:0; }
+.bg{ overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.bg img{ display:block; height:100%; width:auto; margin:0 auto; }
+
+.lottie-layer{ overflow:hidden; }
+.lot-stage{
+  position:absolute; left:50%; top:50%;
+  transform-origin:50% 50%;
+}
+.lottie-mount{ width:100%; height:100%; }
+
+/* Плейсхолдер — центр */
+.placeholder{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--muted); font-size:13px; letter-spacing:.2px; background:var(--preview-bg);
+  border:none; border-radius:12px; text-align:center; padding:12px;
+}
+.placeholder .ph{ display:flex; flex-direction:column; align-items:center; }
+.placeholder .ph-1{ color:#fff; margin-bottom:4px; font-weight:600; }
+.placeholder .ph-2{ color:var(--muted); }
+.placeholder.hidden{ display:none; }
+
+/* Во время перетаскивания скрываем плейсхолдер */
+body.dragging .placeholder{ display:none !important; }
+
+/* ===== Drag&Drop overlay — внутри .wrapper и по центру превью ===== */
+.drop-overlay{
+  position:absolute; inset:0;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.04);
+  z-index:3;
+  pointer-events:none;
+}
+.drop-overlay .box{
+  border:2px dashed #2b334a; color:#ddd; padding:14px 18px; border-radius:10px; font-size:13px;
+  background:rgba(0,0,0,.35);
+}
+body.dragging .drop-overlay{ display:flex; }
+
+/* ===================== К Н О П К И  И  Ч Е К Б О К С ===================== */
+.controls{
+  display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
+  background:transparent; padding:0; border:none;
+}
+
+.btn{
+  cursor:pointer; border:none; border-radius:var(--btn-radius);
+  padding:var(--btn-pad-y) var(--btn-pad-x);
+  font-weight:600; font-size:var(--btn-font); line-height:1;
+  min-height:var(--ctl-h);
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  transition:transform .05s ease, opacity .2s ease, filter .2s ease;
+  color:#0b0c10; background:var(--accent);
+}
+.btn:disabled{opacity:.5; cursor:not-allowed}
+.btn:active{transform:translateY(1px)}
+.btn:hover:not(:disabled){ filter:brightness(1.05); }
+
+.btn.secondary { background:#273046; color:#dce3ef; border:1px solid #2e374f; }
+.btn.accent    { background:var(--accent-orange); color:#fff; }
+
+#sizeBtn, #heightBtn { background:var(--btn-dim-bg); color:#fff; }
+
+.chk{
+  display:inline-flex; align-items:center; gap:6px;
+  color:#dce3ef; background:#273046; border:1px solid #2e374f;
+  border-radius:var(--btn-radius); padding:0 var(--btn-pad-x); min-height:var(--ctl-h);
+  font-size:var(--btn-font); line-height:1;
+}
+.chk input{ width:14px; height:14px; margin:0; }
+
+/* ===================== Л О У Д Е Р  Н А  « П О Д Е Л И Т Ь С Я » ===================== */
+.btn.loading{ opacity:.95; pointer-events:none; position:relative; }
+.btn.loading::after{
+  content:""; width:14px; height:14px; margin-left:6px;
+  border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff; border-right-color:#fff;
+  border-radius:50%;
+  display:inline-block; animation:spin .6s linear infinite; vertical-align:middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===================== Т О С Т ===================== */
+.toast{
+  position:fixed; padding:8px 10px; background:rgba(0,0,0,.85); color:#fff; border-radius:8px;
+  font-size:12px; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
+  z-index:1000; backdrop-filter:blur(4px);
+  transform:translate(-50%, calc(-100% - 8px));
+}
+.toast.show{ opacity:1; }
+
+/* Версия (скрыта на мобиле) */
+.ver{
+  position:fixed; right:8px; bottom:6px; z-index:1000;
+  font-size:11px; line-height:1; padding:4px 6px; color:#bbb;
+  background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
+}
+
+/* ===================== М О Б И Л Ь Н Ы Й  Р Е Ж И М ===================== */
+body.is-mobile .page{ padding:0; }
+body.is-mobile .app{ max_width:none; }
+body.is-mobile .controls{ display:none !important; }
+body.is-mobile{ overflow:hidden; }
+body.is-mobile .wrapper{
+  position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
+  border-radius:0; --wrap-r: 0px;
+}
+body.is-mobile .preview{
+  width:360px;
+  left:50%; top:50%; transform-origin:50% 50%;
+  /* height и transform выставляет JS */
+}
+body.is-mobile .ver{ display:none !important; }
+
+
+/* === Patch: hide deprecated size/height controls === */
+#sizeBtn, #heightBtn { display: none !important; }
+
+/* === PWA standalone fullscreen (iOS target) === */
+body.standalone .controls { display: none !important; }
+body.standalone .ver { display: none !important; }
+body.standalone .wrapper{
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+}

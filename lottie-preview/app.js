@@ -1,32 +1,56 @@
 'use strict';
 
+/* Early redirect from root using cookie (works for A2HS base URL) */
+(function () {
+  try {
+    var p = location.pathname;
+    var onRoot = (p === '/' || p.endsWith('/index.html'));
+    var noDeep = !/[?]id=|#|\/(?:s|shot)\//i.test(location.href);
+    if (onRoot && noDeep) {
+      var m = document.cookie.match(/(?:^|;\s*)lastShotId=([^;]+)/);
+      if (m && m[1]) {
+        var id = decodeURIComponent(m[1]);
+        if (id) location.replace('/s/' + encodeURIComponent(id));
+      }
+    }
+  } catch (_e) {}
+})();
+
 /* [ANCHOR:CODE_VERSION] */
-const CODE_VERSION = 'v67-offline-sw-edge';
+const CODE_VERSION = 'v66-path-base-fix';
 
 document.addEventListener('DOMContentLoaded', function () {
+  /* ---------------- DOM ---------------- */
   const wrapper     = document.getElementById('wrapper');
   const preview     = document.getElementById('preview');
   const bgImg       = document.getElementById('bgImg');
   const phEl        = document.getElementById('ph');
   const toastEl     = document.getElementById('toast');
   const verEl       = document.getElementById('ver');
+
   const restartBtn  = document.getElementById('restartBtn');
   const loopChk     = document.getElementById('loopChk');
   const shareBtn    = document.getElementById('shareBtn');
+
   const lotStage    = document.getElementById('lotStage');
   const lottieMount = document.getElementById('lottie');
 
+  /* ---------------- STATE ---------------- */
   let anim = null;
   let lastLottieJSON = null;
   let loopOn = false;
+
+  // фон
   let bgNatW = 0, bgNatH = 800;
   let bgDpr  = 1;
+
+  // номинал композиции Lottie
   let lotNomW = 0, lotNomH = 0;
 
+  /* ---------------- INIT ---------------- */
   if (verEl) verEl.textContent = CODE_VERSION;
 
   function matchMediaSafe(q){ try{ return window.matchMedia(q).matches; } catch(_ ){ return false; } }
-  function isStandalone(){ return matchMediaSafe('(display-mode: standalone)') || window.navigator.standalone === true; }
   const MOBILE = (function(){
     const coarse = matchMediaSafe('(pointer: coarse)');
     const touch  = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -35,29 +59,24 @@ document.addEventListener('DOMContentLoaded', function () {
   })();
   if (MOBILE) document.body.classList.add('is-mobile');
 
-  async function ensureLottieScript() {
+  try { if (typeof lottie !== 'undefined' && typeof lottie.setCacheEnabled === 'function') lottie.setCacheEnabled(false); } catch(_ ){}
+
+  /* ---------------- UTILS ---------------- */
+  async function ensureLottieScript(){
     if (typeof window.lottie !== 'undefined') return;
-    const ok = await new Promise((res)=>{
-      const s = document.createElement('script');
-      s.src = '/lib/lottie.min.js';
-      s.onload = ()=>res(!!window.lottie);
-      s.onerror = ()=>res(false);
-      document.head.appendChild(s);
-    });
-    if (ok) return;
     await new Promise((res, rej)=>{
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js';
-      s.onload = ()=>res();
-      s.onerror = rej;
-      document.head.appendChild(s);
+      s.onload = ()=>res(); s.onerror = rej; document.head.appendChild(s);
     });
   }
 
   function afterTwoFrames(cb){ requestAnimationFrame(()=>requestAnimationFrame(cb)); }
+
   function basePreviewWidth(){ return 360; }
   function basePreviewHeight(){ return Math.max(1, Math.round((bgNatH || 800) / (bgDpr || 1))); }
 
+  /* ---------------- LAYOUT ---------------- */
   function resizeLottieStage(){
     if (!lotNomW || !lotNomH) return;
     const ph = preview.clientHeight || basePreviewHeight();
@@ -66,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
     lotStage.style.height = lotNomH + 'px';
     lotStage.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
+
   function applyDesktopScale(){
     const baseW = basePreviewWidth();
     const baseH = basePreviewHeight();
@@ -78,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     resizeLottieStage();
   }
+
   function applyMobileScale(){
     const vw = (window.visualViewport && window.visualViewport.width) ? window.visualViewport.width : window.innerWidth;
     const s  = vw / 360;
@@ -90,9 +111,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     resizeLottieStage();
   }
+
   function layout(){ (MOBILE ? applyMobileScale : applyDesktopScale)(); }
   window.addEventListener('resize', layout);
 
+  /* ---------------- ФОН ---------------- */
   async function setBackgroundFromSrc(src, dpr = 1){
     await new Promise(res=>{
       const im = new Image();
@@ -110,11 +133,13 @@ document.addEventListener('DOMContentLoaded', function () {
     layout();
   }
 
+  /* ---------------- LOTTIE ---------------- */
   function renewLottieRoot(){
     if (!lottieMount) return;
     while (lottieMount.firstChild) lottieMount.removeChild(lottieMount.firstChild);
     anim = null;
   }
+
   function loadLottieFromData(animationData){
     ensureLottieScript().catch(()=>{});
     renewLottieRoot();
@@ -134,10 +159,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  /* ---------------- Контролы ---------------- */
   if (restartBtn) restartBtn.addEventListener('click', function(){
     if (!anim) return;
     try { anim.stop(); anim.goToAndPlay(0, true); } catch(_ ){}
   });
+
   if (loopChk) loopChk.addEventListener('change', function(){
     loopOn = !!loopChk.checked;
     if (anim) {
@@ -146,12 +173,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  ['dragenter','dragover','dragleave','drop'].forEach(evt => {
+  /* ---------------- DnD ---------------- */
+  ;['dragenter','dragover','dragleave','drop'].forEach(evt => {
     window.addEventListener(evt, (e)=>{ e.preventDefault(); }, false);
     document.addEventListener(evt, (e)=>{ e.preventDefault(); }, false);
   });
+
   function isImageFile(f){ return !!(f && ((f.type && f.type.startsWith('image/')) || /\.(png|jpe?g|webp|gif)$/i.test(f.name||''))); }
   function isJsonFile(f){ return !!(f && (f.type === 'application/json' || /\.json$/i.test(f.name||''))); }
+
   document.addEventListener('drop', async (e)=>{
     let files = (e.dataTransfer && e.dataTransfer.files) ? Array.from(e.dataTransfer.files) : [];
     if ((!files || !files.length) && e.dataTransfer && e.dataTransfer.items) {
@@ -204,6 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  /* ---------------- Share with fallback endpoints + cookie ---------------- */
   async function postJSON(url, body) {
     const resp = await fetch(url, {
       method: 'POST',
@@ -213,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!resp.ok) throw new Error('HTTP ' + resp.status + ' @ ' + url);
     return resp.json();
   }
+
   async function tryShare(payload) {
     const endpoints = ['/api/share', '/.netlify/functions/share', '/share'];
     let lastErr = null, data = null;
@@ -222,35 +254,35 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     throw lastErr || new Error('no-endpoint');
   }
+
   if (shareBtn){
     shareBtn.addEventListener('click', async function(){
       if (!lastLottieJSON){ showToastNear(shareBtn, 'Загрузи Lottie'); return; }
       const payload = {
-        v: 1, lot: lastLottieJSON, bg: bgImg ? (bgImg.src || null) : null,
+        v: 1,
+        lot: lastLottieJSON,
+        bg: bgImg ? (bgImg.src || null) : null,
         opts: { loop: loopOn, bgDpr: (bgDpr||1), version: CODE_VERSION }
       };
       try {
-        const { data } = await tryShare(payload);
-        rememberId(String(data.id), payload);
+        const { data, used } = await tryShare(payload);
+        try { localStorage.setItem('lastShotId', String(data.id)); localStorage.setItem('lastSnap', JSON.stringify(payload)); } catch(_ ){}
+        try { document.cookie = 'lastShotId=' + encodeURIComponent(String(data.id)) + '; Path=/; Max-Age=2592000; SameSite=Lax'; } catch(_ ){}
         const link = location.origin + '/s/' + encodeURIComponent(data.id);
-        await copy(link);
+        try { await navigator.clipboard.writeText(link); }
+        catch(_ ){ const ta = document.createElement('textarea'); ta.value = link; document.body.appendChild(ta);
+                   ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); try { document.execCommand('copy'); } catch(_ ){}
+                   document.body.removeChild(ta); }
         showToastNear(shareBtn, 'Ссылка скопирована');
-      } catch(err) { console.error('[share] failed', err); showToastNear(shareBtn, 'Ошибка при шаринге'); }
+        console.log('[share] OK via', used);
+      } catch(err) {
+        console.error('[share] failed', err);
+        showToastNear(shareBtn, 'Ошибка при шаринге: ' + (err && err.message ? err.message : 'unknown'));
+      }
     });
   }
-  function rememberId(id, snap) {
-    try { document.cookie = 'lastShotId=' + encodeURIComponent(String(id)) + '; Path=/; Max-Age=2592000; SameSite=Lax'; } catch(_ ){}
-    try { localStorage.setItem('lastShotId', String(id)); localStorage.setItem('lastSnap', JSON.stringify(snap)); } catch(_ ){}
-    try { if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({type:'SAVE_LAST', id, snap}); } catch(_ ){}
-    try { idbPut('last','snap', snap); } catch(_ ){}
-  }
-  async function copy(text) {
-    try { await navigator.clipboard.writeText(text); }
-    catch(_ ){ const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
-               ta.style.position='fixed'; ta.style.left='-9999px'; ta.select(); try { document.execCommand('copy'); } catch(_ ){}
-               document.body.removeChild(ta); }
-  }
 
+  /* ---------------- Load by id ---------------- */
   function getShareId(){
     const m = location.pathname.match(/\/(?:s|shot)\/([^\/]+)/i);
     if (m && m[1]) return m[1];
@@ -263,103 +295,31 @@ document.addEventListener('DOMContentLoaded', function () {
     if (seg) return seg;
     return null;
   }
+
   (async function loadIfLinked(){
     let id = getShareId();
-    if (id) {
-      try {
-        const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const snap = await resp.json();
-        rememberId(String(id), snap);
-        if (snap.opts && (snap.opts.bgDpr!=null)) { bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1); }
-        if (snap.bg)  { await setBackgroundFromSrc(snap.bg, bgDpr); }
-        if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { layout(); }
-        return;
-      } catch(e){ console.warn('load by id failed', e); }
-    }
-    if (isStandalone()) {
-      try {
-        const r = await fetch('/offline-last', {cache:'reload'});
-        if (r.ok) {
-          const snap = await r.json();
-          if (snap && (snap.bg || snap.lot)) {
-            if (snap.opts && (snap.opts.bgDpr!=null)) { bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1); }
-            if (snap.bg)  { await setBackgroundFromSrc(snap.bg, bgDpr); }
-            if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { layout(); }
-            return;
-          }
-        }
-      } catch(_ ){}
-      try { const snap = await idbGet('last','snap'); if (snap && (snap.bg || snap.lot)) { if (snap.bg) await setBackgroundFromSrc(snap.bg, snap.opts&&snap.opts.bgDpr||1); if (snap.lot) { lastLottieJSON=snap.lot; loadLottieFromData(snap.lot); } return; } } catch(_ ){}
-      try { const snap = JSON.parse(localStorage.getItem('lastSnap')||'null'); if (snap && (snap.bg || snap.lot)) { if (snap.bg) await setBackgroundFromSrc(snap.bg, snap.opts&&snap.opts.bgDpr||1); if (snap.lot) { lastLottieJSON=snap.lot; loadLottieFromData(snap.lot); } return; } } catch(_ ){}
-    }
-    layout();
+    if (!id) { layout(); return; } // editor starts blank
+    try {
+      const resp = await fetch('/api/shot?id=' + encodeURIComponent(id));
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const snap = await resp.json();
+      try { document.cookie = 'lastShotId=' + encodeURIComponent(String(id)) + '; Path=/; Max-Age=2592000; SameSite=Lax'; } catch(_ ){}
+      try { localStorage.setItem('lastShotId', String(id)); localStorage.setItem('lastSnap', JSON.stringify(snap)); } catch(_ ){}
+      if (snap.opts && (snap.opts.bgDpr!=null)) { bgDpr = Math.max(1, Number(snap.opts.bgDpr)||1); }
+      if (snap.bg)  { await setBackgroundFromSrc(snap.bg, bgDpr); }
+      if (snap.lot) { lastLottieJSON = snap.lot; loadLottieFromData(snap.lot); } else { layout(); }
+    } catch(e){ console.error(e); layout(); }
   })();
 
-  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
-
-  try {
-    const hud = document.createElement('div'); hud.id='hud';
-    const toggle = document.createElement('button'); toggle.id='hudToggle'; toggle.textContent='HUD';
-    document.body.appendChild(hud); document.body.appendChild(toggle);
-    function render(){ 
-      const lines=[];
-      lines.push('ver ' + CODE_VERSION);
-      lines.push('standalone=' + isStandalone());
-      lines.push('path=' + location.pathname);
-      lines.push('bg=' + (!!(bgImg&&bgImg.src)) + ' nat=' + bgNatW+'x'+bgNatH + ' dpr=' + bgDpr);
-      lines.push('lot nom=' + lotNomW+'x'+lotNomH + ' children=' + (lottieMount?lottieMount.childNodes.length:0));
-      lines.push('sw=' + (!!(navigator.serviceWorker&&navigator.serviceWorker.controller)));
-      document.getElementById('hud').textContent = lines.join('\n');
-    }
-    toggle.addEventListener('click', ()=>{ hud.classList.toggle('show'); render(); });
-    setTimeout(()=>{ if (isStandalone() && !bgImg.src && !lottieMount.childNodes.length) { hud.classList.add('show'); render(); } }, 1200);
-    window.addEventListener('resize', render);
-  } catch(_ ){}
-
+  /* ---------------- UI bits ---------------- */
   function showToastNear(btn, msg){
     if (!toastEl) return;
     toastEl.textContent = String(msg || '');
+    const r = (btn && btn.getBoundingClientRect) ? btn.getBoundingClientRect() : null;
+    if (r){ toastEl.style.left = (r.left + r.width/2) + 'px'; toastEl.style.top = (r.top) + 'px'; }
+    else { toastEl.style.left = '50%'; toastEl.style.top = (window.innerHeight - 24) + 'px'; }
     toastEl.classList.add('show');
     clearTimeout(showToastNear._t);
-    showToastNear._t = setTimeout(()=> toastEl.classList.remove('show'), 1600);
-  }
-
-  // Minimal IndexedDB helpers
-  function idbOpen(dbName, storeName) {
-    return new Promise((res, rej)=>{
-      const req = indexedDB.open(dbName, 1);
-      req.onupgradeneeded = () => {
-        const db = req.result;
-        if (!db.objectStoreNames.contains(storeName)) db.createObjectStore(storeName);
-      };
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
-    });
-  }
-  async function idbPut(dbName, key, value) {
-    try {
-      const db = await idbOpen(dbName, 'kv');
-      await new Promise((res, rej)=>{
-        const tx = db.transaction('kv', 'readwrite');
-        tx.objectStore('kv').put(value, key);
-        tx.oncomplete = () => res();
-        tx.onerror = () => rej(tx.error);
-      });
-      db.close();
-    } catch(_ ){}
-  }
-  async function idbGet(dbName, key) {
-    try {
-      const db = await idbOpen(dbName, 'kv');
-      const val = await new Promise((res, rej)=>{
-        const tx = db.transaction('kv', 'readonly');
-        const r = tx.objectStore('kv').get(key);
-        r.onsuccess = () => res(r.result);
-        r.onerror = () => rej(r.error);
-      });
-      db.close();
-      return val;
-    } catch(_ ){ return null; }
+    showToastNear._t = setTimeout(()=> toastEl.classList.remove('show'), 1800);
   }
 });

@@ -5,28 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <!-- CRITICAL: make all relative URLs resolve from the site root -->
   <base href="/" />
   <title>Preview</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/style.css" />
-
-  <!-- EARLY: cookie redirect before any JS -->
-  <script>
-  (function() {
-    try {
-      var p = location.pathname;
-      var onRoot = (p === '/' || p.endsWith('/index.html'));
-      var noDeep = !(/[?]id=|#|\/(?:s|shot)\//i).test(location.href);
-      if (onRoot && noDeep) {
-        var m = document.cookie.match(/(?:^|;\s*)lastShotId=([^;]+)/);
-        if (m && m[1]) {
-          var id = decodeURIComponent(m[1]);
-          if (id) location.replace('/s/' + encodeURIComponent(id));
-        }
-      }
-    } catch(e) {}
-  })();
-  </script>
 </head>
 <body>
   <div id="wrapper">
