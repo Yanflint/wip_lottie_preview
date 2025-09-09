@@ -1,22 +1,4 @@
-# Only rewrite deep-link path /s/* to index.html for SPA
-[[redirects]]
-  from = "/s/*"
-  to = "/index.html"
-  status = 200
-<<<<<<< HEAD
-
-# Enable edge redirect from root using cookie (server-side)
-[[edge_functions]]
-  function = "redirect-root"
-  path = "/"
-
-[[edge_functions]]
-  function = "redirect-root"
-  path = "/index.html"
-
-[[redirects]]
-from="/api/*"
-to="/.netlify/functions/:splat"
-status=200
-=======
->>>>>>> parent of f578e04 (4)
+[build]
+  publish='.'
+  functions='netlify/functions'
+  command=''
