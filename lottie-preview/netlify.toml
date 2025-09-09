@@ -1,10 +1,17 @@
-# [ANCHOR:NETLIFY_TOML]
 [build]
+  base = "lottie-preview"
   publish = "."
   functions = "netlify/functions"
-
   command = "npm run build"
+
+# Редирект API-запросов на функции
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+# Короткий путь для ссылок-шаров
+[[redirects]]
+  from = "/s/:id"
+  to = "/?id=:id"
   status = 200
