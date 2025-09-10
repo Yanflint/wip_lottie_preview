@@ -1,14 +1,15 @@
-// Netlify function: share_api
+// netlify/functions/share_api.js
+// Netlify Functions v2 (ESM)
 import { getStore } from '@netlify/blobs';
 
-export default async (request) => {
+export default async (request, context) => {
   const store = getStore('shares');
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
 
   try {
     if (method === 'POST') {
-      const payload = await request.json();
+      const payload = await request.json(); // { lot, bg?, opts? }
       if (!payload || typeof payload !== 'object' || !payload.lot) {
         return json({ error: 'invalid payload' }, 400);
       }

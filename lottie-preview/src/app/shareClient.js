@@ -1,53 +1,39 @@
-// Netlify Functions v2 (ESM, Fetch API)
-import { getStore } from '@netlify/blobs';
+// Client-side share
+import { state } from './state.js';
+import { withLoading, showToastNear } from './utils.js';
 
-export default async (request, context) => {
-  const store = getStore('shares'); // коллекция "shares" в Netlify Blobs
+function isMobileUA() { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+function isWindows()  { return /Windows/i.test(navigator.userAgent); }
 
-  const url = new URL(request.url);
-  const method = request.method.toUpperCase();
-
-  try {
-    if (method === 'POST') {
-      // ожидаем { lot, bg?, opts? }
-      const payload = await request.json();
-
-      if (!payload || typeof payload !== 'object' || !payload.lot) {
-        return json({ error: 'invalid payload' }, 400);
+export function initShare({ refs }) {
+  const { shareBtn, toastEl } = refs;
+  if (!shareBtn) return;
+  shareBtn.addEventListener('click', () => {
+    withLoading(shareBtn, async () => {
+      if (!state.lastLottieJSON) {
+        showToastNear(toastEl, shareBtn, 'Сначала загрузите Lottie JSON');
+        return;
       }
-
-      const id = (crypto?.randomUUID && crypto.randomUUID()) ||
-                 Math.random().toString(36).slice(2) + Date.now().toString(36);
-
-      await store.setJSON(id, payload);
-      return json({ id }, 200);
-    }
-
-    if (method === 'GET') {
-      const id = url.searchParams.get('id');
-      if (!id) return json({ error: 'missing id' }, 400);
-
-      const data = await store.getJSON(id);
-      if (!data) return json({ error: 'not found' }, 404);
-
-      return json(data, 200);
-    }
-
-    // OPTIONS (на всякий) — можно вернуть пусто
-    if (method === 'OPTIONS') {
-      return new Response(null, { status: 204 });
-    }
-
-    return json({ error: 'method not allowed' }, 405);
-  } catch (e) {
-    console.error('share function error', e);
-    return json({ error: 'server error' }, 500);
-  }
-};
-
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
+      const snap = { lot: state.lastLottieJSON, opts: { loop: true } };
+      const resp = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(snap),
+      });
+      if (!resp.ok) throw new Error('share failed: ' + resp.status);
+      const { id } = await resp.json();
+      const shortURL = location.origin + '/s/' + id;
+      const preferClipboard = isWindows() || !isMobileUA();
+      if (!preferClipboard && navigator.share) {
+        try { await navigator.share({ title: document.title || 'Lottie-превью', url: shortURL }); showToastNear(toastEl, shareBtn, 'Отправлено'); return; } catch {}
+      }
+      try { await navigator.clipboard.writeText(shortURL); }
+      catch {
+        const ta = document.createElement('textarea'); ta.value = shortURL;
+        ta.style.position='fixed'; ta.style.left='-9999px';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      showToastNear(toastEl, shareBtn, 'Ссылка скопирована');
+    }).catch((e) => { console.error(e); showToastNear(refs.toastEl, shareBtn, 'Ошибка при шаринге'); });
   });
 }
