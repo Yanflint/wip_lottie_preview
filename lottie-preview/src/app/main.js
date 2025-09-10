@@ -15,6 +15,7 @@ import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
+import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 
 // 3) DOM-refs
 function collectRefs() {
@@ -48,12 +49,13 @@ function applyVersion(refs) {
   }
 }
 
-import { initViewportFit } from './viewportFit.js';
-
 // 5) Init
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
   applyVersion(refs);
+
+  // Авто-рефреш для /s/last (Viewer)
+  initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
   await initLoadFromLink({ refs, isStandalone });
 
@@ -67,18 +69,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('resize', relayout, { passive: true });
   window.addEventListener('orientationchange', relayout, { passive: true });
 
-  // ──────────────────────────────────────────────
-  // ТАП ПО ЭКРАНУ → ПОВТОР АНИМАЦИИ (мобила)
-  // Работает, даже если кнопка «повтор» скрыта (мы программно кликаем её).
+  // Тап = перезапуск (если было добавлено ранее)
   const restartByTap = (e) => {
-    // только тапы (не мышь), и не по панели управления
     const isTouch = e.pointerType ? (e.pointerType === 'touch') : (e.touches && e.touches.length === 1);
     if (!isTouch && !isStandalone) return;
     if (refs.mode && refs.mode.contains(e.target)) return;
     refs.restartBtn?.click();
   };
-
-  // поддержим и pointer, и старые iOS touch
   refs.preview?.addEventListener('pointerdown', restartByTap, { passive: true });
   refs.preview?.addEventListener('touchstart',  restartByTap, { passive: true });
 });
