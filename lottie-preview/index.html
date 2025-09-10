@@ -5,16 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lottie Preview</title>
 
-  <!-- CSS вашего проекта -->
   <link rel="stylesheet" href="./style.css?v=57">
-
-  <!-- Фавикон: положите favicon.ico в корень (lottie-preview/) или измените путь ниже -->
-  <link rel="icon" href="/favicon.ico">
+  <!-- Если нет favicon.ico — убери строку ниже, чтобы не было 404 -->
+  <!-- <link rel="icon" href="/favicon.ico"> -->
 </head>
 <body>
   <div id="wrapper">
 
-    <!-- Верхняя панель / статус -->
     <header class="toolbar">
       <div class="left">
         <strong>Lottie Preview</strong>
@@ -35,20 +32,16 @@
       </div>
     </header>
 
-    <!-- Зона превью -->
     <main id="preview">
       <div id="previewBox">
         <div id="lottieBox" class="lottie-box">
           <img id="bgImg" alt="" />
-          <!-- Lottie игрок монтируется поверх/внутрь через JS -->
         </div>
 
-        <!-- Подсказка/плейсхолдер -->
         <div id="ph" class="placeholder">
           Перетащите PNG/JPG или Lottie JSON сюда, либо вставьте из буфера.
         </div>
 
-        <!-- Скрытые инпуты (если хотите выбрать файл вручную) -->
         <input id="bgFile" type="file" accept="image/png,image/jpeg" hidden />
         <input id="lotFile" type="file" accept="application/json,.json" hidden />
       </div>
@@ -56,10 +49,12 @@
 
   </div>
 
-  <!-- Тосты -->
   <div id="toast" class="toast"></div>
 
   <!-- Точка входа: ES-модули -->
+  <script type="module">
+    console.log('[boot] main inline check'); // чтобы точно увидеть старт
+  </script>
   <script type="module" src="./src/app/main.js?v=57"></script>
 </body>
 </html>
