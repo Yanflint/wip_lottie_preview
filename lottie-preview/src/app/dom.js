@@ -1,27 +1,27 @@
-// Все DOM-ссылки собираем один раз
 export function getRefs() {
   const $ = (id) => document.getElementById(id);
   return {
+    // layout
     wrapper: $('wrapper'),
     preview: $('preview'),
-    previewBox: $('previewBox'),
-    lottieBox: $('lottieBox'),
-    bgImg: $('bgImg'),
-    bgFile: $('bgFile'),
-    lotFile: $('lotFile'),
-    shareBtn: $('shareBtn'),
-    shareOut: $('shareOut'),
-    toastEl: $('toast'),
-    controls: $('controls'),
-    loopChk: $('loopChk'),
-    autoplayChk: $('autoplayChk'),
-    sizeSel: $('sizeSel'),
-    wideChk: $('wideChk'),
-    fullHChk: $('fullHChk'),
-    verEl: $('ver'),
+
+    // layers
     phEl: $('ph'),
-    // новые (опционально добавь в HTML):
-    bgPickBtn: $('btnBg'),
-    lotPickBtn: $('btnLottie'),
+    bgImg: $('bgImg'),
+    lottieMount: $('lottie'),
+
+    // dnd overlay
+    dropOverlay: $('dropOverlay'),
+
+    // controls
+    sizeBtn: $('sizeBtn'),
+    heightBtn: $('heightBtn'),
+    restartBtn: $('restartBtn'),
+    loopChk: $('loopChk'),
+    shareBtn: $('shareBtn'),
+
+    // misc
+    toastEl: $('toast'),
+    verEl: $('ver'),
   };
 }

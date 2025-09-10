@@ -1,34 +1,40 @@
-// src/app/loadFromLink.js
-import { setLastLottie, setLoop, state } from './state.js';
-import { setBackgroundFromSrc, loadLottieFromData } from './lottie.js';
+import { loadLottieFromData, setBackgroundFromSrc } from './lottie.js';
+import { setLoop, setLastLottie } from './state.js';
 
-export async function initLoadFromLink({ refs }){
-  const url = new URL(location.href);
-  const id = url.searchParams.get('id');
+function getIdFromURL() {
+  const u = new URL(location.href);
 
-  async function loadBy(effId){
-    const resp = await fetch('/api/shot?id=' + encodeURIComponent(effId));
-    if (!resp.ok) return;
-    const data = await resp.json();
-    if (data?.opts) setLoop(!!data.opts.loop);
-    if (data?.bg)   await setBackgroundFromSrc(refs, data.bg);
-    if (data?.lot)  { setLastLottie(data.lot); loadLottieFromData(refs, data.lot); }
+  // 1) ?id=...
+  const idParam = u.searchParams.get('id');
+  if (idParam) return idParam;
+
+  // 2) /s/:id (без регулярок)
+  const path = u.pathname;
+  const idx = path.indexOf('/s/');
+  if (idx !== -1) {
+    const rest = path.slice(idx + 3);       // всё после "/s/"
+    const id = rest.split(/[/?#]/)[0] || ''; // до следующего / ? #
+    return id || null;
   }
+  return null;
+}
 
-  if (id) { try { await loadBy(id); } catch(e){ console.error(e); } }
+export async function initLoadFromLink({ refs }) {
+  const id = getIdFromURL();
+  if (!id) return;
 
   try {
-    const hasId  = url.searchParams.has('id');
-    const pathId = url.pathname.startsWith('/s/') ? url.pathname.split('/').pop() : null;
-    let effId = hasId ? id : pathId;
+    const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
+    if (!r.ok) return;
+    const data = await r.json(); // { lot, bg, opts }
 
-    if (!effId && state.A2HS) {
-      const lastId = localStorage.getItem('lastShareId');
-      if (lastId) effId = lastId;
+    if (data.bg) await setBackgroundFromSrc(refs, data.bg);
+    if (data.lot) {
+      setLastLottie(data.lot);
+      await loadLottieFromData(refs, data.lot);
     }
-    if (effId && !hasId) {
-      try { history.replaceState(null, '', '/?id=' + encodeURIComponent(effId)); } catch(_){}
-    }
-    if (effId && !id) { await loadBy(effId); }
-  } catch(e){ console.error(e); }
+    if (data?.opts?.loop != null) setLoop(!!data.opts.loop);
+  } catch (e) {
+    console.warn('loadFromLink failed', e);
+  }
 }
