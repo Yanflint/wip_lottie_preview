@@ -1,4 +1,4 @@
-// src/app/main.js
+// Без size/height-кнопок, только нужные контролы
 import { state, setLoop } from './state.js';
 import { getRefs } from './dom.js';
 import { initDnd } from './dnd.js';

@@ -1,3 +1,4 @@
+// Без sizeBtn/heightBtn — оставляем только то, что реально используем
 export function getRefs() {
   const $ = (id) => document.getElementById(id);
   return {
@@ -14,8 +15,6 @@ export function getRefs() {
     dropOverlay: $('dropOverlay'),
 
     // controls
-    sizeBtn: $('sizeBtn'),
-    heightBtn: $('heightBtn'),
     restartBtn: $('restartBtn'),
     loopChk: $('loopChk'),
     shareBtn: $('shareBtn'),
