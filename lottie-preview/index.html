@@ -5,26 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lottie-превью</title>
 
-  <!-- чтобы не ловить /favicon.ico 404 -->
+  <!-- PWA: web app manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#000000" />
+
+  <!-- iOS: запуск без UI Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Lottie Preview" />
+  <!-- Иконка для iOS (положи файл /icons/icon-180.png) -->
+  <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+
+  <!-- favicon, чтоб не было /favicon.ico 404 -->
   <link rel="icon" type="image/png"
         href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
 
-  <!-- Lottie Web -->
+  <!-- Lottie -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
 
-  <!-- ВАЖНО: абсолютный путь (чтобы работало по /s/:id) -->
+  <!-- ВАЖНО: абсолютные пути -->
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <!-- центрирование страницы -->
   <div class="page">
-    <div class="app"><!-- корень приложения -->
-
-      <!-- область превью -->
+    <div class="app">
       <div id="wrapper" class="wrapper" aria-label="Область превью">
-        <div id="preview" class="preview"><!-- canvas превью -->
+        <div id="preview" class="preview">
 
-          <!-- плейсхолдер -->
           <div id="ph" class="placeholder">
             <div class="ph">
               <div class="ph-1">Перетащите файл:</div>
@@ -32,10 +39,8 @@
             </div>
           </div>
 
-          <!-- фоновая картинка -->
           <div class="bg"><img id="bgImg" alt=""></div>
 
-          <!-- слой Lottie -->
           <div class="lottie-layer">
             <div id="lotStage" class="lot-stage">
               <div id="lottie" class="lottie-mount"></div>
@@ -44,13 +49,11 @@
 
         </div>
 
-        <!-- оверлей DnD -->
         <div id="dropOverlay" class="drop-overlay">
           <div class="box">Отпустите файл здесь</div>
         </div>
       </div>
 
-      <!-- панель управления -->
       <div id="mode" class="controls">
         <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
         <button class="btn primary"  id="heightBtn">Высота: 800px</button>
@@ -65,13 +68,18 @@
     </div>
   </div>
 
-  <!-- тост -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-  <!-- версия -->
   <div id="ver" class="ver"></div>
 
-  <!-- скрипт приложения (абсолютный путь) -->
+  <!-- Абсолютный путь -->
+  <script type="module">
+    // помечаем standalone-класс для CSS
+    const isStandalone =
+      (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
+                             window.matchMedia('(display-mode: fullscreen)').matches)) ||
+      (navigator.standalone === true); // iOS
+    if (isStandalone) document.documentElement.classList.add('standalone');
+  </script>
   <script type="module" src="/src/app/main.js?v=58"></script>
 </body>
 </html>
