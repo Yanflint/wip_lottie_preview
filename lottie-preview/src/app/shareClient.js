@@ -1,5 +1,5 @@
-// Клиентский «Поделиться»: сохраняем lot и фон через /api/share, и ПАРАЛЛЕЛЬНО
-// закрепляем текущий макет локально (для иконки на дом. экране).
+// Клиентский «Поделиться»: сохраняем lot и фон через /api/share, и параллельно
+// закрепляем текущий макет локально (для A2HS).
 import { state } from './state.js';
 import { withLoading, showToastNear } from './utils.js';
 import { savePinned } from './pinned.js';
@@ -48,7 +48,9 @@ async function buildPayload(refs) {
     }
   }
 
-  const opts = { loop: !!state.loopOn, autoplay: !!state.autoplayOn };
+  // ВАЖНО: передаём флаг цикла
+  const opts = { loop: !!state.loopOn };
+
   return { lot, bg, opts };
 }
 
@@ -69,7 +71,7 @@ async function copyToClipboard(text) {
   }
 }
 
-export function initShare({ refs /*, isStandalone*/ }) {
+export function initShare({ refs }) {
   const btn = refs?.shareBtn;
   if (!btn) return;
 
@@ -77,7 +79,7 @@ export function initShare({ refs /*, isStandalone*/ }) {
     await withLoading(btn, async () => {
       const payload = await buildPayload(refs);
 
-      // 1) Сохраняем на сервер (для короткой ссылки)
+      // Сохраняем на сервер (короткая ссылка)
       const res = await fetch('/api/share', {
         method: 'POST',
         headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -90,7 +92,7 @@ export function initShare({ refs /*, isStandalone*/ }) {
       const { id } = await res.json();
       const shortUrl = `${location.origin}/s/${id}`;
 
-      // 2) Параллельно закрепляем локально для A2HS (если ярлык грузит базовый URL)
+      // Параллельно закрепляем локально (для A2HS)
       savePinned(payload);
 
       await copyToClipboard(shortUrl);

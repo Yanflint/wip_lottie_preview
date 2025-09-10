@@ -1,9 +1,7 @@
-// Загружаем по /s/:id. Если id нет и это standalone (ярлык),
- // пробуем получить "последний" снимок с сервера — /api/share?id=last.
-// Локальный pinned оставляем вторым резервом.
-
+// Загружаем по /s/:id. Если id нет и это standalone, пробуем "последний" снимок.
+// Флаг цикла (opts.loop) применяем до создания анимации.
 import { setPlaceholderVisible } from './utils.js';
-import { setLastLottie } from './state.js';
+import { setLastLottie, state } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 import { loadPinned } from './pinned.js';
 
@@ -15,8 +13,18 @@ function getShareIdFromLocation() {
   return q || null;
 }
 
+function applyLoopFromPayload(refs, data) {
+  if (data && data.opts && typeof data.opts.loop === 'boolean') {
+    state.loopOn = !!data.opts.loop;
+    if (refs?.loopChk) refs.loopChk.checked = state.loopOn;
+  }
+}
+
 async function applyPayload(refs, data) {
   if (!data || typeof data !== 'object') return false;
+
+  // ВАЖНО: сначала применяем флаг цикла
+  applyLoopFromPayload(refs, data);
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
@@ -24,7 +32,7 @@ async function applyPayload(refs, data) {
   }
   if (data.lot) {
     setLastLottie(data.lot);
-    await loadLottieFromData(refs, data.lot);
+    await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
   }
 
   setPlaceholderVisible(refs, false);
@@ -58,7 +66,7 @@ export async function initLoadFromLink({ refs, isStandalone }) {
     } catch (e) { console.error('last GET error', e); }
   }
 
-  // 3) Резерв: локальный pinned (если вдруг нужен)
+  // 3) Резерв: локальный pinned
   if (isStandalone) {
     const pinned = loadPinned();
     if (pinned && await applyPayload(refs, pinned)) return;
