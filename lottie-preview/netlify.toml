@@ -4,13 +4,13 @@
   command   = "echo static"
 
 [[redirects]]
-  from = "/s/:id"
-  to   = "/index.html"
+  from = "/api/share"
+  to   = "/.netlify/functions/share_api"
   status = 200
 
 [[redirects]]
-  from = "/api/share"
-  to   = "/.netlify/functions/share_api"
+  from = "/s/:id"
+  to   = "/index.html"
   status = 200
 
 [[redirects]]
