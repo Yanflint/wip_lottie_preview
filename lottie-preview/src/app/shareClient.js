@@ -1,16 +1,15 @@
-// Клиентский «Поделиться»: сохраняем lot и фон в Netlify Blobs через /api/share
+// Клиентский «Поделиться»: сохраняем lot и фон через /api/share, и ПАРАЛЛЕЛЬНО
+// закрепляем текущий макет локально (для иконки на дом. экране).
 import { state } from './state.js';
 import { withLoading, showToastNear } from './utils.js';
+import { savePinned } from './pinned.js';
 
 async function imageElementToDataURL(imgEl) {
   if (!imgEl || !imgEl.src) return null;
-
   const src = imgEl.src;
 
-  // 1) Уже data: — просто вернуть
   if (src.startsWith('data:')) return src;
 
-  // 2) blob: — рисуем в canvas и получаем data:
   if (src.startsWith('blob:')) {
     await new Promise((res, rej) => {
       if (imgEl.complete && imgEl.naturalWidth) return res();
@@ -26,15 +25,11 @@ async function imageElementToDataURL(imgEl) {
       ctx.drawImage(imgEl, 0, 0, w, h);
       return canvas.toDataURL('image/png');
     } catch {
-      // если canvas «tainted» — вернём null, чтобы ниже упасть в URL-вариант
       return null;
     }
   }
 
-  // 3) http(s): — лучше оставить как URL (так безопаснее с CORS)
   if (/^https?:\/\//i.test(src)) return src;
-
-  // 4) fallback — попробуем как есть
   return src;
 }
 
@@ -45,7 +40,6 @@ async function buildPayload(refs) {
   let bg = null;
   const imgEl = refs?.bgImg;
   if (imgEl && imgEl.src) {
-    // Пытаемся получить dataURL, если это blob:
     const maybeData = await imageElementToDataURL(imgEl);
     if (maybeData && maybeData.startsWith('data:')) {
       bg = { kind: 'data', value: maybeData };
@@ -54,9 +48,7 @@ async function buildPayload(refs) {
     }
   }
 
-  // Можно добавлять опции в будущем (loop и пр.)
   const opts = { loop: !!state.loopOn, autoplay: !!state.autoplayOn };
-
   return { lot, bg, opts };
 }
 
@@ -65,7 +57,6 @@ async function copyToClipboard(text) {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    // fallback — через временный input
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
@@ -78,7 +69,7 @@ async function copyToClipboard(text) {
   }
 }
 
-export function initShare({ refs }) {
+export function initShare({ refs /*, isStandalone*/ }) {
   const btn = refs?.shareBtn;
   if (!btn) return;
 
@@ -86,19 +77,21 @@ export function initShare({ refs }) {
     await withLoading(btn, async () => {
       const payload = await buildPayload(refs);
 
+      // 1) Сохраняем на сервер (для короткой ссылки)
       const res = await fetch('/api/share', {
         method: 'POST',
         headers: { 'content-type': 'application/json; charset=utf-8' },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) {
         const t = await res.text().catch(() => '');
         throw new Error(`share failed: ${res.status}${t ? ' ' + t : ''}`);
       }
-
       const { id } = await res.json();
       const shortUrl = `${location.origin}/s/${id}`;
+
+      // 2) Параллельно закрепляем локально для A2HS (если ярлык грузит базовый URL)
+      savePinned(payload);
 
       await copyToClipboard(shortUrl);
       showToastNear(refs.toastEl, btn, 'Ссылка скопирована');

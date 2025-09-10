@@ -14,33 +14,30 @@
   --btn-dim-bg: #525b72;   /* цвет кнопок ширины/высоты */
 
   /* [ANCHOR:STACK_GAP] — расстояние между превью и блоком кнопок */
-  --stack-gap: 18px;
-
-  --toast-bg: rgba(0,0,0,0.8);
-  --toast-fg: #fff;
+  --stack-gap: 24px;
 }
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-html{ background:var(--bg); color:#e5e7eb; }
+*{box-sizing:border-box}
+html,body{height:100%}
 body{
   margin:0;
-  font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  background:linear-gradient(180deg,#0b0c10,#0f1117);
+  color:#eef2f8;
 }
 
-/* ===================== Р А З М Е Т К А ===================== */
-
+/* Центрирование контента по экрану */
 .page{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
+  min-height:100dvh;
+  display:grid;
+  place-items:center;
+  padding:16px;
 }
 
+/* ===================== П Р Е В Ь Ю  L O T T I E ===================== */
 .app{
+  width:100%;
+  max-width:1000px;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -83,91 +80,91 @@ body{
 /* Плейсхолдер — центр */
 .placeholder{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  color:var(--muted); text-align:center; z-index:0;
+  color:var(--muted); font-size:13px; letter-spacing:.2px; background:var(--preview-bg);
+  border:none; border-radius:12px; text-align:center; padding:12px;
 }
-.placeholder .ph{ display:flex; flex-direction:column; gap:6px; }
-.placeholder .ph-1{ font-size:16px; opacity:.85; }
-.placeholder .ph-2{ font-size:14px; opacity:.65; }
+.placeholder .ph{ display:flex; flex-direction:column; align-items:center; }
+.placeholder .ph-1{ color:#fff; margin-bottom:4px; font-weight:600; }
+.placeholder .ph-2{ color:var(--muted); }
+.placeholder.hidden{ display:none; }
 
-/* Оверлей DnD */
+/* Во время перетаскивания скрываем плейсхолдер */
+body.dragging .placeholder{ display:none !important; }
+
+/* ===== Drag&Drop overlay — внутри .wrapper и по центру превью ===== */
 .drop-overlay{
-  position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+  position:absolute; inset:0;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.04);
   z-index:3;
+  pointer-events:none;
 }
 .drop-overlay .box{
-  background: rgba(110, 231, 183, 0.1);
-  border:1px dashed var(--accent);
-  color:#d1fae5;
-  padding:12px 16px; border-radius:12px;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  border:2px dashed #2b334a; color:#ddd; padding:14px 18px; border-radius:10px; font-size:13px;
+  background:rgba(0,0,0,.35);
 }
+body.dragging .drop-overlay{ display:flex; }
 
-/* ===================== К Н О П К И / К О Н Т Р О Л Ы ===================== */
-
+/* ===================== К Н О П К И  И  Ч Е К Б О К С ===================== */
 .controls{
-  display:flex; flex-wrap:wrap; gap:10px;
-  align-items:center; justify-content:center;
+  display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
+  background:transparent; padding:0; border:none;
 }
 
 .btn{
-  height:var(--ctl-h);
-  padding: var(--btn-pad-y) var(--btn-pad-x);
-  border-radius: var(--btn-radius);
-  border:none; outline:none;
-  background:#1f2637; color:#e5e7eb;
-  font-weight:600; font-size:var(--btn-font);
-  cursor:pointer;
-  transition: transform .06s ease, background .15s ease, box-shadow .15s ease;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 1px 10px rgba(0,0,0,.2);
+  cursor:pointer; border:none; border-radius:var(--btn-radius);
+  padding:var(--btn-pad-y) var(--btn-pad-x);
+  font-weight:600; font-size:var(--btn-font); line-height:1;
+  min-height:var(--ctl-h);
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  transition:transform .05s ease, opacity .2s ease, filter .2s ease;
+  color:#0b0c10; background:var(--accent);
 }
-.btn:hover{ transform: translateY(-1px); background:#242c40; }
-.btn:active{ transform: translateY(0); }
+.btn:disabled{opacity:.5; cursor:not-allowed}
+.btn:active{transform:translateY(1px)}
+.btn:hover:not(:disabled){ filter:brightness(1.05); }
 
-.btn.primary   { background: var(--btn-dim-bg); }
-.btn.secondary { background: #394057; }
-.btn.accent    { background: linear-gradient(180deg, #17cfa5, #0bb68f); color:#012318; }
-.btn.accent:hover { background: linear-gradient(180deg, #1ce7ba, #10cf9f); }
-.btn[disabled]{ opacity:.5; cursor:default; transform:none; }
+.btn.secondary { background:#273046; color:#dce3ef; border:1px solid #2e374f; }
+.btn.accent    { background:var(--accent-orange); color:#fff; }
 
-.chk{ display:inline-flex; align-items:center; gap:8px; user-select:none; }
-.chk input{ width:16px; height:16px; }
+#sizeBtn, #heightBtn { background:var(--btn-dim-bg); color:#fff; }
+
+.chk{
+  display:inline-flex; align-items:center; gap:6px;
+  color:#dce3ef; background:#273046; border:1px solid #2e374f;
+  border-radius:var(--btn-radius); padding:0 var(--btn-pad-x); min-height:var(--ctl-h);
+  font-size:var(--btn-font); line-height:1;
+}
+.chk input{ width:14px; height:14px; margin:0; }
+
+/* ===================== Л О У Д Е Р  Н А  « П О Д Е Л И Т Ь С Я » ===================== */
+.btn.loading{ opacity:.95; pointer-events:none; position:relative; }
+.btn.loading::after{
+  content:""; width:14px; height:14px; margin-left:6px;
+  border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff; border-right-color:#fff;
+  border-radius:50%;
+  display:inline-block; animation:spin .6s linear infinite; vertical-align:middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ===================== Т О С Т ===================== */
-
 .toast{
-  position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
-  background: var(--toast-bg); color: var(--toast-fg);
-  padding:10px 14px; border-radius:10px;
-  opacity:0; pointer-events:none; transition: opacity .2s ease, transform .2s ease;
-  z-index:99; white-space:nowrap;
+  position:fixed; padding:8px 10px; background:rgba(0,0,0,.85); color:#fff; border-radius:8px;
+  font-size:12px; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
+  z-index:1000; backdrop-filter:blur(4px);
+  transform:translate(-50%, calc(-100% - 8px));
 }
-.toast.show{ opacity:1; transform:translateX(-50%) translateY(-6px); }
+.toast.show{ opacity:1; }
 
-/* ===================== В Е Р С И Я ===================== */
-
+/* Версия (скрыта на мобиле) */
 .ver{
-  position:fixed; right:12px; bottom:10px;
-  opacity:.5; font-size:12px; letter-spacing:.2px;
-  user-select:none; z-index:20;
+  position:fixed; right:8px; bottom:6px; z-index:1000;
+  font-size:11px; line-height:1; padding:4px 6px; color:#bbb;
+  background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
 }
 
-/* ===================== С О С Т О Я Н И Я ===================== */
-
-.is-dragging .drop-overlay{ display:flex; }
-.is-dragging .wrapper::after{ border-color: var(--accent); }
-
-/* Когда есть контент — убираем плейсхолдер */
-.has-bg .placeholder,
-.has-lottie .placeholder{ display:none; }
-
-/* ===================== А Д А П Т И В ===================== */
-
-@media (max-width: 480px){
-  .page{ padding:16px; }
-}
-
-/* “Мобильный режим” (если потребуется принудительно) */
+/* ===================== М О Б И Л Ь Н Ы Й  Р Е Ж И М ===================== */
 body.is-mobile .page{ padding:0; }
 body.is-mobile .app{ max_width:none; }
 body.is-mobile .controls{ display:none !important; }
@@ -183,15 +180,13 @@ body.is-mobile .preview{
 }
 body.is-mobile .ver{ display:none !important; }
 
-/* ===================== STANDALONE (A2HS) ===================== */
-/* Только при запуске с иконки (класс .standalone мы добавляем на <html> в index.html) */
+/* ==== Только для режима "с иконки" ==== */
 html.standalone, html.standalone body {
   background: #000;
   height: 100%;
   overflow: hidden;
 }
 
-/* Растягиваем контейнеры на экран */
 html.standalone .page,
 html.standalone .app,
 html.standalone #wrapper,
@@ -201,35 +196,26 @@ html.standalone #preview{
   margin: 0; padding: 0; border: 0;
 }
 
-/* Убираем пунктирную рамку только в standalone */
+/* убрать пунктир/рамки ТОЛЬКО в standalone */
 html.standalone .wrapper::after{
   display: none !important;
 }
 
-/* Скрываем вспомогательный UI */
+/* скрыть вспомогательные UI в standalone */
 html.standalone .controls,
 html.standalone .drop-overlay,
 html.standalone .placeholder{
   display: none !important;
 }
 
-/* Фон: ровно по ширине экрана, без клиппинга */
+/* фон: ровно по ширине */
 html.standalone .bg, 
+html.standalone .bg img{ position:absolute; inset:0; }
 html.standalone .bg img{
-  position: absolute;
-  inset: 0;
-}
-html.standalone .bg img{
-  width: 100vw;
-  height: auto;
-  max-height: 100dvh;
-  margin: 0 auto;
-  display: block;
+  width:100vw; height:auto; max-height:100dvh; margin:0 auto; display:block;
 }
 
-/* Lottie остаётся по центру (1:1), pointer-events отключены */
+/* слой Лотти — пассивный */
 html.standalone .lottie-layer, 
 html.standalone .lot-stage, 
-html.standalone .lottie-mount{
-  pointer-events: none;
-}
+html.standalone .lottie-mount{ pointer-events:none; }

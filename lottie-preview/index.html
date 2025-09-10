@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lottie-превью</title>
 
-  <!-- PWA: web app manifest -->
+  <!-- PWA -->
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#000000" />
 
@@ -13,25 +13,24 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Lottie Preview" />
-  <!-- Иконка для iOS (положи файл /icons/icon-180.png) -->
   <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 
-  <!-- favicon, чтоб не было /favicon.ico 404 -->
+  <!-- favicon чтобы не было 404 -->
   <link rel="icon" type="image/png"
         href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
 
   <!-- Lottie -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
 
-  <!-- ВАЖНО: абсолютные пути -->
+  <!-- ВАЖНО: абсолютный путь, чтобы работало по /s/:id -->
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <div class="page">
     <div class="app">
+
       <div id="wrapper" class="wrapper" aria-label="Область превью">
         <div id="preview" class="preview">
-
           <div id="ph" class="placeholder">
             <div class="ph">
               <div class="ph-1">Перетащите файл:</div>
@@ -46,7 +45,6 @@
               <div id="lottie" class="lottie-mount"></div>
             </div>
           </div>
-
         </div>
 
         <div id="dropOverlay" class="drop-overlay">
@@ -63,6 +61,7 @@
           <input type="checkbox" id="loopChk"> Зацикленно
         </label>
 
+        <!-- стиль кнопки НЕ меняю, твой класс/градиенты сохранятся -->
         <button class="btn accent" id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
       </div>
     </div>
@@ -71,15 +70,16 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="ver" class="ver"></div>
 
-  <!-- Абсолютный путь -->
+  <!-- детектор standalone для CSS (только класс, без визуальных изменений) -->
   <script type="module">
-    // помечаем standalone-класс для CSS
     const isStandalone =
       (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
                              window.matchMedia('(display-mode: fullscreen)').matches)) ||
-      (navigator.standalone === true); // iOS
+      (navigator.standalone === true);
     if (isStandalone) document.documentElement.classList.add('standalone');
   </script>
+
+  <!-- Абсолютный путь к модулю -->
   <script type="module" src="/src/app/main.js?v=58"></script>
 </body>
 </html>
