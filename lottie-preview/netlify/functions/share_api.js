@@ -1,13 +1,31 @@
 // netlify/functions/share_api.js
-// Совместимо с Functions v1 (export handler) и v2 (export default).
+// Работает с Functions v1 (handler) и v2 (default). Настраивает Blobs автоматически,
+// а при отсутствии автоконфига использует переменные окружения.
 
-async function getStoreSafe() {
+async function makeStore() {
+  const { getStore } = await import('@netlify/blobs');
+
+  // 1) Пробуем автоконфиг от Netlify (если Blobs включены для сайта)
   try {
-    const mod = await import('@netlify/blobs');
-    return mod.getStore;
-  } catch (e) {
-    console.error('share_api: @netlify/blobs not available', e);
-    return null;
+    return getStore('shares'); // может бросить MissingBlobsEnvironmentError
+  } catch (_) {
+    // 2) Фоллбэк: ручная конфигурация через env
+    const siteID =
+      process.env.NETLIFY_BLOBS_SITE_ID ||
+      process.env.NETLIFY_SITE_ID ||
+      process.env.SITE_ID;
+
+    const token =
+      process.env.NETLIFY_BLOBS_TOKEN ||
+      process.env.NETLIFY_API_TOKEN ||
+      process.env.BLOBS_TOKEN;
+
+    if (!siteID || !token) {
+      throw new Error(
+        'Netlify Blobs not configured. Set NETLIFY_BLOBS_SITE_ID and NETLIFY_BLOBS_TOKEN in site env'
+      );
+    }
+    return getStore('shares', { siteID, token });
   }
 }
 
@@ -15,89 +33,67 @@ function jsonV1(obj, status = 200) {
   return {
     statusCode: status,
     headers: { 'content-type': 'application/json; charset=utf-8' },
-    body: JSON.stringify(obj)
+    body: JSON.stringify(obj),
   };
 }
 function jsonV2(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8' }
+    headers: { 'content-type': 'application/json; charset=utf-8' },
   });
 }
 
-// ---- V1 (handler) ----
-export const handler = async (event) => {
-  const getStore = await getStoreSafe();
-  if (!getStore) return jsonV1({ error: 'storage unavailable: @netlify/blobs not installed' }, 500);
-
-  const store = getStore('shares');
-  const method = (event.httpMethod || 'GET').toUpperCase();
-
+async function handle(method, getBody, getQuery) {
   try {
+    const store = await makeStore();
+
     if (method === 'POST') {
-      let payload = {};
-      try { payload = JSON.parse(event.body || '{}'); } catch {}
+      const payload = await getBody();
       if (!payload || typeof payload !== 'object' || !payload.lot) {
-        return jsonV1({ error: 'invalid payload' }, 400);
+        return { body: { error: 'invalid payload' }, status: 400 };
       }
-      const id = (globalThis.crypto?.randomUUID?.() ||
-        (Math.random().toString(36).slice(2) + Date.now().toString(36)));
+      const id =
+        (globalThis.crypto?.randomUUID?.()) ||
+        (Math.random().toString(36).slice(2) + Date.now().toString(36));
 
       await store.setJSON(id, payload);
-      return jsonV1({ id }, 200);
+      return { body: { id }, status: 200 };
     }
 
     if (method === 'GET') {
-      const id = event.queryStringParameters?.id;
-      if (!id) return jsonV1({ error: 'missing id' }, 400);
+      const id = getQuery('id');
+      if (!id) return { body: { error: 'missing id' }, status: 400 };
       const data = await store.getJSON(id);
-      if (!data) return jsonV1({ error: 'not found' }, 404);
-      return jsonV1(data, 200);
+      if (!data) return { body: { error: 'not found' }, status: 404 };
+      return { body: data, status: 200 };
     }
 
-    if (method === 'OPTIONS') return jsonV1({}, 204);
-    return jsonV1({ error: 'method not allowed' }, 405);
+    if (method === 'OPTIONS') return { body: {}, status: 204 };
+    return { body: { error: 'method not allowed' }, status: 405 };
   } catch (e) {
-    console.error('share_api runtime error (v1)', e);
-    return jsonV1({ error: 'server error' }, 500);
+    console.error('share_api error:', e);
+    return { body: { error: e.message || 'server error' }, status: 500 };
   }
+}
+
+// ---- Functions v1
+export const handler = async (event) => {
+  const method = (event.httpMethod || 'GET').toUpperCase();
+  const res = await handle(
+    method,
+    async () => (event.body ? JSON.parse(event.body) : {}),
+    (k) => event.queryStringParameters?.[k]
+  );
+  return jsonV1(res.body, res.status);
 };
 
-// ---- V2 (default export) ----
+// ---- Functions v2
 export default async (request) => {
-  // Если Netlify использует v1, в default никогда не зайдём — но пусть будет.
-  const getStore = await getStoreSafe();
-  if (!getStore) return jsonV2({ error: 'storage unavailable: @netlify/blobs not installed' }, 500);
-
-  const store = getStore('shares');
   const url = new URL(request.url);
-  const method = request.method.toUpperCase();
-
-  try {
-    if (method === 'POST') {
-      const payload = await request.json().catch(() => ({}));
-      if (!payload || typeof payload !== 'object' || !payload.lot) {
-        return jsonV2({ error: 'invalid payload' }, 400);
-      }
-      const id = (globalThis.crypto?.randomUUID?.() ||
-        (Math.random().toString(36).slice(2) + Date.now().toString(36)));
-
-      await store.setJSON(id, payload);
-      return jsonV2({ id }, 200);
-    }
-
-    if (method === 'GET') {
-      const id = url.searchParams.get('id');
-      if (!id) return jsonV2({ error: 'missing id' }, 400);
-      const data = await store.getJSON(id);
-      if (!data) return jsonV2({ error: 'not found' }, 404);
-      return jsonV2(data, 200);
-    }
-
-    if (method === 'OPTIONS') return new Response(null, { status: 204 });
-    return jsonV2({ error: 'method not allowed' }, 405);
-  } catch (e) {
-    console.error('share_api runtime error (v2)', e);
-    return jsonV2({ error: 'server error' }, 500);
-  }
+  const res = await handle(
+    request.method.toUpperCase(),
+    async () => (await request.json().catch(() => ({}))),
+    (k) => url.searchParams.get(k)
+  );
+  return jsonV2(res.body, res.status);
 };
