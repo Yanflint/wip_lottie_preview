@@ -2,73 +2,64 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <!-- [ANCHOR:VIEWPORT] -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Lottie-превью</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lottie Preview</title>
 
-  <!-- [ANCHOR:SCRIPTS_INCLUDE] Lottie Web -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+  <!-- CSS вашего проекта -->
+  <link rel="stylesheet" href="./style.css?v=57">
 
-  <!-- [ANCHOR:STYLESHEET] -->
-  <link rel="stylesheet" href="style.css" />
+  <!-- Фавикон: положите favicon.ico в корень (lottie-preview/) или измените путь ниже -->
+  <link rel="icon" href="/favicon.ico">
 </head>
 <body>
-  <!-- [ANCHOR:PAGE_CENTER] — центр по экрану -->
-  <div class="page">
-    <div class="app"><!-- [ANCHOR:APP_ROOT] -->
+  <div id="wrapper">
 
-      <!-- [ANCHOR:WRAPPER_NODE] -->
-      <div id="wrapper" class="wrapper" aria-label="Область превью">
-        <div id="preview" class="preview"><!-- [ANCHOR:PREVIEW_NODE] -->
+    <!-- Верхняя панель / статус -->
+    <header class="toolbar">
+      <div class="left">
+        <strong>Lottie Preview</strong>
+        <span id="ver" class="muted"></span>
+      </div>
+      <div class="right controls" id="controls">
+        <label><input type="checkbox" id="loopChk"> loop</label>
+        <label><input type="checkbox" id="autoplayChk"> autoplay</label>
+        <select id="sizeSel">
+          <option value="fit">Fit</option>
+          <option value="fill">Fill</option>
+        </select>
+        <label><input type="checkbox" id="wideChk"> wide</label>
+        <label><input type="checkbox" id="fullHChk"> fullH</label>
 
-          <!-- [ANCHOR:PLACEHOLDER_NODE] — двухстрочный центрированный текст -->
-          <div id="ph" class="placeholder">
-            <div class="ph">
-              <div class="ph-1">Перетащите файл:</div>
-              <div class="ph-2">PNG / JSON</div>
-            </div>
-          </div>
+        <button id="shareBtn">Поделиться</button>
+        <input id="shareOut" type="text" readonly placeholder="ссылка появится здесь" />
+      </div>
+    </header>
 
-          <!-- [ANCHOR:BG_IMG] -->
-          <div class="bg"><img id="bgImg" alt=""></div>
-
-          <!-- [ANCHOR:LOTTIE_LAYER_NODE] -->
-          <div class="lottie-layer">
-            <div id="lotStage" class="lot-stage"><!-- [ANCHOR:LOT_STAGE] -->
-              <div id="lottie" class="lottie-mount"></div><!-- [ANCHOR:LOTTIE_MOUNT] -->
-            </div>
-          </div>
-
+    <!-- Зона превью -->
+    <main id="preview">
+      <div id="previewBox">
+        <div id="lottieBox" class="lottie-box">
+          <img id="bgImg" alt="" />
+          <!-- Lottie игрок монтируется поверх/внутрь через JS -->
         </div>
 
-        <!-- [ANCHOR:DRAGNDROP_OVERLAY] — внутри wrapper, центр по высоте/ширине -->
-        <div id="dropOverlay" class="drop-overlay">
-          <div class="box">Отпустите файл здесь</div>
+        <!-- Подсказка/плейсхолдер -->
+        <div id="ph" class="placeholder">
+          Перетащите PNG/JPG или Lottie JSON сюда, либо вставьте из буфера.
         </div>
+
+        <!-- Скрытые инпуты (если хотите выбрать файл вручную) -->
+        <input id="bgFile" type="file" accept="image/png,image/jpeg" hidden />
+        <input id="lotFile" type="file" accept="application/json,.json" hidden />
       </div>
+    </main>
 
-      <!-- [ANCHOR:CONTROL_PANEL] — без подложки -->
-      <div id="mode" class="controls">
-        <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
-        <button class="btn primary"  id="heightBtn">Высота: 800px</button>
-
-        <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
-        <label class="chk" title="Играть зацикленно">
-          <input type="checkbox" id="loopChk"> Зацикленно
-        </label>
-
-        <button class="btn accent"   id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
-      </div>
-    </div>
   </div>
 
-  <!-- [ANCHOR:TOAST_NODE] -->
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <!-- Тосты -->
+  <div id="toast" class="toast"></div>
 
-  <!-- [ANCHOR:VERSION_NODE] -->
-  <div id="ver" class="ver"></div>
-
-  <!-- [ANCHOR:SCRIPTS] -->
+  <!-- Точка входа: ES-модули -->
   <script type="module" src="./src/app/main.js?v=57"></script>
 </body>
 </html>
