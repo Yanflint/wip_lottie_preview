@@ -1,10 +1,12 @@
 // src/app/autoRefresh.js
-// Live-пулинг для /s/last: каждые 5с ±20% (только когда вкладка видима).
-// Мгновенная проверка при возврате в фокус/тач. Экспоненциальный бэкофф до 30с при ошибках.
+// Live-пулинг для /s/last: 5с ±20% (только когда вкладка видима).
+// Мгновенная проверка при возврате в фокус/тач. Бэкофф до 30с при ошибках.
+// Перед перезагрузкой ставим флаг в sessionStorage, чтобы показать тост "Обновлено".
 
-const BASE_INTERVAL = 5000;        // 5s
-const JITTER = 0.20;               // ±20%
-const MAX_BACKOFF = 30000;         // 30s
+const BASE_INTERVAL = 5000;
+const JITTER = 0.20;
+const MAX_BACKOFF = 30000;
+const TOAST_FLAG = 'lp_show_toast';
 
 function isViewingLast() {
   try {
@@ -19,93 +21,49 @@ function isViewingLast() {
   } catch {}
   return false;
 }
-
-function jittered(ms) {
-  const f = 1 + (Math.random() * 2 - 1) * JITTER; // 0.8…1.2
-  return Math.max(1000, Math.round(ms * f));
+function jittered(ms){const f=1+(Math.random()*2-1)*JITTER;return Math.max(1000,Math.round(ms*f));}
+async function fetchRev(){
+  const r=await fetch('/api/share?id=last&rev=1',{cache:'no-store'});
+  if(!r.ok) throw new Error('bad '+r.status);
+  const j=await r.json(); return String(j.rev||'');
 }
 
-async function fetchRev() {
-  // компактный ответ: { rev: "<hash>" }
-  const r = await fetch('/api/share?id=last&rev=1', { cache: 'no-store' });
-  if (!r.ok) throw new Error('bad status ' + r.status);
-  const j = await r.json();
-  return String(j.rev || '');
-}
+export function initAutoRefreshIfViewingLast(){
+  if(!isViewingLast()) return;
 
-export function initAutoRefreshIfViewingLast() {
-  if (!isViewingLast()) return;
+  let baseline=null, timer=null, currentDelay=BASE_INTERVAL, inFlight=false;
 
-  let baseline = null;
-  let timer = null;
-  let currentDelay = BASE_INTERVAL;
-  let inFlight = false;
+  const schedule=(d=currentDelay)=>{clearTimeout(timer); timer=setTimeout(tick,jittered(d));};
+  const reset=()=>{currentDelay=BASE_INTERVAL;};
 
-  const schedule = (delay = currentDelay) => {
-    clearTimeout(timer);
-    timer = setTimeout(tick, jittered(delay));
-  };
-
-  const resetDelay = () => { currentDelay = BASE_INTERVAL; };
-
-  const tick = async () => {
-    if (inFlight) return;
-    if (document.visibilityState !== 'visible') { schedule(currentDelay); return; }
-    inFlight = true;
-    try {
-      const rev = await fetchRev();
-      if (!baseline) {
-        baseline = rev;
-      } else if (rev && rev !== baseline) {
-        // обновилось — жёсткий рефреш текущего URL (сохраняет ?fit=…)
-        location.replace(location.href);
-        return; // прерываем — страница перезагрузится
+  const tick=async()=>{
+    if(inFlight) return;
+    if(document.visibilityState!=='visible'){schedule(currentDelay); return;}
+    inFlight=true;
+    try{
+      const rev=await fetchRev();
+      if(!baseline){ baseline=rev; }
+      else if(rev && rev!==baseline){
+        try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
+        location.replace(location.href); // жёсткий рефреш, сохраняя ?fit
+        return;
       }
-      // успех → сброс бэкоффа
-      resetDelay();
-    } catch (e) {
-      // ошибка → экспоненциальный бэкофф
-      currentDelay = Math.min(MAX_BACKOFF, Math.max(BASE_INTERVAL, currentDelay * 2));
-    } finally {
-      inFlight = false;
+      reset();
+    }catch{
+      currentDelay=Math.min(MAX_BACKOFF, Math.max(BASE_INTERVAL, currentDelay*2));
+    }finally{
+      inFlight=false;
       schedule(currentDelay);
     }
   };
 
-  // старт, если видимо
-  const startIfVisible = () => {
-    if (document.visibilityState === 'visible') {
-      resetDelay();
-      schedule(BASE_INTERVAL);
-    }
-  };
-
-  // мгновенная проверка по возвращению в фокус/видимость
-  const onVisible = () => {
-    if (document.visibilityState === 'visible') {
-      resetDelay();
-      clearTimeout(timer);
-      tick();
-    }
-  };
-
-  // быстрый триггер и при любом тапе/клике (дебаг)
-  const onPointer = () => {
-    if (document.visibilityState === 'visible') {
-      resetDelay();
-      clearTimeout(timer);
-      tick();
-    }
-  };
+  const onVisible=()=>{ if(document.visibilityState==='visible'){ reset(); clearTimeout(timer); tick(); } };
+  const onPointer=()=>{ if(document.visibilityState==='visible'){ reset(); clearTimeout(timer); tick(); } };
 
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('focus', onVisible);
   window.addEventListener('pageshow', onVisible);
-  window.addEventListener('pointerdown', onPointer, { passive: true });
+  window.addEventListener('pointerdown', onPointer, {passive:true});
 
-  // первичная фиксация ревизии (без ожидания интервала)
-  (async () => {
-    try { baseline = await fetchRev(); } catch {}
-    startIfVisible();
-  })();
+  (async()=>{ try{ baseline=await fetchRev(); }catch{} if(document.visibilityState==='visible'){ schedule(BASE_INTERVAL);} })();
 }

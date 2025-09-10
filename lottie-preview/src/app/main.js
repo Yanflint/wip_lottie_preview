@@ -16,6 +16,7 @@ import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
+import { showToastIfFlag } from './updateToast.js';
 
 // 3) DOM-refs
 function collectRefs() {
@@ -53,6 +54,7 @@ function applyVersion(refs) {
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
   applyVersion(refs);
+showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
 
   // Авто-рефреш для /s/last (Viewer)
   initAutoRefreshIfViewingLast(); // ← НОВОЕ

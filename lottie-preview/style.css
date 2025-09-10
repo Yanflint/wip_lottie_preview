@@ -295,3 +295,68 @@ html.standalone.fit-vv .bg img{
   height:auto;
   display:block;
 }
+
+
+/* === Update Toast ======================================================== */
+:root{
+  --toast-bg: rgba(15, 18, 24, .82);
+  --toast-fg: #e8f7f0;
+  --toast-accent: #17cfa5;
+  --toast-radius: 14px;
+  --toast-shadow: 0 10px 30px rgba(0,0,0,.35);
+  --toast-enter-ms: 260ms;
+  --toast-stay-ms: 1400ms;
+  --toast-exit-ms: 400ms;
+  --toast-translate: 14px;
+  --toast-offset: 8px;
+  --toast-z: 9999;
+}
+.update-toast{
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + var(--toast-offset));
+  transform: translate(-50%, calc(-1 * var(--toast-translate)));
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  border-radius: var(--toast-radius);
+  box-shadow: var(--toast-shadow);
+  padding: 10px 14px;
+  z-index: var(--toast-z);
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: saturate(120%) blur(10px);
+  -webkit-backdrop-filter: saturate(120%) blur(10px);
+  transition:
+    opacity var(--toast-enter-ms) ease,
+    transform var(--toast-enter-ms) ease;
+}
+.update-toast.show{
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.update-toast:not(.show){
+  transition:
+    opacity var(--toast-exit-ms) ease,
+    transform var(--toast-exit-ms) ease;
+}
+.update-toast .ut-wrap{
+  display:flex; align-items:center; gap:10px;
+}
+.update-toast .ut-ic{
+  width:18px; height:18px; flex:0 0 18px;
+  fill: var(--toast-accent);
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.15));
+}
+.update-toast .ut-text{
+  font-weight: 600;
+  letter-spacing: .2px;
+}
+
+/* Меньше анимации для тех, кто так предпочитает */
+@media (prefers-reduced-motion: reduce){
+  .update-toast,
+  .update-toast.show{
+    transition: opacity 120ms ease !important;
+    transform: translate(-50%, 0) !important;
+  }
+}
