@@ -48,6 +48,8 @@ function applyVersion(refs) {
   }
 }
 
+import { initViewportFit } from './viewportFit.js';
+
 // 5) Init
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();

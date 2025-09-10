@@ -283,3 +283,15 @@ html.standalone .lot-stage{
   position:absolute; left:50%; top:50%;
   transform: translate(-50%, -50%);
 }
+
+/* Режим JS-центрирования по visualViewport */
+html.standalone.fit-vv .bg,
+html.standalone.fit-vv .lottie-layer{
+  position:absolute; /* точные размеры/позицию задаёт JS */
+}
+
+html.standalone.fit-vv .bg img{
+  width:100%;
+  height:auto;
+  display:block;
+}
