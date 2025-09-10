@@ -1,4 +1,3 @@
-// src/app/main.js
 import { state } from './state.js';
 import { getRefs } from './dom.js';
 import { initLayout, layout } from './layout.js';
@@ -8,6 +7,7 @@ import { initLoadFromLink } from './loadFromLink.js';
 import { initControls } from './controls.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[boot] ES modules start');
   const refs = getRefs();
   if (refs.verEl) refs.verEl.textContent = 'v' + state.VERSION;
 
@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initDnd({ refs });
   initControls({ refs });
   initShare({ refs });
+
+  // Если пришли по short URL или A2HS — подтянем снапшот
   await initLoadFromLink({ refs });
 
   layout({ refs });
