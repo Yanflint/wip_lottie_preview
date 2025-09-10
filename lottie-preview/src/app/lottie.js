@@ -1,98 +1,85 @@
-// Центровка Lottie «в родном размере» + учёт размеров фона
-import { setLastLottie, setLastBgSize, state } from './state.js';
+// src/app/lottie.js
+import { state } from './state.js';
+import { setPlaceholderVisible } from './utils.js';
 
-let LOTTIE = null;
-let lottieInstance = null;
+let anim = null;
 
-async function ensureLottie() {
-  if (window.lottie) return window.lottie;
-  if (LOTTIE) return LOTTIE;
-  try {
-    const mod = await import('https://esm.sh/lottie-web@5.12.2');
-    LOTTIE = mod.default || mod;
-  } catch {
-    await new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js';
-      s.onload = () => res();
-      s.onerror = () => rej(new Error('lottie load failed'));
-      document.head.appendChild(s);
-    });
-    LOTTIE = window.lottie;
-  }
-  return LOTTIE;
-}
-
-function getAnimSize() {
-  const j = state.lastLottieJSON;
-  let w = 512, h = 512;
-  if (j && typeof j === 'object') {
-    if (Number.isFinite(j.w)) w = j.w;
-    if (Number.isFinite(j.h)) h = j.h;
-  }
-  return { w, h };
-}
-
+/** Центрируем лотти-стейдж без масштаба (1:1) */
 export function layoutLottie(refs) {
-  const mount = refs?.lottieMount;
-  if (!mount) return;
-  const { w, h } = getAnimSize();
-  Object.assign(mount.style, {
-    position: 'absolute',
-    width: w + 'px',
-    height: h + 'px',
-    left: '50%',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-    pointerEvents: 'none',
-  });
+  const stage = refs?.lotStage;
+  if (!stage) return;
+  stage.style.left = '50%';
+  stage.style.top = '50%';
+  stage.style.transform = 'translate(-50%, -50%)';
 }
 
+/** Установка фона из data: / blob: / http(s) */
 export async function setBackgroundFromSrc(refs, src) {
   if (!refs?.bgImg) return;
-  await new Promise((res) => {
-    refs.bgImg.onload = () => {
-      const iw = refs.bgImg.naturalWidth || 0;
-      const ih = refs.bgImg.naturalHeight || 0;
-      setLastBgSize(iw, ih);
-      res();
-    };
-    refs.bgImg.onerror = () => res();
-    refs.bgImg.src = src;
-  });
-  layoutLottie(refs);
+  refs.bgImg.onload = () => {
+    setPlaceholderVisible(refs, false);
+    if (refs.wrapper) refs.wrapper.classList.add('has-bg');
+  };
+  refs.bgImg.onerror = () => {};
+  refs.bgImg.src = src;
 }
 
-function applyPlaybackOptions(inst) {
-  if (!inst) return;
-  try { inst.loop = !!state.loopOn; } catch {}
-  if (state.autoplayOn) { try { inst.play?.(); } catch {} }
-  else { try { inst.stop?.(); inst.goToAndStop?.(0, true); } catch {} }
+/** Жёсткий перезапуск проигрывания */
+export function restart() {
+  if (!anim) return;
+  try {
+    anim.stop();
+    anim.goToAndStop(0, true);
+    anim.play();
+  } catch {}
 }
 
-export async function loadLottieFromData(refs, json) {
-  try { if (typeof json === 'string') json = JSON.parse(json); } catch {}
-  if (!json || typeof json !== 'object') return;
+/** Включить/выключить цикл прямо во время проигрывания */
+export function setLoop(on) {
+  if (anim) anim.loop = !!on;
+}
 
-  setLastLottie(json);
-  const mount = refs?.lottieMount; if (!mount) return;
-  mount.innerHTML = '';
+/** Подгрузка лотти из JSON-объекта */
+export async function loadLottieFromData(refs, lotJson) {
+  if (!refs?.lottieMount || !lotJson) return;
 
-  const L = await ensureLottie();
-  try { lottieInstance?.destroy?.(); } catch {}
-  lottieInstance = L.loadAnimation({
-    container: mount,
+  // Сносим прежнюю
+  if (anim) {
+    try { anim.destroy(); } catch {}
+    anim = null;
+  }
+
+  const loop = !!state.loopOn;        // берём текущее состояние чекбокса
+  const autoplay = true;
+
+  anim = window.lottie.loadAnimation({
+    container: refs.lottieMount,
     renderer: 'svg',
-    loop: !!state.loopOn,
-    autoplay: !!state.autoplayOn,
-    animationData: json,
-    rendererSettings: { preserveAspectRatio: 'xMidYMid meet' },
+    loop,
+    autoplay,
+    animationData: lotJson
   });
 
-  try { lottieInstance.addEventListener?.('DOMLoaded', () => { applyPlaybackOptions(lottieInstance); layoutLottie(refs); }); } catch {}
-  applyPlaybackOptions(lottieInstance);
-  layoutLottie(refs);
+  // Когда DOM лотти готов — ставим габариты и показываем контент
+  anim.addEventListener('DOMLoaded', () => {
+    const w = Number(lotJson.w || 0) || 512;
+    const h = Number(lotJson.h || 0) || 512;
+    if (refs.lotStage) {
+      refs.lotStage.style.width = w + 'px';
+      refs.lotStage.style.height = h + 'px';
+    }
+    setPlaceholderVisible(refs, false);
+    if (refs.wrapper) refs.wrapper.classList.add('has-lottie');
+    layoutLottie(refs);
+  });
+
+  // На всякий случай: при завершении без loop – остаёмся на конце, кнопка/тап перезапустят
+  anim.addEventListener('complete', () => {
+    // ничего не делаем; restart() всегда доступен
+  });
+
+  return anim;
 }
 
-export function restartLottie() { try { lottieInstance?.goToAndPlay?.(0, true); } catch {} }
-export function updatePlaybackFromState(refs) { applyPlaybackOptions(lottieInstance); layoutLottie(refs); }
+/** На всякий экспортим текущее окно анимации (если понадобится где-то ещё) */
+export function getAnim() { return anim; }

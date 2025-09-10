@@ -1,18 +1,24 @@
-import { setLoop, setAutoplay } from './state.js';
-import { layout } from './layout.js';
+// src/app/controls.js
+import { restart, setLoop } from './lottie.js';
+import { state } from './state.js';
 
 export function initControls({ refs }) {
-  const { loopChk, autoplayChk, sizeSel, wideChk, fullHChk, bgPickBtn, lotPickBtn, bgFile, lotFile } = refs;
+  // Кнопка повторного проигрывания
+  if (refs?.restartBtn) {
+    refs.restartBtn.addEventListener('click', () => {
+      restart();
+    });
+  }
 
-  if (loopChk) loopChk.addEventListener('change', () => setLoop(loopChk.checked));
-  if (autoplayChk) autoplayChk.addEventListener('change', () => setAutoplay(autoplayChk.checked));
+  // Чекбокс "Зацикленно"
+  if (refs?.loopChk) {
+    // Инициализация состоянием (если где-то выставляли ранее)
+    refs.loopChk.checked = !!state.loopOn;
 
-  const relayout = () => layout({ refs });
-  if (sizeSel) sizeSel.addEventListener('change', relayout);
-  if (wideChk) wideChk.addEventListener('change', relayout);
-  if (fullHChk) fullHChk.addEventListener('change', relayout);
-
-  // Кнопки выбора файлов (опциональные, если ты добавишь их в HTML)
-  if (bgPickBtn && bgFile) bgPickBtn.addEventListener('click', () => bgFile.click());
-  if (lotPickBtn && lotFile) lotPickBtn.addEventListener('click', () => lotFile.click());
+    refs.loopChk.addEventListener('change', (e) => {
+      const on = !!e.target.checked;
+      state.loopOn = on;      // запомним в общем состоянии
+      setLoop(on);            // переключим текущую анимацию "на лету"
+    });
+  }
 }
