@@ -1,6 +1,5 @@
 // src/app/loadFromLink.js
-// Загружаем состояние по /s/:id. Если id нет (или установлен на дом. экран),
-// пробуем поднять локально закреплённый макет (pinned).
+// Загружаем состояние по /s/:id. Если id нет, то используем pinned ТОЛЬКО в standalone.
 
 import { setPlaceholderVisible } from './utils.js';
 import { setLastLottie } from './state.js';
@@ -32,7 +31,7 @@ async function applyPayload(refs, data) {
   return true;
 }
 
-export async function initLoadFromLink({ refs/*, isStandalone*/ }) {
+export async function initLoadFromLink({ refs, isStandalone }) {
   // ПО УМОЛЧАНИЮ показываем placeholder — пока не загрузим данные
   setPlaceholderVisible(refs, true);
 
@@ -49,11 +48,13 @@ export async function initLoadFromLink({ refs/*, isStandalone*/ }) {
     }
   }
 
-  // fallback: локально закреплённый макет (для иконки на дом. экране)
-  const pinned = loadPinned();
-  if (pinned) {
-    await applyPayload(refs, pinned);
-    return;
+  // ВАЖНО: fallback на pinned — ТОЛЬКО в standalone (ярлык на Домой)
+  if (isStandalone) {
+    const pinned = loadPinned();
+    if (pinned) {
+      await applyPayload(refs, pinned);
+      return;
+    }
   }
 
   // если сюда дошли — контента нет, placeholder остаётся видимым
