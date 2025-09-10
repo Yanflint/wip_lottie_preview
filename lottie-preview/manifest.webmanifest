@@ -1,7 +1,7 @@
 {
   "name": "Lottie Preview",
   "short_name": "Lottie",
-  "start_url": "/",
+  "start_url": "/s/last",
   "scope": "/",
   "display": "standalone",
   "background_color": "#000000",

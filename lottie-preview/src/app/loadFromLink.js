@@ -1,5 +1,6 @@
-// src/app/loadFromLink.js
-// Загружаем состояние по /s/:id. Если id нет, то используем pinned ТОЛЬКО в standalone.
+// Загружаем по /s/:id. Если id нет и это standalone (ярлык),
+ // пробуем получить "последний" снимок с сервера — /api/share?id=last.
+// Локальный pinned оставляем вторым резервом.
 
 import { setPlaceholderVisible } from './utils.js';
 import { setLastLottie } from './state.js';
@@ -26,15 +27,15 @@ async function applyPayload(refs, data) {
     await loadLottieFromData(refs, data.lot);
   }
 
-  setPlaceholderVisible(refs, false); // контент есть — скрыть
+  setPlaceholderVisible(refs, false);
   layoutLottie(refs);
   return true;
 }
 
 export async function initLoadFromLink({ refs, isStandalone }) {
-  // ПО УМОЛЧАНИЮ показываем placeholder — пока не загрузим данные
   setPlaceholderVisible(refs, true);
 
+  // 1) Пробуем id из URL
   const id = getShareIdFromLocation();
   if (id) {
     try {
@@ -43,19 +44,25 @@ export async function initLoadFromLink({ refs, isStandalone }) {
         const data = await r.json().catch(() => null);
         if (await applyPayload(refs, data)) return;
       }
-    } catch (e) {
-      console.error('share GET error', e);
-    }
+    } catch (e) { console.error('share GET error', e); }
   }
 
-  // ВАЖНО: fallback на pinned — ТОЛЬКО в standalone (ярлык на Домой)
+  // 2) Если ярлык — тянем "последний" снимок с сервера
+  if (isStandalone) {
+    try {
+      const r = await fetch('/api/share?id=last', { cache: 'no-store' });
+      if (r.ok) {
+        const data = await r.json().catch(() => null);
+        if (await applyPayload(refs, data)) return;
+      }
+    } catch (e) { console.error('last GET error', e); }
+  }
+
+  // 3) Резерв: локальный pinned (если вдруг нужен)
   if (isStandalone) {
     const pinned = loadPinned();
-    if (pinned) {
-      await applyPayload(refs, pinned);
-      return;
-    }
+    if (pinned && await applyPayload(refs, pinned)) return;
   }
 
-  // если сюда дошли — контента нет, placeholder остаётся видимым
+  // 4) Ничего не нашли — остаётся плейсхолдер
 }
