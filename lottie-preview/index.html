@@ -2,28 +2,29 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <!-- [ANCHOR:VIEWPORT] -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lottie-превью</title>
-  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
 
+  <!-- чтобы не ловить /favicon.ico 404 -->
+  <link rel="icon" type="image/png"
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
 
-  <!-- [ANCHOR:SCRIPTS_INCLUDE] Lottie Web -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+  <!-- Lottie Web -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
 
-  <!-- [ANCHOR:STYLESHEET] -->
-  <link rel="stylesheet" href="style.css" />
+  <!-- ВАЖНО: абсолютный путь (чтобы работало по /s/:id) -->
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <!-- [ANCHOR:PAGE_CENTER] — центр по экрану -->
+  <!-- центрирование страницы -->
   <div class="page">
-    <div class="app"><!-- [ANCHOR:APP_ROOT] -->
+    <div class="app"><!-- корень приложения -->
 
-      <!-- [ANCHOR:WRAPPER_NODE] -->
+      <!-- область превью -->
       <div id="wrapper" class="wrapper" aria-label="Область превью">
-        <div id="preview" class="preview"><!-- [ANCHOR:PREVIEW_NODE] -->
+        <div id="preview" class="preview"><!-- canvas превью -->
 
-          <!-- [ANCHOR:PLACEHOLDER_NODE] — двухстрочный центрированный текст -->
+          <!-- плейсхолдер -->
           <div id="ph" class="placeholder">
             <div class="ph">
               <div class="ph-1">Перетащите файл:</div>
@@ -31,25 +32,25 @@
             </div>
           </div>
 
-          <!-- [ANCHOR:BG_IMG] -->
+          <!-- фоновая картинка -->
           <div class="bg"><img id="bgImg" alt=""></div>
 
-          <!-- [ANCHOR:LOTTIE_LAYER_NODE] -->
+          <!-- слой Lottie -->
           <div class="lottie-layer">
-            <div id="lotStage" class="lot-stage"><!-- [ANCHOR:LOT_STAGE] -->
-              <div id="lottie" class="lottie-mount"></div><!-- [ANCHOR:LOTTIE_MOUNT] -->
+            <div id="lotStage" class="lot-stage">
+              <div id="lottie" class="lottie-mount"></div>
             </div>
           </div>
 
         </div>
 
-        <!-- [ANCHOR:DRAGNDROP_OVERLAY] — внутри wrapper, центр по высоте/ширине -->
+        <!-- оверлей DnD -->
         <div id="dropOverlay" class="drop-overlay">
           <div class="box">Отпустите файл здесь</div>
         </div>
       </div>
 
-      <!-- [ANCHOR:CONTROL_PANEL] — без подложки -->
+      <!-- панель управления -->
       <div id="mode" class="controls">
         <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
         <button class="btn primary"  id="heightBtn">Высота: 800px</button>
@@ -59,18 +60,18 @@
           <input type="checkbox" id="loopChk"> Зацикленно
         </label>
 
-        <button class="btn accent"   id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
+        <button class="btn accent" id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
       </div>
     </div>
   </div>
 
-  <!-- [ANCHOR:TOAST_NODE] -->
+  <!-- тост -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <!-- [ANCHOR:VERSION_NODE] -->
+  <!-- версия -->
   <div id="ver" class="ver"></div>
 
-  <!-- [ANCHOR:SCRIPTS] -->
-<script type="module" src="/src/app/main.js?v=58"></script>
+  <!-- скрипт приложения (абсолютный путь) -->
+  <script type="module" src="/src/app/main.js?v=58"></script>
 </body>
 </html>

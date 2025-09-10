@@ -1,32 +1,21 @@
 // netlify/functions/share_api.js
-// Работает с Functions v1 (handler) и v2 (default). Настраивает Blobs автоматически,
-// а при отсутствии автоконфига использует переменные окружения.
+// Жёсткая ручная конфигурация Blobs через ENV. Работает и в Functions v1, и в v2.
 
-async function makeStore() {
-  const { getStore } = await import('@netlify/blobs');
+import { getStore } from '@netlify/blobs';
 
-  // 1) Пробуем автоконфиг от Netlify (если Blobs включены для сайта)
-  try {
-    return getStore('shares'); // может бросить MissingBlobsEnvironmentError
-  } catch (_) {
-    // 2) Фоллбэк: ручная конфигурация через env
-    const siteID =
-      process.env.NETLIFY_BLOBS_SITE_ID ||
-      process.env.NETLIFY_SITE_ID ||
-      process.env.SITE_ID;
+function getConfiguredStore() {
+  const siteID =
+    process.env.NETLIFY_BLOBS_SITE_ID ||
+    process.env.NETLIFY_SITE_ID;
 
-    const token =
-      process.env.NETLIFY_BLOBS_TOKEN ||
-      process.env.NETLIFY_API_TOKEN ||
-      process.env.BLOBS_TOKEN;
+  const token =
+    process.env.NETLIFY_BLOBS_TOKEN ||
+    process.env.NETLIFY_API_TOKEN;
 
-    if (!siteID || !token) {
-      throw new Error(
-        'Netlify Blobs not configured. Set NETLIFY_BLOBS_SITE_ID and NETLIFY_BLOBS_TOKEN in site env'
-      );
-    }
-    return getStore('shares', { siteID, token });
+  if (!siteID || !token) {
+    throw new Error('Set NETLIFY_BLOBS_SITE_ID and NETLIFY_BLOBS_TOKEN in site env');
   }
+  return getStore('shares', { siteID, token });
 }
 
 function jsonV1(obj, status = 200) {
@@ -44,18 +33,22 @@ function jsonV2(obj, status = 200) {
 }
 
 async function handle(method, getBody, getQuery) {
+  let store;
   try {
-    const store = await makeStore();
+    store = getConfiguredStore();
+  } catch (e) {
+    console.error('share_api config error:', e);
+    return { body: { error: e.message }, status: 500 };
+  }
 
+  try {
     if (method === 'POST') {
-      const payload = await getBody();
+      const payload = await getBody();           // { lot, bg?, opts? }
       if (!payload || typeof payload !== 'object' || !payload.lot) {
         return { body: { error: 'invalid payload' }, status: 400 };
       }
-      const id =
-        (globalThis.crypto?.randomUUID?.()) ||
-        (Math.random().toString(36).slice(2) + Date.now().toString(36));
-
+      const id = (globalThis.crypto?.randomUUID?.())
+        || (Math.random().toString(36).slice(2) + Date.now().toString(36));
       await store.setJSON(id, payload);
       return { body: { id }, status: 200 };
     }
@@ -65,14 +58,14 @@ async function handle(method, getBody, getQuery) {
       if (!id) return { body: { error: 'missing id' }, status: 400 };
       const data = await store.getJSON(id);
       if (!data) return { body: { error: 'not found' }, status: 404 };
-      return { body: data, status: 200 };
+      return { body: data }, 200;
     }
 
     if (method === 'OPTIONS') return { body: {}, status: 204 };
     return { body: { error: 'method not allowed' }, status: 405 };
   } catch (e) {
-    console.error('share_api error:', e);
-    return { body: { error: e.message || 'server error' }, status: 500 };
+    console.error('share_api runtime error:', e);
+    return { body: { error: 'server error' }, status: 500 };
   }
 }
 
