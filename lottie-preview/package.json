@@ -7,7 +7,6 @@
     "dev": "echo \"Use any static server (no build)\""
   },
   "dependencies": {
-    "@netlify/blobs": "^8.0.0",
-    "uuid": "^9.0.1"
+    "@netlify/blobs": "^8.0.0"
   }
 }
