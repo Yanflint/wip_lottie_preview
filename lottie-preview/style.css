@@ -243,3 +243,43 @@ html.standalone .bg img{
 html.standalone .lottie-layer, 
 html.standalone .lot-stage, 
 html.standalone .lottie-mount{ pointer-events:none; }
+
+
+/* ============ STANDALONE fit modes ============ */
+/* Базовая обвязка для обоих режимов */
+html.standalone .bg,
+html.standalone .lottie-layer{
+  position:absolute;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ---- Режим по краям экрана (edge) ---- */
+html.standalone.fit-edge .bg,
+html.standalone.fit-edge .lottie-layer{
+  inset:0;
+}
+html.standalone.fit-edge .bg img{
+  width:100vw; height:auto; display:block;
+}
+
+/* ---- Режим по safe-area (safe) ---- */
+html.standalone.fit-safe .bg,
+html.standalone.fit-safe .lottie-layer{
+  left:  env(safe-area-inset-left);
+  right: env(safe-area-inset-right);
+  top:   env(safe-area-inset-top);
+  bottom:env(safe-area-inset-bottom);
+}
+html.standalone.fit-safe .bg img{
+  width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+  height:auto; display:block;
+}
+
+/* Лотти остаётся 1:1 и центрируется внутри .lottie-layer */
+html.standalone .lot-stage{
+  position:absolute; left:50%; top:50%;
+  transform: translate(-50%, -50%);
+}

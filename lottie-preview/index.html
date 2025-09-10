@@ -71,13 +71,22 @@
   <div id="ver" class="ver"></div>
 
   <!-- детектор standalone для CSS (только класс, без визуальных изменений) -->
-  <script type="module">
-    const isStandalone =
-      (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
-                             window.matchMedia('(display-mode: fullscreen)').matches)) ||
-      (navigator.standalone === true);
-    if (isStandalone) document.documentElement.classList.add('standalone');
-  </script>
+<script type="module">
+  const isStandalone =
+    (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
+                           window.matchMedia('(display-mode: fullscreen)').matches)) ||
+    (navigator.standalone === true);
+
+  if (isStandalone) {
+    document.documentElement.classList.add('standalone');
+
+    // Режим подгонки: ?fit=edge | ?fit=safe (по умолчанию safe)
+    const fit = new URL(location.href).searchParams.get('fit');
+    const mode = (fit === 'edge' || fit === 'safe') ? fit : 'safe';
+    document.documentElement.classList.add(`fit-${mode}`);
+  }
+</script>
+
 
   <!-- Абсолютный путь к модулю -->
   <script type="module" src="/src/app/main.js?v=0.01"></script>
