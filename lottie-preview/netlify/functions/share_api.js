@@ -1,23 +1,39 @@
 // netlify/functions/share_api.js
-// Принудительная ручная конфигурация Netlify Blobs по ENV.
-// Работает и как Functions v1 (export handler), и как v2 (export default).
+// Принудительная ручная конфигурация Blobs через ENV.
+// Совместимо с Netlify Functions v1 (export handler) и v2 (export default).
 
-import { getStore } from '@netlify/blobs';
+import * as blobs from '@netlify/blobs';
 
-// Берём только из ENV; если чего-то не хватает — даём понятную 500-ошибку.
 function makeStoreFromEnv() {
   const siteID =
-    process.env.NETLIFY_BLOBS_SITE_ID ||      // задать в Site settings → Environment
-    process.env.NETLIFY_SITE_ID;              // резерв: Site API ID
+    process.env.NETLIFY_BLOBS_SITE_ID ||
+    process.env.NETLIFY_SITE_ID;
 
   const token =
-    process.env.NETLIFY_BLOBS_TOKEN ||        // задать в Site settings → Environment (Secret)
-    process.env.NETLIFY_API_TOKEN;            // резерв: персональный токен
+    process.env.NETLIFY_BLOBS_TOKEN   ||
+    process.env.NETLIFY_API_TOKEN;
 
   if (!siteID || !token) {
-    throw new Error('Missing env NETLIFY_BLOBS_SITE_ID or NETLIFY_BLOBS_TOKEN');
+    throw new Error('Missing NETLIFY_BLOBS_SITE_ID or NETLIFY_BLOBS_TOKEN in site env');
   }
-  return getStore('shares', { siteID, token });
+
+  // v8+: getStore({ name, siteID, token })
+  try {
+    return blobs.getStore({ name: 'shares', siteID, token });
+  } catch (e1) {
+    // старый формат: getStore('name', { siteID, token })
+    try {
+      // @ts-ignore
+      return blobs.getStore('shares', { siteID, token });
+    } catch (e2) {
+      // последний шанс: createClient().store('name')
+      try {
+        const client = blobs.createClient?.({ siteID, token });
+        if (client?.store) return client.store('shares');
+      } catch {}
+      throw e2;
+    }
+  }
 }
 
 function jsonV1(obj, status = 200) {
@@ -45,11 +61,12 @@ async function handle(method, getBody, getQuery) {
 
   try {
     if (method === 'POST') {
-      const payload = await getBody();   // ожидаем { lot, bg?, opts? }
+      const payload = await getBody(); // { lot, bg?, opts? }
       if (!payload || typeof payload !== 'object' || !payload.lot) {
         return { body: { error: 'invalid payload' }, status: 400 };
       }
-      const id = (globalThis.crypto?.randomUUID?.()) ||
+      const id =
+        (globalThis.crypto?.randomUUID?.()) ||
         (Math.random().toString(36).slice(2) + Date.now().toString(36));
       await store.setJSON(id, payload);
       return { body: { id }, status: 200 };
@@ -71,18 +88,17 @@ async function handle(method, getBody, getQuery) {
   }
 }
 
-// --- Functions v1 (handler) ---
+// v1
 export const handler = async (event) => {
-  const method = (event.httpMethod || 'GET').toUpperCase();
   const res = await handle(
-    method,
+    (event.httpMethod || 'GET').toUpperCase(),
     async () => (event.body ? JSON.parse(event.body) : {}),
     (k) => event.queryStringParameters?.[k]
   );
   return jsonV1(res.body, res.status);
 };
 
-// --- Functions v2 (default) ---
+// v2
 export default async (request) => {
   const url = new URL(request.url);
   const res = await handle(

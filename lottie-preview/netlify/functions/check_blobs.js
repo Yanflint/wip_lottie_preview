@@ -1,28 +1,41 @@
 // netlify/functions/check_blobs.js
-// Диагностика окружения для Netlify Blobs (НЕ выводит сам токен)
+import * as blobs from '@netlify/blobs';
+
 export const handler = async () => {
   const env = process.env;
   const siteID = env.NETLIFY_BLOBS_SITE_ID || env.NETLIFY_SITE_ID || null;
-  const hasToken = !!(env.NETLIFY_BLOBS_TOKEN || env.NETLIFY_API_TOKEN);
+  const token  = env.NETLIFY_BLOBS_TOKEN   || env.NETLIFY_API_TOKEN || null;
 
-  let canAuto = false, canManual = false, errAuto = null, errManual = null, storeType = null;
+  let auto_ok = false, manual_ok = false, auto_err = null, manual_err = null, storeType = null;
 
   try {
-    const { getStore } = await import('@netlify/blobs');
     try {
-      await getStore('shares').list();   // автоконфиг
-      canAuto = true; storeType = 'auto';
-    } catch (e) { errAuto = String(e?.message || e); }
+      await blobs.getStore('shares').list(); // автоконфиг (если вдруг доступен)
+      auto_ok = true; storeType = 'auto';
+    } catch (e) {
+      auto_err = String(e?.message || e);
+    }
+
     try {
-      if (!siteID || !hasToken) throw new Error('missing siteID/token for manual');
-      await getStore('shares', { siteID, token: env.NETLIFY_BLOBS_TOKEN || env.NETLIFY_API_TOKEN }).list();
-      canManual = true; storeType = storeType || 'manual';
-    } catch (e) { errManual = String(e?.message || e); }
-  } catch (e) {
+      if (!siteID || !token) throw new Error('missing siteID/token for manual');
+      // v8 сигнатура
+      try {
+        await blobs.getStore({ name: 'shares', siteID, token }).list();
+        manual_ok = true; storeType = storeType || 'manual(new)';
+      } catch (eNew) {
+        // старый формат
+        // @ts-ignore
+        await blobs.getStore('shares', { siteID, token }).list();
+        manual_ok = true; storeType = storeType || 'manual(old)';
+      }
+    } catch (e) {
+      manual_err = String(e?.message || e);
+    }
+  } catch (fatal) {
     return {
       statusCode: 500,
       headers: { 'content-type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ ok:false, error: 'cannot import @netlify/blobs', detail: String(e?.message||e) })
+      body: JSON.stringify({ ok: false, error: 'cannot use @netlify/blobs', detail: String(fatal?.message || fatal) })
     };
   }
 
@@ -30,11 +43,11 @@ export const handler = async () => {
     statusCode: 200,
     headers: { 'content-type': 'application/json; charset=utf-8' },
     body: JSON.stringify({
-      ok: canAuto || canManual,
+      ok: auto_ok || manual_ok,
       siteID_present: !!siteID,
-      token_present: hasToken,
-      auto_ok: canAuto, auto_err: errAuto,
-      manual_ok: canManual, manual_err: errManual,
+      token_present: !!token,
+      auto_ok, auto_err,
+      manual_ok, manual_err,
       storeType
     })
   };
