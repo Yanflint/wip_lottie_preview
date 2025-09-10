@@ -1,27 +1,29 @@
 [build]
-  publish   = "lottie-preview"
-  functions = "lottie-preview/netlify/functions"
+  # Мы уже находимся внутри каталога lottie-preview (Base directory),
+  # поэтому пути должны быть относительными от него:
+  publish   = "."
+  functions = "netlify/functions"
   command   = "echo static"
 
-# Короткая ссылка рендерит index.html
+# Короткие ссылки отдают index.html
 [[redirects]]
   from = "/s/:id"
   to   = "/index.html"
   status = 200
 
-# Явное сопоставление /api/share -> /.netlify/functions/share_api
+# Явно мапим /api/share на функцию share_api
 [[redirects]]
   from = "/api/share"
   to   = "/.netlify/functions/share_api"
   status = 200
 
-# Остальные функции по шаблону (например /api/shot)
+# Остальные API-функции по шаблону (например /api/shot)
 [[redirects]]
   from = "/api/*"
   to   = "/.netlify/functions/:splat"
   status = 200
 
-# (опционально) если вдруг кто-то обращается к исходнику функции как статике —
+# На случай, если кто-то случайно запросит исходник функции как статику —
 # перебрасываем в рантайм
 [[redirects]]
   from = "/netlify/functions/*"
