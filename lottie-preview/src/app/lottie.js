@@ -1,5 +1,5 @@
 // src/app/lottie.js
-import { setLastLottie, state } from './state.js';
+import { setLastLottie, state, setLastBgSize } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let LOTTIE = null;
@@ -33,6 +33,11 @@ export async function setBackgroundFromSrc(refs, src) {
     refs.bgImg.onload = () => res();
     refs.bgImg.onerror = () => rej(new Error('background load failed'));
   });
+  try {
+    const w = refs.bgImg.naturalWidth || refs.bgImg.width || 0;
+    const h = refs.bgImg.naturalHeight || refs.bgImg.height || 0;
+    if (w && h) setLastBgSize(w, h);
+  } catch(_) {}
   setPlaceholderVisible(refs, false);
 }
 
@@ -46,7 +51,6 @@ function applyPlaybackOptions(inst) {
 }
 
 export async function loadLottieFromData(refs, json) {
-  // На случай если передали строку
   try { if (typeof json === 'string') json = JSON.parse(json); } catch(_) {}
   if (!json || typeof json !== 'object') return;
 

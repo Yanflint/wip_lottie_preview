@@ -46,12 +46,10 @@ export function setDropActive(refs, on) {
   if (!box) return;
   try {
     if (on) {
-      box.dataset.drop = '1';
-      box.style.outline = '2px dashed rgba(59,130,246,.85)';
+      box.classList.add('drop-active');
       if (refs.phEl) refs.phEl.textContent = 'Отпустите здесь';
     } else {
-      delete box.dataset.drop;
-      box.style.outline = '';
+      box.classList.remove('drop-active');
       if (refs.phEl) refs.phEl.textContent = 'Перетащите PNG/JPG или Lottie JSON сюда, либо вставьте из буфера.';
     }
   } catch(_) {}

@@ -1,4 +1,4 @@
-// src/app/dom.js
+// Все DOM-ссылки собираем один раз
 export function getRefs() {
   const $ = (id) => document.getElementById(id);
   return {
@@ -20,5 +20,8 @@ export function getRefs() {
     fullHChk: $('fullHChk'),
     verEl: $('ver'),
     phEl: $('ph'),
+    // новые (опционально добавь в HTML):
+    bgPickBtn: $('btnBg'),
+    lotPickBtn: $('btnLottie'),
   };
 }

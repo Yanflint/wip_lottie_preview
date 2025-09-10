@@ -8,6 +8,7 @@ function readDroppedFile(file, refs) {
     const url = URL.createObjectURL(file);
     return setBackgroundFromSrc(refs, url);
   }
+  // допускаем "application/json", ".json" и "text/plain" с JSON внутри
   if (file.type === 'application/json' || file.name?.endsWith?.('.json')) {
     return file.text().then(text => {
       try {
@@ -15,6 +16,15 @@ function readDroppedFile(file, refs) {
         setLastLottie(json);
         loadLottieFromData(refs, json);
       } catch (e2) { console.error('Invalid Lottie JSON', e2); }
+    });
+  }
+  if (file.type === 'text/plain') {
+    return file.text().then(text => {
+      try {
+        const json = JSON.parse(text);
+        setLastLottie(json);
+        loadLottieFromData(refs, json);
+      } catch(_) {}
     });
   }
 }
@@ -35,6 +45,7 @@ export function initDnd({ refs }) {
 
     if (dt.files && dt.files.length) {
       await readDroppedFile(dt.files[0], refs);
+      setPlaceholderVisible(refs, false);
       return;
     }
     if (dt.items && dt.items.length) {
@@ -42,12 +53,12 @@ export function initDnd({ refs }) {
       if (it.kind === 'file') {
         const file = it.getAsFile();
         await readDroppedFile(file, refs);
+        setPlaceholderVisible(refs, false);
         return;
       }
     }
   };
 
-  // Слушатели на window + document + root
   window.addEventListener('dragenter', onDragEnter);
   window.addEventListener('dragover', onDragOver);
   window.addEventListener('dragleave', onDragLeave);
@@ -88,26 +99,4 @@ export function initDnd({ refs }) {
       }
     }
   });
-
-  // Инпуты файлов (если есть)
-  if (refs.bgFile) {
-    refs.bgFile.addEventListener('change', async () => {
-      const f = refs.bgFile.files?.[0]; if (!f) return;
-      const url = URL.createObjectURL(f);
-      await setBackgroundFromSrc(refs, url);
-      setPlaceholderVisible(refs, false);
-    });
-  }
-  if (refs.lotFile) {
-    refs.lotFile.addEventListener('change', async () => {
-      const f = refs.lotFile.files?.[0]; if (!f) return;
-      const text = await f.text();
-      try {
-        const json = JSON.parse(text);
-        setLastLottie(json);
-        loadLottieFromData(refs, json);
-        setPlaceholderVisible(refs, false);
-      } catch(e) { console.error(e); }
-    });
-  }
 }
