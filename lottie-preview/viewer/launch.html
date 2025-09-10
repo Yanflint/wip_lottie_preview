@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Lottie Viewer</title>
+
+  <!-- Манифест для Android/Chrome -->
+  <link rel="manifest" href="/viewer-manifest.webmanifest">
+  <meta name="theme-color" content="#000000" />
+
+  <!-- iOS: запуск без UI Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Lottie Viewer" />
+  <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+
+  <!-- favicon, чтобы не было 404 -->
+  <link rel="icon" type="image/png"
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
+
+  <style>
+    html,body{height:100%;margin:0;background:#000;color:#888;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    .center{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+    .hint{opacity:.6}
+  </style>
+</head>
+<body>
+  <div class="center"><div class="hint">Открываю последний шот…</div></div>
+
+  <script>
+    (function(){
+      // Всегда открываем «последний», с автоподгонкой по visualViewport
+      const url = new URL('/s/last', location.origin);
+      url.searchParams.set('fit', 'vv'); // vv|safe|edge — vv даёт наилучшее центрирование
+      // Мгновенная навигация без возможности "Назад", чтобы ярлык всегда попадал на актуальное
+      location.replace(url.toString());
+    })();
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=/s/last">
+  </noscript>
+</body>
+</html>
