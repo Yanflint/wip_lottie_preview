@@ -1,0 +1,12 @@
+Чтобы страница с коротким URL /s/:id загружала стили и скрипты, сделай пути абсолютными (со слэша):
+  В index.html замени:
+    <link rel="stylesheet" href="./style.css?v=57">
+    <script type="module" src="./src/app/main.js?v=57"></script>
+  на
+    <link rel="stylesheet" href="/style.css?v=57">
+    <script type="module" src="/src/app/main.js?v=57"></script>
+
+Почему это важно:
+- Редирект Netlify со статусом 200 оставляет URL как /s/123 и отдает содержимое /?id=123.
+- Относительный путь ./src/app/main.js на /s/123 превращается в /s/src/app/main.js (404).
+- Абсолютный путь /src/app/main.js всегда корректен.
