@@ -211,12 +211,23 @@ html.standalone .drop-overlay{
    (классы .has-bg / .has-lottie выставляет JS) */
 
 
-/* фон: ровно по ширине */
-html.standalone .bg, 
-html.standalone .bg img{ position:absolute; inset:0; }
-html.standalone .bg img{
-  width:100vw; height:auto; max-height:100dvh; margin:0 auto; display:block;
+/* стало: фон по ширине, обрезка по высоте */
+html.standalone .bg{
+  position: absolute;
+  inset: 0;
+  overflow: hidden;                    /* важно: обрезка по высоте */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+html.standalone .bg img{
+  position: relative;
+  width: 100vw;                        /* фиксируем по ширине экрана */
+  height: auto;                        /* пропорции сохраняются */
+  /* без max-height — можно выходить за экран и обрезаться контейнером */
+  display: block;
+}
+
 
 /* слой Лотти — пассивный */
 html.standalone .lottie-layer, 
