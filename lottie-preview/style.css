@@ -3,7 +3,7 @@
   --bg:#0b0c10; --muted:#9aa3b2;
   --accent:#6ee7b7; --accent-orange:#FF7700;
   --preview-bg:#0b0f1a;
-
+  --controls-space: 150px; /* запас под панель кнопок + отступы */
   /* UI-параметры */
   --ctl-h: 36px;           /* высота кнопки */
   --btn-font: 13px;        /* размер шрифта в кнопке */
@@ -44,13 +44,23 @@ body{
   gap:var(--stack-gap);
 }
 
-/* Коробка превью */
+/* Область превью: держим соотношение 360/800 и подстраиваем высоту под экран */
 .wrapper{
-  position:relative; width:360px; height:800px;
-  border:none; outline:none;
-  border-radius:var(--wrap-r);
-  overflow:visible;              /* чтобы рамку не клипало */
+  position: relative;
+  /* базовый размер для больших экранов */
+  height: 800px;
+  aspect-ratio: 360 / 800;   /* ширина высчитывается из высоты */
+  width: auto;
+
+  /* чтобы всё поместилось без скролла: */
+  max-height: calc(100dvh - var(--controls-space));
+  max-width:  min(100vw - 32px, 1000px);
+
+  border: none; outline: none;
+  border-radius: var(--wrap-r);
+  overflow: visible;
 }
+
 
 /* Единственная пунктирная рамка */
 .wrapper::after{
