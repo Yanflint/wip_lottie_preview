@@ -1,5 +1,7 @@
-// Загружаем состояние по /s/:id. Если id нет (или мы в standalone без параметров),
-// пробуем поднять локально закреплённый макет.
+// src/app/loadFromLink.js
+// Загружаем состояние по /s/:id. Если id нет (или установлен на дом. экран),
+// пробуем поднять локально закреплённый макет (pinned).
+
 import { setPlaceholderVisible } from './utils.js';
 import { setLastLottie } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
@@ -20,36 +22,39 @@ async function applyPayload(refs, data) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
     if (src) await setBackgroundFromSrc(refs, src);
   }
-
   if (data.lot) {
     setLastLottie(data.lot);
     await loadLottieFromData(refs, data.lot);
   }
 
-  setPlaceholderVisible(refs, false);
+  setPlaceholderVisible(refs, false); // контент есть — скрыть
   layoutLottie(refs);
   return true;
 }
 
-export async function initLoadFromLink({ refs, isStandalone }) {
-  const id = getShareIdFromLocation();
+export async function initLoadFromLink({ refs/*, isStandalone*/ }) {
+  // ПО УМОЛЧАНИЮ показываем placeholder — пока не загрузим данные
+  setPlaceholderVisible(refs, true);
 
+  const id = getShareIdFromLocation();
   if (id) {
     try {
       const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
-      if (!r.ok) return; // не найдено — оставим плейсхолдер
-      const data = await r.json().catch(() => null);
-      await applyPayload(refs, data);
-      return;
+      if (r.ok) {
+        const data = await r.json().catch(() => null);
+        if (await applyPayload(refs, data)) return;
+      }
     } catch (e) {
       console.error('share GET error', e);
     }
   }
 
-  // Нет id → если установлено на дом. экран (или просто всегда как fallback),
-  // пробуем поднять локально закреплённый макет:
+  // fallback: локально закреплённый макет (для иконки на дом. экране)
   const pinned = loadPinned();
   if (pinned) {
     await applyPayload(refs, pinned);
+    return;
   }
+
+  // если сюда дошли — контента нет, placeholder остаётся видимым
 }

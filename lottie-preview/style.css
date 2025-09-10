@@ -201,12 +201,15 @@ html.standalone .wrapper::after{
   display: none !important;
 }
 
-/* скрыть вспомогательные UI в standalone */
+/* скрываем только UI, НО НЕ placeholder */
 html.standalone .controls,
-html.standalone .drop-overlay,
-html.standalone .placeholder{
+html.standalone .drop-overlay{
   display: none !important;
 }
+
+/* placeholder оставляем — он исчезает, когда появится контент
+   (классы .has-bg / .has-lottie выставляет JS) */
+
 
 /* фон: ровно по ширине */
 html.standalone .bg, 
