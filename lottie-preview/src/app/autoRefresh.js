@@ -1,6 +1,10 @@
 // src/app/autoRefresh.js
-// Авто-рефреш просмотра, когда открыта страница /s/last.
-// При возврате в фокус/видимость сверяем текущий "last" с сервером и, если он изменился, перезагружаем страницу.
+// Live-пулинг для /s/last: каждые 5с ±20% (только когда вкладка видима).
+// Мгновенная проверка при возврате в фокус/тач. Экспоненциальный бэкофф до 30с при ошибках.
+
+const BASE_INTERVAL = 5000;        // 5s
+const JITTER = 0.20;               // ±20%
+const MAX_BACKOFF = 30000;         // 30s
 
 function isViewingLast() {
   try {
@@ -16,57 +20,92 @@ function isViewingLast() {
   return false;
 }
 
-function hashString(s) {
-  // FNV-1a 32-bit
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(16);
+function jittered(ms) {
+  const f = 1 + (Math.random() * 2 - 1) * JITTER; // 0.8…1.2
+  return Math.max(1000, Math.round(ms * f));
 }
 
-async function fetchLastHash() {
-  try {
-    const r = await fetch('/api/share?id=last', { cache: 'no-store' });
-    if (!r.ok) return null;
-    const j = await r.json();
-    return hashString(JSON.stringify(j));
-  } catch {
-    return null;
-  }
+async function fetchRev() {
+  // компактный ответ: { rev: "<hash>" }
+  const r = await fetch('/api/share?id=last&rev=1', { cache: 'no-store' });
+  if (!r.ok) throw new Error('bad status ' + r.status);
+  const j = await r.json();
+  return String(j.rev || '');
 }
 
 export function initAutoRefreshIfViewingLast() {
   if (!isViewingLast()) return;
 
   let baseline = null;
-  let ticking = false;
+  let timer = null;
+  let currentDelay = BASE_INTERVAL;
+  let inFlight = false;
 
-  async function checkAndMaybeReload() {
-    if (ticking) return;
-    ticking = true;
-    try {
-      const h = await fetchLastHash();
-      if (h && baseline && h !== baseline) {
-        // Перезагружаем текущий URL с сохранением ?fit=…
-        location.replace(location.href);
-        return;
-      }
-      if (h && !baseline) baseline = h; // зафиксировать базовую сигнатуру
-    } finally {
-      ticking = false;
-    }
-  }
-
-  // Первичная фиксация
-  checkAndMaybeReload();
-
-  // Триггеры «возврата в фокус/видимость»
-  const onVisible = () => {
-    if (document.visibilityState === 'visible') checkAndMaybeReload();
+  const schedule = (delay = currentDelay) => {
+    clearTimeout(timer);
+    timer = setTimeout(tick, jittered(delay));
   };
+
+  const resetDelay = () => { currentDelay = BASE_INTERVAL; };
+
+  const tick = async () => {
+    if (inFlight) return;
+    if (document.visibilityState !== 'visible') { schedule(currentDelay); return; }
+    inFlight = true;
+    try {
+      const rev = await fetchRev();
+      if (!baseline) {
+        baseline = rev;
+      } else if (rev && rev !== baseline) {
+        // обновилось — жёсткий рефреш текущего URL (сохраняет ?fit=…)
+        location.replace(location.href);
+        return; // прерываем — страница перезагрузится
+      }
+      // успех → сброс бэкоффа
+      resetDelay();
+    } catch (e) {
+      // ошибка → экспоненциальный бэкофф
+      currentDelay = Math.min(MAX_BACKOFF, Math.max(BASE_INTERVAL, currentDelay * 2));
+    } finally {
+      inFlight = false;
+      schedule(currentDelay);
+    }
+  };
+
+  // старт, если видимо
+  const startIfVisible = () => {
+    if (document.visibilityState === 'visible') {
+      resetDelay();
+      schedule(BASE_INTERVAL);
+    }
+  };
+
+  // мгновенная проверка по возвращению в фокус/видимость
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') {
+      resetDelay();
+      clearTimeout(timer);
+      tick();
+    }
+  };
+
+  // быстрый триггер и при любом тапе/клике (дебаг)
+  const onPointer = () => {
+    if (document.visibilityState === 'visible') {
+      resetDelay();
+      clearTimeout(timer);
+      tick();
+    }
+  };
+
   document.addEventListener('visibilitychange', onVisible);
-  window.addEventListener('focus', checkAndMaybeReload);
-  window.addEventListener('pageshow', () => checkAndMaybeReload());
+  window.addEventListener('focus', onVisible);
+  window.addEventListener('pageshow', onVisible);
+  window.addEventListener('pointerdown', onPointer, { passive: true });
+
+  // первичная фиксация ревизии (без ожидания интервала)
+  (async () => {
+    try { baseline = await fetchRev(); } catch {}
+    startIfVisible();
+  })();
 }
