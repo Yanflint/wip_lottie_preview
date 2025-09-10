@@ -1,5 +1,5 @@
-// Center Lottie in its own native size and control playback
-import { setLastLottie, state } from './state.js';
+// Центровка Lottie «в родном размере» + учёт размеров фона
+import { setLastLottie, setLastBgSize, state } from './state.js';
 
 let LOTTIE = null;
 let lottieInstance = null;
@@ -51,7 +51,12 @@ export function layoutLottie(refs) {
 export async function setBackgroundFromSrc(refs, src) {
   if (!refs?.bgImg) return;
   await new Promise((res) => {
-    refs.bgImg.onload = () => res();
+    refs.bgImg.onload = () => {
+      const iw = refs.bgImg.naturalWidth || 0;
+      const ih = refs.bgImg.naturalHeight || 0;
+      setLastBgSize(iw, ih);
+      res();
+    };
     refs.bgImg.onerror = () => res();
     refs.bgImg.src = src;
   });

@@ -24,3 +24,11 @@ export function setPlaceholderVisible(refs, on) {
   const el = refs?.phEl; if (!el) return;
   el.classList.toggle('hidden', !on);
 }
+
+// === добавлено для layout.js ===
+export function isMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+export function afterTwoFrames() {
+  return new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+}
