@@ -1,6 +1,5 @@
 // src/app/lottie.js
 import { setLastLottie, state, setLastBgSize } from './state.js';
-import { setPlaceholderVisible } from './utils.js';
 
 let LOTTIE = null;
 
@@ -22,26 +21,47 @@ function importViaScriptTag() {
 async function ensureLottie() {
   if (LOTTIE) return LOTTIE;
   try { LOTTIE = await importViaESM(); }
-  catch (e) { console.warn('[lottie] ESM import failed, fallback to script tag', e); LOTTIE = await importViaScriptTag(); }
+  catch (e) { console.warn('[lottie] ESM import failed, fallback <script>', e); LOTTIE = await importViaScriptTag(); }
   return LOTTIE;
 }
 
+// Фон (НЕ трогаем lottie-монтажку)
 export async function setBackgroundFromSrc(refs, src) {
-  if (!refs?.bgImg) return;
-  refs.bgImg.src = src;
+  const img = refs?.bgImg;
+  if (!img) return;
+  img.src = src;
   await new Promise((res, rej) => {
-    refs.bgImg.onload = () => res();
-    refs.bgImg.onerror = () => rej(new Error('background load failed'));
+    img.onload = () => res();
+    img.onerror = () => rej(new Error('background load failed'));
   });
   try {
-    const w = refs.bgImg.naturalWidth || refs.bgImg.width || 0;
-    const h = refs.bgImg.naturalHeight || refs.bgImg.height || 0;
+    const w = img.naturalWidth || img.width || 0;
+    const h = img.naturalHeight || img.height || 0;
     if (w && h) setLastBgSize(w, h);
   } catch(_) {}
-  setPlaceholderVisible(refs, false);
 }
 
+// Текущий инстанс Lottie
 let lottieInstance = null;
+
+// Создаём или берём «монтажку» внутри lottieBox, не очищая чужие элементы (фон, плейсхолдер и т.д.)
+function ensureMount(lottieBox) {
+  if (!lottieBox) return null;
+  let mount = lottieBox.querySelector('[data-lottie-mount]');
+  if (!mount) {
+    mount = document.createElement('div');
+    mount.setAttribute('data-lottie-mount', '1');
+    // растягиваемся на весь контейнер, не ломая чужие стили
+    mount.style.position = 'absolute';
+    mount.style.inset = '0';
+    // Lottie поверх фона
+    mount.style.zIndex = '2';
+    lottieBox.appendChild(mount);
+  }
+  // очищаем только монтажку, а не lottieBox целиком
+  mount.innerHTML = '';
+  return mount;
+}
 
 function applyPlaybackOptions(inst) {
   if (!inst) return;
@@ -55,17 +75,14 @@ export async function loadLottieFromData(refs, json) {
   if (!json || typeof json !== 'object') return;
 
   setLastLottie(json);
+
   const lottieBox = refs?.lottieBox;
-  if (!lottieBox) return;
-  lottieBox.innerHTML = '';
+  const mount = ensureMount(lottieBox);
+  if (!mount) return;
 
   const L = await ensureLottie();
 
-  const mount = document.createElement('div');
-  mount.style.width = '100%';
-  mount.style.height = '100%';
-  lottieBox.appendChild(mount);
-
+  // убиваем старый инстанс, если был
   try { lottieInstance?.destroy?.(); } catch(_) {}
 
   lottieInstance = L.loadAnimation({
@@ -74,12 +91,13 @@ export async function loadLottieFromData(refs, json) {
     loop: true,
     autoplay: true,
     animationData: json,
-    rendererSettings: { preserveAspectRatio: 'xMidYMid meet' }
+    rendererSettings: { preserveAspectRatio: 'xMidYMid meet' },
   });
 
-  try { lottieInstance.addEventListener?.('DOMLoaded', () => applyPlaybackOptions(lottieInstance)); } catch(_) {}
+  try {
+    lottieInstance.addEventListener?.('DOMLoaded', () => applyPlaybackOptions(lottieInstance));
+  } catch(_) {}
   applyPlaybackOptions(lottieInstance);
-  setPlaceholderVisible(refs, false);
 }
 
 export function updatePlaybackFromState() {

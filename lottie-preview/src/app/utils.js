@@ -1,3 +1,4 @@
+// src/app/utils.js
 export function uid() {
   return Math.random().toString(36).slice(2, 8);
 }
@@ -37,20 +38,17 @@ export function showToastNear(toastEl, el, msg) {
   showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1400);
 }
 
-/* UI helpers */
-export function setPlaceholderVisible(refs, on) {
-  try { if (refs?.phEl) refs.phEl.style.display = on ? '' : 'none'; } catch(_) {}
-}
+/* Только переключение класса; внешний вид — целиком твоим CSS */
 export function setDropActive(refs, on) {
   const box = refs?.previewBox || refs?.wrapper || document.body;
   if (!box) return;
-  try {
-    if (on) {
-      box.classList.add('drop-active');
-      if (refs.phEl) refs.phEl.textContent = 'Отпустите здесь';
-    } else {
-      box.classList.remove('drop-active');
-      if (refs.phEl) refs.phEl.textContent = 'Перетащите PNG/JPG или Lottie JSON сюда, либо вставьте из буфера.';
-    }
-  } catch(_) {}
+  if (on) box.classList.add('drop-active');
+  else box.classList.remove('drop-active');
+}
+
+/* Ничего не меняем во внешнем виде плейсхолдера */
+export function setPlaceholderVisible(refs, on) {
+  const el = refs?.phEl;
+  if (!el) return;
+  el.style.display = on ? '' : 'none';
 }
