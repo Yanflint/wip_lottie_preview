@@ -2,9 +2,6 @@
   base = "lottie-preview"
   publish = "."
   functions = "netlify/functions"
-  # Вариант А: без команды (статический сайт)
-  # command = ""
-  # Вариант Б: явный no-op
   command = "echo static"
 
 [[redirects]]

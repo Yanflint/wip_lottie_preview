@@ -1,4 +1,4 @@
-// Все DOM-ссылки собираем один раз
+// src/app/dom.js
 export function getRefs() {
   const $ = (id) => document.getElementById(id);
   return {

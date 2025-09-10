@@ -1,9 +1,11 @@
+// src/app/main.js
 import { state } from './state.js';
 import { getRefs } from './dom.js';
 import { initLayout, layout } from './layout.js';
 import { initDnd } from './dnd.js';
 import { initShare } from './share.js';
 import { initLoadFromLink } from './loadFromLink.js';
+import { initControls } from './controls.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const refs = getRefs();
@@ -11,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initLayout({ refs });
   initDnd({ refs });
+  initControls({ refs });
   initShare({ refs });
   await initLoadFromLink({ refs });
 
