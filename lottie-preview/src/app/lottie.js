@@ -23,46 +23,51 @@ async function ensureLottie() {
   return LOTTIE;
 }
 
-// --- СОВМЕЩЕНИЕ LOTTIE С ФОНОМ 1:1 ---
-export function syncLottieToBg(refs) {
-  const mount = refs?.lottieMount;
-  const bg = refs?.bgImg;
-  const preview = refs?.preview;
-  if (!mount || !bg || !preview) return;
-
-  const pr = preview.getBoundingClientRect();
-  const br = bg.getBoundingClientRect();
-  // Накладываем контейнер Lottie ровно поверх фактической области bgImg
-  Object.assign(mount.style, {
-    position: 'absolute',
-    left: (br.left - pr.left) + 'px',
-    top: (br.top - pr.top) + 'px',
-    width: br.width + 'px',
-    height: br.height + 'px',
-    overflow: 'hidden',
-  });
+// ===== Размер и центрирование =====
+function getAnimSize() {
+  const j = state.lastLottieJSON;
+  let w = 512, h = 512; // дефолт на всякий
+  if (j && typeof j === 'object') {
+    if (Number.isFinite(j.w)) w = j.w;
+    if (Number.isFinite(j.h)) h = j.h;
+  }
+  return { w, h };
 }
 
+export function layoutLottie(refs) {
+  const mount = refs?.lottieMount;
+  const preview = refs?.preview;
+  if (!mount || !preview) return;
+
+  const { w, h } = getAnimSize();
+
+  // Центрируем контейнер «как есть» (1:1), без масштабирования,
+  // по центру превью: left/top 50% + translate(-50%, -50%)
+  mount.style.position = 'absolute';
+  mount.style.width = w + 'px';
+  mount.style.height = h + 'px';
+  mount.style.left = '50%';
+  mount.style.top = '50%';
+  mount.style.transform = 'translate(-50%, -50%)';
+  mount.style.pointerEvents = 'none'; // чтобы не мешать dnd/кликам
+  // не трогаем z-index — у тебя свой порядок слоёв
+}
+
+// ===== Фон (без влияния на лотти) =====
 export async function setBackgroundFromSrc(refs, src) {
   if (!refs?.bgImg) return;
   await new Promise((res) => {
-    // чтобы сначала подписаться на onload, а потом менять src
     refs.bgImg.onload = () => res();
-    refs.bgImg.onerror = () => res(); // не валимся — всё равно попробуем синкнуть
+    refs.bgImg.onerror = () => res();
     refs.bgImg.src = src;
   });
-  // как только фон отрисован — подгоняем Lottie
-  syncLottieToBg(refs);
+  // фон загрузился — просто перелэйаутим лотти на всякий
+  layoutLottie(refs);
 }
 
 function applyPlaybackOptions(inst) {
   if (!inst) return;
-  // 1) Учитываем текущее состояние loop при ИНИЦИАЛИЗАЦИИ и при переключении
-  try {
-    // lottie-web поддерживает установку свойства loop на инстансе
-    inst.loop = !!state.loopOn;
-  } catch {}
-  // 2) Автовоспроизведение
+  try { inst.loop = !!state.loopOn; } catch {}
   if (state.autoplayOn) {
     try { inst.play?.(); } catch {}
   } else {
@@ -78,8 +83,7 @@ export async function loadLottieFromData(refs, json) {
   const mount = refs?.lottieMount;
   if (!mount) return;
 
-  // Контейнер — тот же DOM-узел, НЕ трогаем фон/оверлеи
-  mount.innerHTML = '';
+  mount.innerHTML = ''; // чистим только сам mount
 
   const L = await ensureLottie();
 
@@ -87,23 +91,22 @@ export async function loadLottieFromData(refs, json) {
   lottieInstance = L.loadAnimation({
     container: mount,
     renderer: 'svg',
-    loop: !!state.loopOn,        // важно: петля учитывается уже на старте
+    loop: !!state.loopOn,
     autoplay: !!state.autoplayOn,
     animationData: json,
-    rendererSettings: { preserveAspectRatio: 'xMidYMid meet' }, // 1:1 + центрирование
+    rendererSettings: { preserveAspectRatio: 'xMidYMid meet' },
   });
 
-  // Как только DOM Lottie построен — дожимаем настройки и подгоняем размер к фону
+  // как только собрался DOM — применим опции и разложим по центру 1:1
   try {
     lottieInstance.addEventListener?.('DOMLoaded', () => {
       applyPlaybackOptions(lottieInstance);
-      syncLottieToBg(refs);
+      layoutLottie(refs);
     });
   } catch {}
 
-  // На всякий случай — и сразу применим
   applyPlaybackOptions(lottieInstance);
-  syncLottieToBg(refs);
+  layoutLottie(refs);
 }
 
 export function restartLottie() {
@@ -111,8 +114,6 @@ export function restartLottie() {
 }
 
 export function updatePlaybackFromState(refs) {
-  // дергаем при переключении loop/автовоспроизведения
   applyPlaybackOptions(lottieInstance);
-  // и подстраховываемся на ресайзах/поворотах
-  syncLottieToBg(refs);
+  layoutLottie(refs); // на всякий при переключении loop
 }
