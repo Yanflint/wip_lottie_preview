@@ -3,9 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "netlify dev",
-    "build": "npm run prepare && echo \"static\"",
-    "prepare": "node scripts/build.js"
+    "build": "echo \"static\"",
+    "dev": "echo \"Use a local static server (no build)\""
   },
   "dependencies": {
     "@netlify/blobs": "^8.0.0",
