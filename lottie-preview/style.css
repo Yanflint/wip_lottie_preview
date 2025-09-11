@@ -360,38 +360,3 @@ html.standalone.fit-vv .bg img{
     transform: translate(-50%, 0) !important;
   }
 }
-
-/* === Placeholder (drag-n-drop) centering fix ==============================
-   Делаем надпись «Перетащите PNG / JSON» по центру области превью,
-   поверх фона и кликов/перетаскиваний (events проходят «сквозь»).
-   ======================================================================= */
-.preview > .ph{
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  z-index: 2;
-  pointer-events: none;
-}
-/* === Placeholder (drag-n-drop) centering fix ============================== */
-.preview > .ph{
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  z-index: 2;          /* поверх .bg и .lottie-layer */
-  pointer-events: none;/* DnD и клики проходят сквозь подсказку */
-}
-/* === Lottie stage must fill preview ===================================== */
-.lot-stage {
-  width: 100%;
-  height: 100%;
-}
