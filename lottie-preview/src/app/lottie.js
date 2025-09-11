@@ -43,9 +43,19 @@ export function layoutLottie(refs) {
   const cssW = +((state.lastBgSize && state.lastBgSize.w) || 0);
   const cssH = +((state.lastBgSize && state.lastBgSize.h) || 0);
 
-  const br = wrap.getBoundingClientRect();
-  const realW = br.width || 0;
-  const realH = br.height || 0;
+  // Реальные размеры фона, а не рамки превью
+  let realW = 0, realH = 0;
+  const bgEl = refs?.bgImg;
+  if (bgEl && bgEl.getBoundingClientRect) {
+    const bgr = bgEl.getBoundingClientRect();
+    realW = bgr.width || 0;
+    realH = bgr.height || 0;
+  }
+  if (!(realW > 0 && realH > 0)) {
+    const br = wrap.getBoundingClientRect();
+    realW = br.width || 0;
+    realH = br.height || 0;
+  }
 
   let fitScale = 1;
   if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
