@@ -276,3 +276,18 @@ html.standalone.fit-safe .lottie-layer{
     transform: translate(-50%, 0) !important;
   }
 }
+
+/* === Desktop wide overrides (added by assistant) === */
+@media (min-width: 1024px){
+  /* Снимаем лимит общей ширины приложения на desktop */
+  .app{ max-width: none; }
+
+  /* Снимаем ограничение ширины превью-контейнера */
+  .wrapper{ max-width: none; }
+
+  /* Не режем контент по краям у слоя превью только на desktop */
+  .preview{ overflow: visible; }
+
+  /* Разрешаем горизонтальный скролл при широкой картинке */
+  html, body{ overflow-x: auto; }
+}
