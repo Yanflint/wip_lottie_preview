@@ -24,16 +24,14 @@ export function layout({ refs }) {
     preview.style.maxWidth = 'unset';
     preview.style.maxHeight = 'unset';
   }
-
-  // Синхронизируем лотти со scale фона
+  // синхронизируем масштаб и смещение лотти с фоном
   try { layoutLottie(refs); } catch {} else {
     preview.style.maxWidth = Math.min(1200, vw - pad * 2) + 'px';
     preview.style.maxHeight = (vh - pad * 2) + 'px';
     previewBox.style.width = '';
     previewBox.style.height = '';
   }
-
-  // Синхронизируем лотти со scale фона
+  // синхронизируем масштаб и смещение лотти с фоном
   try { layoutLottie(refs); } catch {}
 }
 

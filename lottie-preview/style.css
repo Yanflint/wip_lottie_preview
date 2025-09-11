@@ -92,7 +92,7 @@ body{
 }
 
 /* По умолчанию: подгоняем по высоте контейнера (контейнер уже держит aspect-ratio) */
-.bg img{ display:block; height:100%; width:auto; margin:0 auto; }
+.bg img{ display:block; width:100%; height:100%; object-fit:contain; margin:0 auto; }
 
 .lottie-layer{ overflow:hidden; }
 .lot-stage{
@@ -216,10 +216,7 @@ html.is-standalone.is-mobile .wrapper::after{ display:none; }
 /* Для этого режима картинку подгоняем по ширине экрана,
    чтобы при высоких макетах шла обрезка по вертикали.
    Центрирование сохраняется за счёт flex на .bg */
-html.is-standalone.is-mobile .bg img{
-  width:100vw;
-  height:auto;
-}
+html.is-standalone.is-mobile .bg img{ display:block; width:100%; height:100%; object-fit:contain; margin:0 auto; }
 
 /* ============ STANDALONE fit modes (как было) ============ */
 html.standalone .bg,
@@ -233,7 +230,7 @@ html.standalone .lottie-layer{
 
 html.standalone.fit-edge .bg,
 html.standalone.fit-edge .lottie-layer{ inset:0; }
-html.standalone.fit-edge .bg img{ width:100vw; height:auto; display:block; }
+html.standalone.fit-edge .bg img{ display:block; width:100%; height:100%; object-fit:contain; margin:0 auto; }
 
 html.standalone.fit-safe .bg,
 html.standalone.fit-safe .lottie-layer{

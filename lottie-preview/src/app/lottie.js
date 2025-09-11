@@ -1,5 +1,5 @@
 // src/app/lottie.js
-import { state, setLastBgSize, setLastBgMeta } from './state.js';
+import { state, setLastBgSize } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
@@ -34,18 +34,26 @@ function parseAssetScale(nameOrUrl) {
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
-/** Центрируем и масштабируем лотти-стейдж синхронно с фоном */
 export function layoutLottie(refs) {
   const stage = refs?.lotStage;
-  const wrap  = refs?.wrapper || refs?.previewBox || refs?.preview;
-  if (!stage || !wrap) return;
+  const imgEl = refs?.bgImg;
+  const preview = refs?.preview || refs?.wrapper || refs?.previewBox;
+  if (!stage || !preview) return;
 
   const cssW = +((state.lastBgSize && state.lastBgSize.w) || 0);
   const cssH = +((state.lastBgSize && state.lastBgSize.h) || 0);
 
-  const br = wrap.getBoundingClientRect();
-  const realW = br.width || 0;
-  const realH = br.height || 0;
+  // фактические размеры отображаемого фона (после CSS)
+  let realW = imgEl && imgEl.clientWidth || 0;
+  let realH = imgEl && imgEl.clientHeight || 0;
+  if (!realW || !realH) {
+    const br = preview.getBoundingClientRect();
+    realW = br.width; realH = br.height;
+    // попробуем пересчитать на следующем кадре, когда img дорисуется
+    if (imgEl && (!imgEl.complete || !imgEl.naturalWidth)) {
+      requestAnimationFrame(() => layoutLottie(refs));
+    }
+  }
 
   let fitScale = 1;
   if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
@@ -63,6 +71,7 @@ export function layoutLottie(refs) {
   stage.style.transformOrigin = '50% 50%';
   stage.style.transform = `translate(calc(-50% + ${xpx}px), calc(-50% + ${ypx}px)) scale(${fitScale})`;
 }
+
 /**
  * Установка фоновой картинки из data:/blob:/http(s)
  * — считываем naturalWidth/naturalHeight
@@ -100,8 +109,11 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
+    // Сохраняем фактический размер пикселей
+    setLastBgSize(iw, ih);
+
     // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
-    const assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
+    const assetScale = parseAssetScale(guessName);
 
     // Приводим к «CSS-размеру», как это было бы на сайте
     const cssW = iw / assetScale;
@@ -112,9 +124,6 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
       wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
       wrap.style.setProperty('--preview-h', `${cssH}px`);
       wrap.style.setProperty('--asset-scale', String(assetScale));
-      // Сохраняем логический (CSS) размер и метаданные фона
-      setLastBgSize(cssW, cssH);
-      setLastBgMeta({ fileName: guessName, assetScale });
       wrap.classList.add('has-bg');
     }
 
@@ -126,6 +135,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   };
 
   refs.bgImg.src = src;
+  try { refs.bgImg.addEventListener('load', () => { try { layoutLottie(refs); } catch {} }); } catch {}
 }
 
 /** Жёсткий перезапуск проигрывания */
