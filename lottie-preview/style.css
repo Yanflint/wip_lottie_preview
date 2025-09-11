@@ -28,14 +28,13 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, Helvetica, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji;
 }
 
-/* ===================== Л Е Й А У Т ===================== */
+/* ===================== Л Е Й А У Т (ДЕСКТОП) ===================== */
 .page{
   min-height:100dvh;
   display:grid;
   place-items:center;
   padding:16px;
 }
-
 .app{
   width:100%;
   max-width:1000px;
@@ -46,7 +45,7 @@ body{
   position:relative;
 }
 
-/* ===================== П Р Е В Ь Ю ===================== */
+/* ===================== П Р Е В Ь Ю  (общие правила) ===================== */
 /* Контейнер превью подстраивается под картинку:
    --preview-h  : CSS-высота (учитывает @2x/@3x)
    --preview-ar : соотношение сторон после деления на scale
@@ -67,8 +66,6 @@ body{
 
   margin-inline:auto;
 }
-
-/* Пунктирная рамка */
 .wrapper::after{
   content:"";
   position:absolute;
@@ -78,21 +75,13 @@ body{
   pointer-events:none;
   z-index:1;
 }
-
-.preview{
-  position:absolute; inset:0;
-  overflow:hidden;
-  z-index:0;
-}
-
+.preview{ position:absolute; inset:0; overflow:hidden; z-index:0; }
 .bg, .lottie-layer{ position:absolute; inset:0; }
 .bg{
   overflow:hidden;
   display:flex; align-items:center; justify-content:center;
 }
-
-/* 👉 По умолчанию (десктоп): контейнер держит aspect-ratio,
-      картинка заполняет высоту без искажений */
+/* Десктоп: контейнер держит aspect-ratio, картинка — по высоте без искажений */
 .bg img{ display:block; height:100%; width:auto; margin:0 auto; }
 
 .lottie-layer{ overflow:hidden; }
@@ -103,22 +92,7 @@ body{
 }
 .lottie-mount{ width:100%; height:100%; }
 
-/* Плейсхолдер */
-.placeholder{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  color:var(--muted); font-size:13px; letter-spacing:.2px;
-  background:var(--preview-bg);
-  border:none; border-radius:12px; text-align:center; padding:12px;
-}
-.placeholder.hidden{ display:none; }
-.placeholder .ph{
-  display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:center;
-}
-.placeholder .ph-1{ font-weight:700; }
-.placeholder .ph-2{ opacity:.8; }
-
-/* ===================== К О Н Т Р О Л Ы ===================== */
+/* ===================== К О Н Т Р О Л Ы  И  ПРОЧЕЕ ===================== */
 .controls{
   display:flex; align-items:center; justify-content:center;
   gap:8px; flex-wrap:wrap;
@@ -126,7 +100,6 @@ body{
   position: relative;
   z-index: 5; /* поверх превью */
 }
-
 .btn{
   cursor:pointer; border:none; border-radius:var(--btn-radius);
   padding:var(--btn-pad-y) var(--btn-pad-x);
@@ -139,10 +112,8 @@ body{
 .btn:disabled{opacity:.5; cursor:not-allowed}
 .btn:active{transform:translateY(1px)}
 .btn:hover:not(:disabled){ filter:brightness(1.05); }
-
 .btn.secondary { background:#273046; color:#dce3ef; border:1px solid #2e374f; }
 .btn.accent    { background:var(--accent-orange); color:#fff; }
-
 #sizeBtn, #heightBtn { background:var(--btn-dim-bg); color:#fff; }
 
 .chk{
@@ -158,7 +129,6 @@ body{
 .chk input:checked{ background:#2c8e6a; border-color:#2c8e6a; }
 .chk input:checked::after{ content:""; position:absolute; inset:3px; background:#fff; border-radius:2px; }
 
-/* ===================== TOAST (если на странице используется) ===================== */
 .toast{
   position:fixed; left:50%; top:16px; transform:translateX(-50%) translateY(-16px);
   opacity:0; transition:transform .2s ease, opacity .2s ease;
@@ -176,8 +146,9 @@ body{
 html.is-mobile:not(.is-standalone) .wrapper{ margin-inline:auto; }
 
 /* ===================== МОБИЛЬНЫЙ: ЯРЛЫК / STANDALONE ===================== */
-/* скрываем контролы */
-html.is-standalone.is-mobile .controls{ display:none !important; }
+/* скрыть все контролы и служебные «build» */
+html.is-standalone.is-mobile .controls,
+html.is-standalone.is-mobile .ver{ display:none !important; }
 
 /* убираем grid, чтобы ничего не сдвигало wrapper */
 html.is-standalone.is-mobile .page{
@@ -185,13 +156,13 @@ html.is-standalone.is-mobile .page{
   padding:0;
   min-height:100svh;
 }
-
 html.is-standalone.is-mobile .app{
   max-width:100svw;
   gap:0;
 }
 
-/* 🔧 wrapper занимает safe-area целиком (никаких "мёртвых" зон) */
+/* 🔧 wrapper приклеен к safe-area и обрезает излишки по высоте;
+   шапки/жест-бар учтены через env() */
 html.is-standalone.is-mobile .wrapper{
   position: fixed;
   left:  env(safe-area-inset-left);
@@ -199,37 +170,30 @@ html.is-standalone.is-mobile .wrapper{
   top:   env(safe-area-inset-top);
   bottom:env(safe-area-inset-bottom);
 
-  width: auto;
+  width: auto;    /* ширину задаёт внутренняя картинка */
   height: auto;
   border-radius: 0;
-  overflow: hidden; /* на случай сверхдлинных макетов */
-
-  /* для центровки внутренностей */
-  display:block;
+  overflow: hidden;
+  background: #000;
 }
 
-/* убираем декор */
-html.is-standalone.is-mobile .wrapper::after{ display:none; }
-
-/* 👉 КЛЮЧЕВОЕ: «contain» внутри safe-area.
-   Картинка занимает максимум доступного прямоугольника БЕЗ обрезки,
-   если это возможно. Когда не влезает по высоте — естественно появится "обрезка". */
+/* центровка превью по центру экрана */
 html.is-standalone.is-mobile .bg{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
-  overflow:hidden;
+  overflow:hidden; /* чтобы высокая картинка обрезалась сверху/снизу симметрично */
 }
 
-/* contain: никуда не уплывает, не обрезается, пока есть место */
+/* ⚡️ КЛЮЧ: на телефоне в standalone делаем ширину = ширине экрана,
+   высота — авто. Так мы получаем «во всю ширину», а по высоте может уходить
+   за край. Центрирование обеспечивает flex-контейнер .bg */
 html.is-standalone.is-mobile .bg img{
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  width: 100svw;   /* вся ширина экрана */
+  height: auto;    /* сохраняем пропорции */
   display:block;
-  margin: 0;
 }
 
-/* Лотти — строго по центру (1:1) */
+/* слой лотти — строго по центру */
 html.is-standalone.is-mobile .lot-stage{
   left:50%; top:50%; transform: translate(-50%, -50%);
 }
@@ -243,11 +207,9 @@ html.standalone .lottie-layer{
   align-items:center;
   justify-content:center;
 }
-
 html.standalone.fit-edge .bg,
 html.standalone.fit-edge .lottie-layer{ inset:0; }
 html.standalone.fit-edge .bg img{ width:100vw; height:auto; display:block; }
-
 html.standalone.fit-safe .bg,
 html.standalone.fit-safe .lottie-layer{
   left:  env(safe-area-inset-left);
