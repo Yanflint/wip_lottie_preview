@@ -1,34 +1,44 @@
+// src/app/utils.js
+// Общие утилиты для UI
+
+let toastTimer = null;
+
+/** Показать/скрыть плейсхолдер "Перетащите файл..." */
+export function setPlaceholderVisible(refs, visible) {
+  const el = refs?.placeholder || document.getElementById('ph');
+  if (!el) return;
+  el.style.display = visible ? '' : 'none';
+}
+
+/** Обёртка с состоянием загрузки на кнопке */
 export async function withLoading(btn, fn) {
-  if (!btn) return fn();
-  const text = btn.textContent;
-  btn.classList.add('loading');
-  try { return await fn(); }
-  finally { btn.classList.remove('loading'); btn.textContent = text; }
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.setAttribute('aria-busy', 'true');
+  }
+  try {
+    return await fn();
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.removeAttribute('aria-busy');
+    }
+  }
 }
 
-export function showToastNear(toastEl, el, msg) {
-  if (!toastEl) return;
-  toastEl.textContent = msg;
-  const r = el?.getBoundingClientRect?.();
-  if (r) { toastEl.style.left = (r.left + r.width/2)+'px'; toastEl.style.top = (r.top)+'px'; }
-  toastEl.classList.add('show');
-  clearTimeout(showToastNear._t);
-  showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1400);
-}
+/** Небольшой тост внизу (использует #toast из index.html) */
+export function toast(refs, message, ms = 1800) {
+  const el = (refs && refs.toastEl) ? refs.toastEl : document.getElementById('toast');
+  const text = String(message ?? '');
+  if (!el) { try { alert(text); } catch {} return; } // запасной вариант
 
-export function setDropActive(on) {
-  document.body.classList.toggle('dragging', !!on);
-}
+  el.textContent = text;
+  el.classList.add('on');
 
-export function setPlaceholderVisible(refs, on) {
-  const el = refs?.phEl; if (!el) return;
-  el.classList.toggle('hidden', !on);
-}
-
-// === добавлено для layout.js ===
-export function isMobile() {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-export function afterTwoFrames() {
-  return new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.remove('on');
+  }, ms);
 }
