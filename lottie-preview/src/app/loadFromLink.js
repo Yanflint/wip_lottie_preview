@@ -58,17 +58,34 @@ export async function initLoadFromLink({ refs, isStandalone }) {
   setPlaceholderVisible(refs, true);
 
   // Применяем смещение из URL (?ox=&oy=), если есть
-  try { const p = getPosFromLocation(); if (p) setLotOffset(p.x, p.y); } catch {}
+  try { const p = getPosFromLocation(); if (p) { setLotOffset(p.x, p.y); try { layoutLottie(refs); } catch {} } } catch {}
 
   // 1) Пробуем id из URL
   const id = getShareIdFromLocation();
   if (id) {
     try {
       const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
-      if (r.ok) {
-        const data = await r.json().catch(() => null);
-        if (await applyPayload(refs, data)) return;
-      }
+        if (r.ok) {
+          const data = await r.json().catch(() => null);
+          if (await applyPayload(refs, data)) {
+            // ДОПОЛНЕНИЕ: если позиция не пришла от сервера — восстановим из URL или pinned
+            try {
+              const hasPos = !!(data && data.opts && data.opts.pos && (typeof data.opts.pos.x === 'number' || typeof data.opts.pos.y === 'number'));
+              if (!hasPos) {
+                const p = getPosFromLocation();
+                if (p) { setLotOffset(p.x, p.y); try { layoutLottie(refs); } catch {} }
+                else {
+                  try {
+                    const { loadPinned } = await import('./pinned.js');
+                    const pinned = loadPinned && loadPinned();
+                    if (pinned && pinned.opts && pinned.opts.pos) { setLotOffset(pinned.opts.pos.x, pinned.opts.pos.y); try { layoutLottie(refs); } catch {} }
+                  } catch {}
+                }
+              }
+            } catch {}
+            return;
+          }
+        }
     } catch (e) { console.error('share GET error', e); }
   }
 
