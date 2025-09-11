@@ -90,7 +90,12 @@ export function initShare({ refs }) {
         throw new Error(`share failed: ${res.status}${t ? ' ' + t : ''}`);
       }
       const { id } = await res.json();
-      const shortUrl = `${location.origin}/s/${id}`;
+      const pos = (state.lotOffset || {x:0,y:0});
+      let shortUrl = `${location.origin}/s/${id}`;
+      if ((pos.x||0) !== 0 || (pos.y||0) !== 0) {
+        const qp = new URLSearchParams({ ox: String(pos.x||0), oy: String(pos.y||0) });
+        shortUrl += `?${qp.toString()}`;
+      }
 
       // Параллельно закрепляем локально (для A2HS)
       savePinned(payload);

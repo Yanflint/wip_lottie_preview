@@ -14,6 +14,18 @@ function getShareIdFromLocation() {
   return q || null;
 }
 
+
+function getPosFromLocation() {
+  try {
+    const u = new URL(location.href);
+    const ox = Number(u.searchParams.get('ox') || '0') || 0;
+    const oy = Number(u.searchParams.get('oy') || '0') || 0;
+    if (ox !== 0 || oy !== 0) return { x: ox, y: oy };
+  } catch {}
+  return null;
+}
+
+
 function applyLoopFromPayload(refs, data) {
   if (data && data.opts && typeof data.opts.loop === 'boolean') {
     state.loopOn = !!data.opts.loop;
@@ -44,6 +56,9 @@ async function applyPayload(refs, data) {
 
 export async function initLoadFromLink({ refs, isStandalone }) {
   setPlaceholderVisible(refs, true);
+
+  // Применяем смещение из URL (?ox=&oy=), если есть
+  try { const p = getPosFromLocation(); if (p) setLotOffset(p.x, p.y); } catch {}
 
   // 1) Пробуем id из URL
   const id = getShareIdFromLocation();
