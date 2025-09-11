@@ -18,7 +18,6 @@ import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { showToastIfFlag } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
-import { layoutLottie } from './lottie.js';
 
 // 3) DOM-refs
 function collectRefs() {
