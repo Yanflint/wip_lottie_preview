@@ -390,3 +390,8 @@ html.standalone.fit-vv .bg img{
   z-index: 2;          /* поверх .bg и .lottie-layer */
   pointer-events: none;/* DnD и клики проходят сквозь подсказку */
 }
+/* === Lottie stage must fill preview ===================================== */
+.lot-stage {
+  width: 100%;
+  height: 100%;
+}
