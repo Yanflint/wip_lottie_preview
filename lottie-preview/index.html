@@ -17,12 +17,12 @@
 
   <!-- favicon чтобы не было 404 -->
   <link rel="icon" type="image/png"
-        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEA...BCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
 
   <!-- Lottie -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
 
-  <!-- ВАЖНО: абсолютный путь, чтобы работало по /s/:id -->
+  <!-- Абсолютный путь, чтобы работало по /s/:id -->
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -31,11 +31,10 @@
 
       <div id="wrapper" class="wrapper" aria-label="Область превью">
         <div id="preview" class="preview">
-          <div id="ph" class="placeholder">
-            <div class="ph">
-              <div class="ph-1">Перетащите файл:</div>
-              <div class="ph-2">PNG / JSON</div>
-            </div>
+
+          <div class="ph">
+            <div class="ph-1">Перетащите файл:</div>
+            <div class="ph-2">PNG / JSON</div>
           </div>
 
           <div class="bg"><img id="bgImg" alt=""></div>
@@ -61,7 +60,6 @@
           <input type="checkbox" id="loopChk"> Зацикленно
         </label>
 
-        <!-- стиль кнопки НЕ меняю, твой класс/градиенты сохранятся -->
         <button class="btn accent" id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
       </div>
     </div>
@@ -71,24 +69,30 @@
   <div id="ver" class="ver"></div>
 
   <!-- детектор standalone для CSS (только класс, без визуальных изменений) -->
-<script type="module">
-  const isStandalone =
-    (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
-                           window.matchMedia('(display-mode: fullscreen)').matches)) ||
-    (navigator.standalone === true);
+  <script type="module">
+    const isStandalone =
+      (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
+       window.matchMedia('(display-mode: fullscreen)').matches)) ||
+      (navigator.standalone === true);
 
-  if (isStandalone) {
-    document.documentElement.classList.add('standalone');
+    if (isStandalone) {
+      document.documentElement.classList.add('standalone');
 
-    // Режим подгонки: ?fit=edge | ?fit=safe (по умолчанию safe)
-    const fit = new URL(location.href).searchParams.get('fit');
-    const mode = (fit === 'edge' || fit === 'safe') ? fit : 'safe';
-    document.documentElement.classList.add(`fit-${mode}`);
-  }
-</script>
+      // Режим подгонки: ?fit=edge | ?fit=safe (по умолчанию safe)
+      const fit = new URL(location.href).searchParams.get('fit');
+      const mode = (fit === 'edge' || fit === 'safe') ? fit : 'safe';
+      document.documentElement.classList.add(`fit-${mode}`);
+    }
+  </script>
 
-
-  <!-- Абсолютный путь к модулю -->
+  <!-- Основной модуль приложения -->
   <script type="module" src="/src/app/main.js?v=0.01"></script>
+
+  <!-- ВАЖНО: инициализация динамического лэйаута и в вебе -->
+  <script type="module">
+    import { initLayout } from '/src/app/layout.js';
+    import { getRefs }     from '/src/app/dom.js';
+    initLayout({ refs: getRefs() });
+  </script>
 </body>
 </html>

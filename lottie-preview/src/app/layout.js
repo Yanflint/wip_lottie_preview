@@ -2,42 +2,38 @@ import { isMobile, afterTwoFrames } from './utils.js';
 import { state } from './state.js';
 
 /**
- * Dynamic layout:
- * - Размер превью задаётся соотношением сторон фоновой картинки.
- * - Если картинка помещается — показываем 1:1 (реальные пиксели).
- *   Иначе — равномерно масштабируем внутрь доступной области.
- * - Больше нет фиксированной "360×800" — пропорции диктует изображение.
+ * Динамический лэйаут превью:
+ * - Пропорции диктует сама картинка (bgImg.naturalWidth/Height).
+ * - Пытаемся показать 1:1 пиксели; если не влазит — равномерно уменьшаем.
+ * - Никаких зашитых 360×800 и max-width:1000 — только ограничения вьюпорта.
  */
 export function layout({ refs }) {
   const { wrapper, preview, previewBox, bgImg } = refs;
   if (!wrapper || !preview) return;
 
-  // В какой бокс выставляем размеры (если previewBox нет — падём на wrapper)
+  // В какой бокс выставляем размеры (если previewBox нет — падаем на wrapper)
   const box = previewBox || wrapper;
 
-  // Небольшой внутренний отступ вокруг бокса
+  // Небольшие поля вокруг бокса
   const pad = isMobile() ? 8 : 12;
 
-  // Границы доступной области окна
+  // Габариты окна
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // Резерв под панель кнопок (берём из CSS-переменной, по умолчанию 150)
+  // Резерв под панель кнопок (берём из CSS-переменной)
   const rootStyles = getComputedStyle(document.documentElement);
   const controlsSpace = parseFloat(rootStyles.getPropertyValue('--controls-space')) || 150;
 
-  // Доступные размеры под сам бокс
-  const availW = Math.max(120, Math.min(1200, vw - pad * 2));
+  // Доступная область под рамку превью
+  const availW = Math.max(120, vw - pad * 2);
   const availH = Math.max(120, vh - controlsSpace - pad * 2);
 
-  // Размеры/пропорции фоновой картинки
+  // Размеры исходного изображения (или последний известный)
   const iw = (bgImg && bgImg.naturalWidth)  || state.lastBgSize.w || 360;
   const ih = (bgImg && bgImg.naturalHeight) || state.lastBgSize.h || 800;
 
-  // Подстрахуемся на случай отсутствия данных
-  const ratio = ih > 0 ? (iw / ih) : (360 / 800);
-
-  // Пытаемся показать 1:1, но если не влезает — уменьшаем
+  // Стартуем с натурального размера (1:1), но ужимаем, если не помещается
   let targetW = iw;
   let targetH = ih;
 
@@ -47,11 +43,12 @@ export function layout({ refs }) {
     targetH = Math.floor(targetH * scale);
   }
 
-  // Явно задаём размеры бокса (перебьём любые aspect-ratio/height из CSS)
+  // Чётко задаём размеры рамки (снимаем влияние aspect-ratio из CSS)
   box.style.width = `${targetW}px`;
   box.style.height = `${targetH}px`;
+  box.style.aspectRatio = 'auto';
 
-  // Слой превью должен ровно заполнять бокс, без «базовых 360px»
+  // Превью заполняет бокс полностью
   preview.style.position = 'absolute';
   preview.style.left = '0';
   preview.style.top = '0';
@@ -59,19 +56,24 @@ export function layout({ refs }) {
   preview.style.height = '100%';
   preview.style.transform = 'none';
 
-  // Для надёжности ограничим наружный wrapper по вьюпорту
-  wrapper.style.maxWidth = `${Math.min(1200, vw - pad * 2)}px`;
+  // Перебиваем CSS-кап на wrapper (1000px) — даём расти до вьюпорта
+  wrapper.style.maxWidth = `${vw - pad * 2}px`;
   wrapper.style.maxHeight = `${vh - pad * 2}px`;
+  wrapper.style.aspectRatio = 'auto';
 }
 
 export function initLayout({ refs }) {
   const doLayout = () => layout({ refs });
 
-  // Пересчёт при изменении окна / ориентации
+  // Пересчёт по изменению окна/ориентации
   window.addEventListener('resize', doLayout, { passive: true });
-  window.addEventListener('orientationchange', () => afterTwoFrames().then(doLayout), { passive: true });
+  window.addEventListener(
+    'orientationchange',
+    () => afterTwoFrames().then(doLayout),
+    { passive: true }
+  );
 
-  // Пересчёт сразу после загрузки фоновой картинки
+  // Пересчёт после загрузки фоновой картинки (когда известны naturalWidth/Height)
   if (refs?.bgImg) {
     refs.bgImg.addEventListener('load', doLayout, { passive: true });
   }
