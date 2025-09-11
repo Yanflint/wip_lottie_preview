@@ -360,3 +360,44 @@ html.standalone.fit-vv .bg img{
     transform: translate(-50%, 0) !important;
   }
 }
+
+
+/* === UI tweaks per request ============================================== */
+
+/* 1) Версия + ссылочка на viewer */
+.ver { opacity:.6; font-size:12px; }
+.ver .dot{ opacity:.5; margin:0 .3em; }
+.ver .ver-link{
+  color:inherit; text-decoration:none; border-bottom:1px dashed currentColor; opacity:.75;
+}
+.ver .ver-link:hover{ opacity:1; }
+
+/* 2) Скрыть UI в режиме просмотра (и рамки/подсказки) */
+html.view-mode .controls,
+html.view-mode .drop-overlay,
+html.view-mode .placeholder { display:none !important; }
+
+/* убрать пунктир/рамки вокруг превью, если они у тебя заданы где-то */
+html.view-mode .wrapper { box-shadow:none !important; border:none !important; }
+
+/* 3) Скругление углов у фона и на мобильном */
+.bg img{
+  border-radius: var(--wrap-r, 16px);
+}
+html.standalone .bg img{
+  border-radius: var(--wrap-r, 16px);
+}
+
+/* 4) Веб-редактор: пусть wrapper принимает реальный размер макета (1:1),
+      при этом не ломаем твой лейаут. Если у тебя есть фиксированные width/height —
+      этот блок их переопределит, когда лоадер задаст inline-style. */
+.wrapper{
+  /* ничего не ставим жёстко; размеры проставит JS для web,
+     и fullscreen-логика сработает для standalone через твои стили */
+}
+
+/* Лотти-стейдж по центру — на случай, если где-то переопределили */
+.lot-stage{
+  position:absolute; left:50%; top:50%;
+  transform: translate(-50%, -50%);
+}

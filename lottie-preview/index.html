@@ -5,32 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lottie-превью</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#000000" />
-
-  <!-- iOS: запуск без UI Safari -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Lottie Preview" />
-  <link rel="apple-touch-icon" href="/icons/icon-180.png" />
-
-  <!-- favicon чтобы не было 404 -->
-  <link rel="icon" type="image/png"
-        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
-
-  <!-- Lottie -->
+  <!-- Lottie Web -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
 
-  <!-- ВАЖНО: абсолютный путь, чтобы работало по /s/:id -->
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="page">
     <div class="app">
-
       <div id="wrapper" class="wrapper" aria-label="Область превью">
         <div id="preview" class="preview">
+
+          <!-- Placeholder -->
           <div id="ph" class="placeholder">
             <div class="ph">
               <div class="ph-1">Перетащите файл:</div>
@@ -38,57 +24,41 @@
             </div>
           </div>
 
+          <!-- Фон -->
           <div class="bg"><img id="bgImg" alt=""></div>
 
+          <!-- Lottie -->
           <div class="lottie-layer">
             <div id="lotStage" class="lot-stage">
               <div id="lottie" class="lottie-mount"></div>
             </div>
           </div>
+
         </div>
 
+        <!-- DnD overlay -->
         <div id="dropOverlay" class="drop-overlay">
           <div class="box">Отпустите файл здесь</div>
         </div>
       </div>
 
+      <!-- Панель (без размеров/высоты) -->
       <div id="mode" class="controls">
-        <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
-        <button class="btn primary"  id="heightBtn">Высота: 800px</button>
-
         <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
         <label class="chk" title="Играть зацикленно">
           <input type="checkbox" id="loopChk"> Зацикленно
         </label>
-
-        <!-- стиль кнопки НЕ меняю, твой класс/градиенты сохранятся -->
         <button class="btn accent" id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
       </div>
     </div>
   </div>
 
+  <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Версия + маленькая ссылка на Viewer -->
   <div id="ver" class="ver"></div>
 
-  <!-- детектор standalone для CSS (только класс, без визуальных изменений) -->
-<script type="module">
-  const isStandalone =
-    (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
-                           window.matchMedia('(display-mode: fullscreen)').matches)) ||
-    (navigator.standalone === true);
-
-  if (isStandalone) {
-    document.documentElement.classList.add('standalone');
-
-    // Режим подгонки: ?fit=edge | ?fit=safe (по умолчанию safe)
-    const fit = new URL(location.href).searchParams.get('fit');
-    const mode = (fit === 'edge' || fit === 'safe') ? fit : 'safe';
-    document.documentElement.classList.add(`fit-${mode}`);
-  }
-</script>
-
-
-  <!-- Абсолютный путь к модулю -->
-  <script type="module" src="/src/app/main.js?v=0.01"></script>
+  <script type="module" src="/src/app/main.js?v=61"></script>
 </body>
 </html>

@@ -1,6 +1,14 @@
 // src/app/main.js
+import { state } from './state.js';
+import { initDnd }           from './dnd.js';
+import { initControls }      from './controls.js';
+import { initShare }         from './shareClient.js';
+import { initLoadFromLink }  from './loadFromLink.js';
+import { layoutLottie }      from './lottie.js';
+import { initAutoRefreshIfViewingLast } from './autoRefresh.js';
+import { showToastIfFlag }   from './updateToast.js';
 
-// 1) Отметка standalone (A2HS)
+// 1) Определяем standalone (A2HS)
 const isStandalone =
   (window.matchMedia &&
     (window.matchMedia('(display-mode: standalone)').matches ||
@@ -8,15 +16,17 @@ const isStandalone =
   (navigator.standalone === true);
 
 if (isStandalone) document.documentElement.classList.add('standalone');
+state.isStandalone = isStandalone;
 
-// 2) Импорты модулей
-import { initDnd }           from './dnd.js';
-import { initControls }      from './controls.js';
-import { initShare }         from './shareClient.js';
-import { initLoadFromLink }  from './loadFromLink.js';
-import { layoutLottie }      from './lottie.js';
-import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
-import { showToastIfFlag } from './updateToast.js';
+// 2) Это режим просмотра (открыт шот /s/:id)?
+function isViewerPage() {
+  try {
+    const p = location.pathname;
+    if (p.startsWith('/s/')) return true;
+    const q = new URL(location.href).searchParams.get('id');
+    return !!q;
+  } catch { return false; }
+}
 
 // 3) DOM-refs
 function collectRefs() {
@@ -28,8 +38,6 @@ function collectRefs() {
     bgImg:        document.getElementById('bgImg'),
     lotStage:     document.getElementById('lotStage'),
     lottieMount:  document.getElementById('lottie'),
-    sizeBtn:      document.getElementById('sizeBtn'),
-    heightBtn:    document.getElementById('heightBtn'),
     restartBtn:   document.getElementById('restartBtn'),
     loopChk:      document.getElementById('loopChk'),
     shareBtn:     document.getElementById('shareBtn'),
@@ -39,14 +47,14 @@ function collectRefs() {
   };
 }
 
-// 4) Версия
+// 4) Версия + маленькая ссылка на Viewer
 function applyVersion(refs) {
-  try {
-    const u = new URL(import.meta.url);
-    const v = u.searchParams.get('v') || 'dev';
-    if (refs.verEl) refs.verEl.textContent = `build ${v}`;
-  } catch {
-    if (refs.verEl) refs.verEl.textContent = 'build dev';
+  const build = (() => {
+    try { return new URL(import.meta.url).searchParams.get('v') || 'dev'; }
+    catch { return 'dev'; }
+  })();
+  if (refs.verEl) {
+    refs.verEl.innerHTML = `build ${build} <span class="dot">·</span> <a class="ver-link" href="/viewer/launch.html" target="_blank" rel="noopener">viewer</a>`;
   }
 }
 
@@ -54,16 +62,26 @@ function applyVersion(refs) {
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
   applyVersion(refs);
-showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
+  showToastIfFlag();
 
-  // Авто-рефреш для /s/last (Viewer)
-  initAutoRefreshIfViewingLast(); // ← НОВОЕ
+  // Авто-рефреш для /s/last
+  initAutoRefreshIfViewingLast();
+
+  // Если это просмотр (/s/:id) — прячем UI и рамки
+  if (isViewerPage()) {
+    document.documentElement.classList.add('view-mode');
+  }
 
   await initLoadFromLink({ refs, isStandalone });
 
-  initDnd({ refs });
+  // Только в редакторе нужен DnD и Share
+  if (!isViewerPage()) {
+    initDnd({ refs });
+    initShare({ refs, isStandalone });
+  }
+
+  // Контролы (restart/loop) доступны везде
   initControls({ refs });
-  initShare({ refs, isStandalone });
 
   // Перелайаут
   const relayout = () => { try { layoutLottie(refs); } catch {} };
@@ -71,7 +89,7 @@ showToastIfFlag(); // покажет "Обновлено", если страни
   window.addEventListener('resize', relayout, { passive: true });
   window.addEventListener('orientationchange', relayout, { passive: true });
 
-  // Тап = перезапуск (если было добавлено ранее)
+  // Тап по превью = повтор (в любом режиме)
   const restartByTap = (e) => {
     const isTouch = e.pointerType ? (e.pointerType === 'touch') : (e.touches && e.touches.length === 1);
     if (!isTouch && !isStandalone) return;
