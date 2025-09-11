@@ -1,6 +1,7 @@
 // Загружаем по /s/:id. Если id нет и это standalone, пробуем "последний" снимок.
 // Флаг цикла (opts.loop) применяем до создания анимации.
 import { setPlaceholderVisible } from './utils.js';
+import { setLotOffset } from './state.js';
 import { setLastLottie, state } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 import { loadPinned } from './pinned.js';
@@ -13,7 +14,9 @@ function getShareIdFromLocation() {
   return q || null;
 }
 
+
 function applyLoopFromPayload(refs, data) {
+
   if (data && data.opts && typeof data.opts.loop === 'boolean') {
     state.loopOn = !!data.opts.loop;
     if (refs?.loopChk) refs.loopChk.checked = state.loopOn;
@@ -25,6 +28,7 @@ async function applyPayload(refs, data) {
 
   // ВАЖНО: сначала применяем флаг цикла
   applyLoopFromPayload(refs, data);
+  if (data && data.opts && data.opts.pos) { try { setLotOffset(data.opts.pos.x, data.opts.pos.y); } catch {} }
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;

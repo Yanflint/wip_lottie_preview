@@ -26,26 +26,26 @@ let anim = null;
 function parseAssetScale(nameOrUrl) {
   try {
     if (!nameOrUrl) return 1;
-    // Strip query/hash
     const s = String(nameOrUrl).replace(/[?#].*$/, '');
-    // Extract the last path component
     const base = s.split('/').pop() || s;
-    // Look for @<number>x just before extension or end
     const m = base.match(/@([0-9]+(?:\.[0-9]+)?)x(?=\.[a-z0-9]+$|$)/i);
     const val = m ? Number(m[1]) : NaN;
     return (val && isFinite(val) && val > 0) ? val : 1;
-  } catch (_) {
-    return 1;
-  }
+  } catch { return 1; }
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
+/** Центрируем лотти-стейдж с учётом смещения */
 export function layoutLottie(refs) {
   const stage = refs?.lotStage;
   if (!stage) return;
+  const x = (window.__lotOffsetX || 0);
+  const y = (window.__lotOffsetY || 0);
   stage.style.left = '50%';
   stage.style.top = '50%';
-  stage.style.transform = 'translate(-50%, -50%)';
+  stage.style.setProperty('--lot-x', x + 'px');
+  stage.style.setProperty('--lot-y', y + 'px');
+  stage.style.transform = 'translate(calc(-50% + var(--lot-x, 0px)), calc(-50% + var(--lot-y, 0px)))';
 }
 
 /**
