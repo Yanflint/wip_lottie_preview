@@ -11,7 +11,7 @@ async function processFilesSequential(refs, files) {
   }
   if (imgFile) {
     const url = URL.createObjectURL(imgFile);
-    await setBackgroundFromSrc(refs, url);
+    await setBackgroundFromSrc(refs, url, { fileName: imgFile?.name });
     setPlaceholderVisible(refs, false);
   }
   if (jsonFile) {

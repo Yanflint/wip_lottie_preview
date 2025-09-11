@@ -34,7 +34,10 @@ async function imageElementToDataURL(imgEl) {
 }
 
 async function buildPayload(refs) {
-  const lot = state.lastLottieJSON;
+  const rawLot = state.lastLottieJSON;
+  const lot = rawLot ? JSON.parse(JSON.stringify(rawLot)) : null;
+  if (!lot) throw new Error('Нет данных Lottie');
+  try { const pos = (state.lotOffset || {x:0,y:0}); lot.meta = lot.meta || {}; lot.meta._lpPos = { x: +pos.x||0, y: +pos.y||0 }; } catch {}
   if (!lot) throw new Error('Нет данных Lottie');
 
   let bg = null;
@@ -42,9 +45,9 @@ async function buildPayload(refs) {
   if (imgEl && imgEl.src) {
     const maybeData = await imageElementToDataURL(imgEl);
     if (maybeData && maybeData.startsWith('data:')) {
-      bg = { kind: 'data', value: maybeData };
+      bg = { kind: 'data', value: maybeData, name: (state.lastBgMeta?.fileName || ''), assetScale: (state.lastBgMeta?.assetScale || undefined) };
     } else if (maybeData) {
-      bg = { kind: 'url', value: maybeData };
+      bg = { kind: 'url', value: maybeData, name: (state.lastBgMeta?.fileName || ''), assetScale: (state.lastBgMeta?.assetScale || undefined) };
     }
   }
 

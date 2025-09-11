@@ -62,7 +62,7 @@ body{
 
   /* Влезаем в окно, сохраняя пропорции */
   max-height: calc(100dvh - var(--controls-space));
-  max-width:  min(100vw - 32px, 1000px);
+  max-width: calc(100vw - 32px);
 
   border: none; outline: none;
   border-radius: var(--wrap-r);

@@ -1,5 +1,5 @@
 // src/app/lottie.js
-import { state, setLastBgSize } from './state.js';
+import { state, setLastBgSize, setLastBgMeta } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
@@ -34,6 +34,7 @@ function parseAssetScale(nameOrUrl) {
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
+
 export function layoutLottie(refs) {
   const stage = refs?.lotStage;
   const imgEl = refs?.bgImg;
@@ -43,16 +44,31 @@ export function layoutLottie(refs) {
   const cssW = +((state.lastBgSize && state.lastBgSize.w) || 0);
   const cssH = +((state.lastBgSize && state.lastBgSize.h) || 0);
 
-  // фактические размеры отображаемого фона (после CSS)
+  // actual rendered background size
   let realW = imgEl && imgEl.clientWidth || 0;
   let realH = imgEl && imgEl.clientHeight || 0;
   if (!realW || !realH) {
     const br = preview.getBoundingClientRect();
     realW = br.width; realH = br.height;
-    // попробуем пересчитать на следующем кадре, когда img дорисуется
     if (imgEl && (!imgEl.complete || !imgEl.naturalWidth)) {
       requestAnimationFrame(() => layoutLottie(refs));
     }
+  }
+
+  let fitScale = 1;
+  if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
+    fitScale = Math.min(realW / cssW, realH / cssH);
+    if (!isFinite(fitScale) || fitScale <= 0) fitScale = 1;
+  }
+
+  const x = (window.__lotOffsetX || 0);
+  const y = (window.__lotOffsetY || 0);
+  stage.style.left = '50%';
+  stage.style.top  = '50%';
+  stage.style.transformOrigin = '50% 50%';
+  stage.style.transform = `translate(calc(-50% + ${x*fitScale}px), calc(-50% + ${y*fitScale}px)) scale(${fitScale})`;
+}
+
   }
 
   let fitScale = 1;
