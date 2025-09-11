@@ -2,7 +2,7 @@
 // Флаг цикла (opts.loop) применяем до создания анимации.
 import { setPlaceholderVisible } from './utils.js';
 import { setLotOffset } from './state.js';
-import { setLastLottie, state } from './state.js';
+import { setLastLottie, state, setLastBgSize } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 import { loadPinned } from './pinned.js';
 
@@ -27,13 +27,26 @@ async function applyPayload(refs, data) {
   // ВАЖНО: сначала применяем флаг цикла
   applyLoopFromPayload(refs, data);
 
-  if (data.bg) {
-    const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
-    const meta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
-    if (!meta.fileName && data.lot && data.lot.meta && data.lot.meta._lpBgMeta) { meta.fileName = data.lot.meta._lpBgMeta.fileName; meta.assetScale = data.lot.meta._lpBgMeta.assetScale; }
-    if (src) await setBackgroundFromSrc(refs, src, meta);
-  }
-  if (data.lot) {
+  
+if (data.bg) {
+  const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
+  const meta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
+  if (!meta.fileName && data.lot && data.lot.meta && data.lot.meta._lpBgMeta) { meta.fileName = data.lot.meta._lpBgMeta.fileName; meta.assetScale = data.lot.meta._lpBgMeta.assetScale; }
+
+  // Предзадание размеров превью из payload, чтобы лотти сразу вычислялся относительно фона
+  try {
+    const dims = data?.lot?.meta?._lpBgDims;
+    const wrap = refs?.wrapper;
+    if (dims && wrap) {
+      wrap.style.setProperty('--preview-ar', `${dims.cssW} / ${dims.cssH}`);
+      wrap.style.setProperty('--preview-h', `${dims.cssH}px`);
+      setLastBgSize(dims.cssW, dims.cssH);
+    }
+  } catch {}
+
+  if (src) await setBackgroundFromSrc(refs, src, meta);
+}
+if (data.lot) {
     try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
     setLastLottie(data.lot);
     await loadLottieFromData(refs, data.lot); // учтёт state.loopOn

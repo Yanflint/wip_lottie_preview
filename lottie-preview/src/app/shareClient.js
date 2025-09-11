@@ -41,7 +41,7 @@ async function buildPayload(refs) {
   const lot = rawLot ? JSON.parse(JSON.stringify(rawLot)) : null;
   if (!lot) throw new Error('Нет данных Lottie');
   // Встраиваем позицию в метаданные
-  try { const pos = (state.lotOffset || {x:0,y:0}); lot.meta = lot.meta || {}; lot.meta._lpPos = { x: +pos.x||0, y: +pos.y||0 }; } catch {}
+  try { const pos = (state.lotOffset || {x:0,y:0});  lot.meta = lot.meta || {}; lot.meta._lpPos = { x: +pos.x||0, y: +pos.y||0 }; } catch {}
   if (!lot) throw new Error('Нет данных Lottie');
 
   
@@ -66,13 +66,27 @@ async function buildPayload(refs) {
   const imgEl = refs?.bgImg;
   const metaNow = _currentBgMeta(imgEl);
 
+  // Фиксируем исходные размеры фона (intrinsic) и CSS-логические (с учётом @Nx)
+  let _lpBgDims = null;
+  if (imgEl) {
+    const iw = Number(imgEl.naturalWidth || imgEl.width || 0) || 0;
+    const ih = Number(imgEl.naturalHeight || imgEl.height || 0) || 0;
+    const cssW = metaNow.assetScale ? (iw / metaNow.assetScale) : iw;
+    const cssH = metaNow.assetScale ? (ih / metaNow.assetScale) : ih;
+    if (iw && ih && cssW && cssH) {
+      _lpBgDims = { iw, ih, cssW, cssH };
+    }
+  }
+
   // Встраиваем метаданные фона в lot.meta, чтобы viewer мог корректно восстановить масштаб
   try {
     lot.meta = lot.meta || {};
     lot.meta._lpBgMeta = { fileName: metaNow.fileName, assetScale: metaNow.assetScale };
   } catch {}
 
-  if (imgEl && imgEl.src) {
+  
+  try { lot.meta._lpBgDims = _lpBgDims || lot.meta._lpBgDims || null; } catch {}
+if (imgEl && imgEl.src) {
     const maybeData = await imageElementToDataURL(imgEl);
     if (maybeData && maybeData.startsWith('data:')) {
       bg = { kind: 'data', value: maybeData, name: metaNow.fileName, assetScale: metaNow.assetScale };
