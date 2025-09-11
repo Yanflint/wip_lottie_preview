@@ -4,12 +4,12 @@ import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
 
-/** Центрируем и РАСТЯГИВАЕМ лотти-стейдж на всю область */
+/** Центрируем и растягиваем лотти-стейдж на всю область превью */
 export function layoutLottie(refs) {
   const stage = refs?.lotStage;
   if (!stage) return;
 
-  // Размер контейнера: во всю «раму» превью
+  // Во весь бокс превью
   stage.style.position = 'absolute';
   stage.style.left = '50%';
   stage.style.top = '50%';
@@ -18,6 +18,7 @@ export function layoutLottie(refs) {
   stage.style.transform = 'translate(-50%, -50%)';
   stage.style.transformOrigin = '50% 50%';
 }
+
 
 /**
  * Установка фоновой картинки (оставлено как было — без изменений логики лотти)
@@ -62,14 +63,10 @@ export function loadLottieFromData(refs, json) {
 
   if (!anim) return null;
 
-  anim.addEventListener?.('DOMLoaded', () => {
-    // как только DOM анимации готов — растягиваем стейдж
-    layoutLottie(refs);
-    // и на всякий прячем плейсхолдер
-    setPlaceholderVisible(refs, false);
-    // помечаем, что лотти есть (если где-то используется)
-    refs.wrapper?.classList.add('has-lottie');
-  });
+anim.addEventListener?.('DOMLoaded', () => {
+  if (refs.wrapper) refs.wrapper.classList.add('has-lottie');
+  layoutLottie(refs);
+});
 
   return anim;
 }
