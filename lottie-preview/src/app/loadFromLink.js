@@ -30,10 +30,19 @@ async function applyPayload(refs, data) {
   
 if (data.bg) {
   const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
-  const meta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
-  if (!meta.fileName && data.lot && data.lot.meta && data.lot.meta._lpBgMeta) { meta.fileName = data.lot.meta._lpBgMeta.fileName; meta.assetScale = data.lot.meta._lpBgMeta.assetScale; }
-
-  // Предзадание размеров превью из payload, чтобы лотти сразу вычислялся относительно фона
+  
+const meta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
+// Всегда накрываем из lot.meta._lpBgMeta, если есть — чтобы ретина не терялась
+try {
+  const mm = data?.lot?.meta?._lpBgMeta;
+  if (mm) {
+    if (!meta.fileName && mm.fileName) meta.fileName = mm.fileName;
+    if (!(typeof meta.assetScale === 'number' && meta.assetScale > 0) && (typeof mm.assetScale === 'number' && mm.assetScale > 0)) {
+      meta.assetScale = mm.assetScale;
+    }
+  }
+} catch {}
+// Предзадание размеров превью из payload, чтобы лотти сразу вычислялся относительно фона
   try {
     const dims = data?.lot?.meta?._lpBgDims;
     const wrap = refs?.wrapper;
@@ -44,6 +53,7 @@ if (data.bg) {
     }
   } catch {}
 
+  try { if (data?.lot?.meta?._lpBgDims) meta._lpBgDims = data.lot.meta._lpBgDims; } catch {}
   if (src) await setBackgroundFromSrc(refs, src, meta);
 }
 if (data.lot) {
