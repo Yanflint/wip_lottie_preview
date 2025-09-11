@@ -43,31 +43,12 @@ export function layoutLottie(refs) {
   const cssW = +((state.lastBgSize && state.lastBgSize.w) || 0);
   const cssH = +((state.lastBgSize && state.lastBgSize.h) || 0);
 
-  
-  // Берём реальные рендерные размеры фоновой картинки (если есть),
-  // чтобы масштаб лотти соответствовал именно фону, а не контейнеру превью.
-  let realW = 0, realH = 0;
-  const bgEl = refs?.bgImg;
-  if (bgEl && bgEl.getBoundingClientRect) {
-    const bgr = bgEl.getBoundingClientRect();
-    realW = bgr.width || 0;
-    realH = bgr.height || 0;
-  }
-  // Фолбэк: если по какой-то причине фон недоступен — используем контейнер
-  if (!(realW > 0 && realH > 0)) {
-    const br = wrap.getBoundingClientRect();
-    realW = br.width || 0;
-    realH = br.height || 0;
-  }
-
+  const br = wrap.getBoundingClientRect();
+  const realW = br.width || 0;
+  const realH = br.height || 0;
 
   let fitScale = 1;
-  
   if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
-    // Масштаб подгоняем так, чтобы 1 CSS-пиксель лотти = 1 CSS-пиксель фона
-    fitScale = Math.min(realW / cssW, realH / cssH);
-  }
-if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
     fitScale = Math.min(realW / cssW, realH / cssH);
     if (!isFinite(fitScale) || fitScale <= 0) fitScale = 1;
   }

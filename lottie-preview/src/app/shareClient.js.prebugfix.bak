@@ -1,8 +1,7 @@
 // Клиентский «Поделиться»: сохраняем lot и фон через /api/share, и параллельно
 // закрепляем текущий макет локально (для A2HS).
 import { state } from './state.js';
-import { withLoading, showToastNear, afterTwoFrames } from './utils.js';
-import { layoutLottie } from './lottie.js';
+import { withLoading, showToastNear } from './utils.js';
 import { savePinned } from './pinned.js';
 
 async function imageElementToDataURL(imgEl) {
@@ -34,9 +33,7 @@ async function imageElementToDataURL(imgEl) {
   return src;
 }
 
-async async function buildPayload(refs) {
-  try { layoutLottie(refs); } catch {}
-  try { await afterTwoFrames(); } catch {}
+async function buildPayload(refs) {
   const rawLot = state.lastLottieJSON;
   const lot = rawLot ? JSON.parse(JSON.stringify(rawLot)) : null;
   if (!lot) throw new Error('Нет данных Lottie');
@@ -44,43 +41,12 @@ async async function buildPayload(refs) {
   try { const pos = (state.lotOffset || {x:0,y:0}); lot.meta = lot.meta || {}; lot.meta._lpPos = { x: +pos.x||0, y: +pos.y||0 }; } catch {}
   if (!lot) throw new Error('Нет данных Lottie');
 
-  
-  // Собираем метаданные фона прямо сейчас, чтобы не тащить устаревшее из state
-  function _parseAssetScale(name) {
-    const m = String(name||'').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(?:[?#]|$))/i);
-    return m ? parseFloat(m[1]) : 1;
-  }
-  function _currentBgMeta(el){
-    let fileName = '';
-    if (el) {
-      fileName = el.getAttribute('data-filename') || el.alt || '';
-      if (!fileName && el.src && /^https?:\/\//i.test(el.src)) {
-        try { const u = new URL(el.src); fileName = (u.pathname.split('/').pop()) || ''; } catch {}
-      }
-    }
-    const assetScale = _parseAssetScale(fileName) || (state.lastBgMeta?.assetScale || 1);
-    return { fileName, assetScale };
-  }
-
   let bg = null;
   const imgEl = refs?.bgImg;
-  const metaNow = _currentBgMeta(imgEl);
-
-  // Встраиваем метаданные фона в lot.meta, чтобы viewer мог корректно восстановить масштаб
-  try {
-    lot.meta = lot.meta || {};
-    lot.meta._lpBgMeta = { fileName: metaNow.fileName, assetScale: metaNow.assetScale };
-  } catch {}
-
   if (imgEl && imgEl.src) {
     const maybeData = await imageElementToDataURL(imgEl);
     if (maybeData && maybeData.startsWith('data:')) {
-      bg = { kind: 'data', value: maybeData, name: metaNow.fileName, assetScale: metaNow.assetScale };
-    } else if (maybeData) {
-      bg = { kind: 'url', value: maybeData, name: metaNow.fileName, assetScale: metaNow.assetScale };
-    }
-  }
-;
+      bg = { kind: 'data', value: maybeData, name: (state.lastBgMeta?.fileName || ''), assetScale: (state.lastBgMeta?.assetScale || undefined) };
     } else if (maybeData) {
       bg = { kind: 'url', value: maybeData, name: (state.lastBgMeta?.fileName || ''), assetScale: (state.lastBgMeta?.assetScale || undefined) };
     }

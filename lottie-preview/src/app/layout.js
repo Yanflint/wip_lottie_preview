@@ -41,17 +41,5 @@ export function initLayout({ refs }) {
   const doLayout = () => layout({ refs });
   window.addEventListener('resize', doLayout);
   window.addEventListener('orientationchange', () => afterTwoFrames().then(doLayout));
-  
-  // Следим за изменением размеров фонового изображения и синхронизируем лотти
-  try {
-    if (refs?.bgImg && 'ResizeObserver' in window) {
-      const ro = new ResizeObserver(() => {
-        try { layoutLottie(refs); } catch {}
-      });
-      ro.observe(refs.bgImg);
-      // сохраняем ссылку, чтобы при необходимости можно было отключить
-      try { refs._bgRO = ro; } catch {}
-    }
-  } catch {}
-doLayout();
+  doLayout();
 }
