@@ -1,16 +1,12 @@
 // src/app/utils.js
-// Общие утилиты для UI
-
 let toastTimer = null;
 
-/** Показать/скрыть плейсхолдер "Перетащите файл..." */
 export function setPlaceholderVisible(refs, visible) {
   const el = refs?.placeholder || document.getElementById('ph');
   if (!el) return;
   el.style.display = visible ? '' : 'none';
 }
 
-/** Обёртка с состоянием загрузки на кнопке */
 export async function withLoading(btn, fn) {
   if (btn) {
     btn.disabled = true;
@@ -28,17 +24,12 @@ export async function withLoading(btn, fn) {
   }
 }
 
-/** Небольшой тост внизу (использует #toast из index.html) */
 export function toast(refs, message, ms = 1800) {
-  const el = (refs && refs.toastEl) ? refs.toastEl : document.getElementById('toast');
+  const el = refs?.toastEl ?? document.getElementById('toast');
   const text = String(message ?? '');
-  if (!el) { try { alert(text); } catch {} return; } // запасной вариант
-
+  if (!el) { try { alert(text); } catch {} return; }
   el.textContent = text;
   el.classList.add('on');
-
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    el.classList.remove('on');
-  }, ms);
+  toastTimer = setTimeout(() => el.classList.remove('on'), ms);
 }

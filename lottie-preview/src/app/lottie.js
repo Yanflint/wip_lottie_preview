@@ -19,10 +19,8 @@ function detectDprFromNameOrUrl(nameOrUrl = '') {
 }
 
 function applyPreviewSizeWeb(refs, w, h) {
-  if (!refs) return;
-  // Жёстко выставляем 1:1 для wrapper и preview (CSS-пиксели)
-  if (refs.wrapper) { refs.wrapper.style.width = w + 'px'; refs.wrapper.style.height = h + 'px'; }
-  if (refs.preview) { refs.preview.style.width = w + 'px'; refs.preview.style.height = h + 'px'; }
+  if (refs?.wrapper) { refs.wrapper.style.width = w + 'px'; refs.wrapper.style.height = h + 'px'; }
+  if (refs?.preview) { refs.preview.style.width = w + 'px'; refs.preview.style.height = h + 'px'; }
 }
 
 export async function setBackgroundFromSrc(refs, src, options = {}) {
@@ -39,21 +37,20 @@ export async function setBackgroundFromSrc(refs, src, options = {}) {
     const natW = img.naturalWidth  || 1;
     const natH = img.naturalHeight || 1;
 
-    // DPR приоритет: state.bgDPR → options.dpr → из имени/URL → 1
+    // DPR: state.bgDPR → options.dpr → по имени/URL → 1
     let dpr = state.bgDPR || hintDpr || detectDprFromNameOrUrl(hintName) || detectDprFromNameOrUrl(img.src) || 1;
 
     if (!state.isStandalone) {
-      // Веб-редактор: показать 1:1 по логическому размеру (natural / dpr)
+      // Веб-редактор: показываем 1:1 (логический размер = natural / dpr)
       const logicalW = Math.max(1, Math.round(natW / dpr));
       const logicalH = Math.max(1, Math.round(natH / dpr));
       applyPreviewSizeWeb(refs, logicalW, logicalH);
 
-      // Картинка вписывается в wrapper (который уже логического размера)
       img.style.width = '100%';
       img.style.height = 'auto';
       img.style.display = 'block';
     } else {
-      // Standalone: оставляем как было (ширина экрана)
+      // A2HS: оставляем поведение как в стабильной версии
       img.style.width = '100vw';
       img.style.height = 'auto';
       img.style.display = 'block';
