@@ -1,5 +1,5 @@
 // src/app/lottie.js
-import { state, setLastBgSize, setLastBgMeta } from './state.js';
+import { state, setLastBgSize, setLastBgMeta, setBgAccounted } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
@@ -77,7 +77,8 @@ export function layoutLottie(refs) {
   stage.style.left = '50%';
   stage.style.top  = '50%';
   stage.style.transformOrigin = '50% 50%';
-  stage.style.transform = `translate(calc(-50% + ${xpx}px), calc(-50% + ${ypx}px)) scale(${fitScale})`;
+  const __mul = (state.bgAccountedAssetScale ? 1 : (state.lotMul||1));
+  stage.style.transform = `translate(calc(-50% + ${xpx}px), calc(-50% + ${ypx}px)) scale(${fitScale * __mul})`;
 }
 /**
  * Установка фоновой картинки из data:/blob:/http(s)
@@ -117,13 +118,24 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
     // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
-    const assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
+    let assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
+// Если пришли явные логические размеры из payload — рассчитываем из них
+try {
+  const dims = meta && meta._lpBgDims;
+  if (dims && dims.cssW > 0) {
+    const est = iw / dims.cssW;
+    if (isFinite(est) && est > 0) assetScale = est;
+  }
+} catch {}
+
 
     // Приводим к «CSS-размеру», как это было бы на сайте
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
 
     const wrap = refs.wrapper;
+  // Отмечаем, что CSS-габариты учитывают assetScale
+  try { setBgAccounted(assetScale > 1); } catch {}
     if (wrap) {
       wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
       wrap.style.setProperty('--preview-h', `${cssH}px`);

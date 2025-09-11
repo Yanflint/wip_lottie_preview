@@ -2,7 +2,7 @@
 // Флаг цикла (opts.loop) применяем до создания анимации.
 import { setPlaceholderVisible } from './utils.js';
 import { setLotOffset } from './state.js';
-import { setLastLottie, state, setLastBgSize } from './state.js';
+import { setLastLottie, state, setLastBgSize, setLotMul, setBgAccounted } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 import { loadPinned } from './pinned.js';
 
@@ -50,12 +50,15 @@ try {
       wrap.style.setProperty('--preview-ar', `${dims.cssW} / ${dims.cssH}`);
       wrap.style.setProperty('--preview-h', `${dims.cssH}px`);
       setLastBgSize(dims.cssW, dims.cssH);
+      setBgAccounted(true);
     }
   } catch {}
 
+  try { if (data?.lot?.meta?._lpBgDims) meta._lpBgDims = data.lot.meta._lpBgDims; } catch {}
   if (src) await setBackgroundFromSrc(refs, src, meta);
 }
 if (data.lot) {
+    try { const mul = data?.lot?.meta?._lpLotMul; if (+mul > 0) setLotMul(+mul); } catch {}
     try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
     setLastLottie(data.lot);
     await loadLottieFromData(refs, data.lot); // учтёт state.loopOn

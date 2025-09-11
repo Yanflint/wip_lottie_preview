@@ -11,6 +11,9 @@ export const state = {
   A2HS: false,                 // режим «на рабочем столе» (PWA / standalone)
   lastBgSize: { w: 0, h: 0 },  // последние известные размеры фонового изображения
   lastBgMeta: { fileName: '', assetScale: 1 }, // метаданные фона
+  lotMul: 1,                 // множитель ретины для лотти (из @2x/@3x)
+  bgAccountedAssetScale: false, // CSS-размеры уже учитывают assetScale
+
 };
 
 export function setLoop(on)       { state.loopOn = !!on; }

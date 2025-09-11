@@ -89,6 +89,7 @@ async function buildPayload(refs) {
   try {
     lot.meta = lot.meta || {};
     lot.meta._lpBgMeta = { fileName: metaNow.fileName, assetScale: metaNow.assetScale };
+    lot.meta._lpLotMul = (metaNow.assetScale || 1);
   } catch {}
 
   
