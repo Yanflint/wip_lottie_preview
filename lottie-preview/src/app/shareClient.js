@@ -34,7 +34,16 @@ async function imageElementToDataURL(imgEl) {
 }
 
 async function buildPayload(refs) {
-  const lot = state.lastLottieJSON;
+  const rawLot = state.lastLottieJSON;
+  const lot = rawLot ? JSON.parse(JSON.stringify(rawLot)) : null;
+  if (!lot) throw new Error('Нет данных Lottie');
+  // Вшиваем позицию в метаданные, чтобы серверный payload её не потерял
+  try {
+    const pos = (state.lotOffset || {x:0,y:0});
+    lot.meta = lot.meta || {};
+    lot.meta._lpPos = { x: +pos.x||0, y: +pos.y||0 };
+  } catch {}
+
   if (!lot) throw new Error('Нет данных Lottie');
 
   let bg = null;
