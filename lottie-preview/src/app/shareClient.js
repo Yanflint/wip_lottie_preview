@@ -1,50 +1,102 @@
-// src/app/shareClient.js
-import { withLoading, toast } from './utils.js';
+// Клиентский «Поделиться»: сохраняем lot и фон через /api/share, и параллельно
+// закрепляем текущий макет локально (для A2HS).
 import { state } from './state.js';
+import { withLoading, showToastNear } from './utils.js';
+import { savePinned } from './pinned.js';
 
-async function postJSON(url, data) {
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json; charset=utf-8' },
-    body: JSON.stringify(data),
-  });
-  if (!r.ok) throw new Error('share failed: ' + r.status);
-  return r.json();
+async function imageElementToDataURL(imgEl) {
+  if (!imgEl || !imgEl.src) return null;
+  const src = imgEl.src;
+
+  if (src.startsWith('data:')) return src;
+
+  if (src.startsWith('blob:')) {
+    await new Promise((res, rej) => {
+      if (imgEl.complete && imgEl.naturalWidth) return res();
+      imgEl.onload = () => res();
+      imgEl.onerror = (e) => rej(e);
+    });
+    try {
+      const w = imgEl.naturalWidth || imgEl.width || 1;
+      const h = imgEl.naturalHeight || imgEl.height || 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imgEl, 0, 0, w, h);
+      return canvas.toDataURL('image/png');
+    } catch {
+      return null;
+    }
+  }
+
+  if (/^https?:\/\//i.test(src)) return src;
+  return src;
 }
 
-function buildShareUrl(id) {
-  const base = `${location.origin}/s/${encodeURIComponent(id)}`;
+async function buildPayload(refs) {
+  const lot = state.lastLottieJSON;
+  if (!lot) throw new Error('Нет данных Lottie');
+
+  let bg = null;
+  const imgEl = refs?.bgImg;
+  if (imgEl && imgEl.src) {
+    const maybeData = await imageElementToDataURL(imgEl);
+    if (maybeData && maybeData.startsWith('data:')) {
+      bg = { kind: 'data', value: maybeData };
+    } else if (maybeData) {
+      bg = { kind: 'url', value: maybeData };
+    }
+  }
+
+  // ВАЖНО: передаём флаг цикла
+  const opts = { loop: !!state.loopOn };
+
+  return { lot, bg, opts };
+}
+
+async function copyToClipboard(text) {
   try {
-    const cur = new URL(location.href);
-    const fit = cur.searchParams.get('fit');
-    return fit ? `${base}?fit=${encodeURIComponent(fit)}` : base;
-  } catch { return base; }
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); return true; }
+    catch { return false; }
+    finally { document.body.removeChild(ta); }
+  }
 }
 
 export function initShare({ refs }) {
   const btn = refs?.shareBtn;
   if (!btn) return;
 
-  btn.addEventListener('click', () => withLoading(btn, async () => {
-    const bgEl = refs.bgImg;
-    const hasBg = !!(bgEl && bgEl.src);
-    const hasLot = !!state.lastLottieJSON;
+  btn.addEventListener('click', async () => {
+    await withLoading(btn, async () => {
+      const payload = await buildPayload(refs);
 
-    if (!hasBg && !hasLot) { toast(refs, 'Нечего сохранять'); return; }
+      // Сохраняем на сервер (короткая ссылка)
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(`share failed: ${res.status}${t ? ' ' + t : ''}`);
+      }
+      const { id } = await res.json();
+      const shortUrl = `${location.origin}/s/${id}`;
 
-    const payload = {
-      lot: hasLot ? state.lastLottieJSON : null,
-      bg:  hasBg  ? bgEl.src : null,
-      bgMeta: { dpr: state.bgDPR || 1 },
-      opts: { loop: !!state.loopOn },
-    };
+      // Параллельно закрепляем локально (для A2HS)
+      savePinned(payload);
 
-    const res = await postJSON('/api/share', payload);
-    const id = res?.id ? String(res.id) : '';
-    if (!id) throw new Error('no id');
-
-    const link = buildShareUrl(id);
-    try { await navigator.clipboard.writeText(link); toast(refs, 'Ссылка скопирована'); }
-    catch { toast(refs, link); }
-  }));
+      await copyToClipboard(shortUrl);
+      showToastNear(refs.toastEl, btn, 'Ссылка скопирована');
+    });
+  });
 }
