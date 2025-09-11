@@ -13,72 +13,97 @@ export function layoutLottie(refs) {
   stage.style.transform = 'translate(-50%, -50%)';
 }
 
-/** Установка фона из data: / blob: / http(s) */
-export async function setBackgroundFromSrc(refs, src) {
-  if (!refs?.bgImg) return;
-  refs.bgImg.onload = () => {
-    setPlaceholderVisible(refs, false);
-    if (refs.wrapper) refs.wrapper.classList.add('has-bg');
-  };
-  refs.bgImg.onerror = () => {};
-  refs.bgImg.src = src;
-}
-
-/** Жёсткий перезапуск проигрывания */
-export function restart() {
-  if (!anim) return;
+/** Детект @Nx из имени/URL */
+function detectDensityFromName(str = '') {
   try {
-    anim.stop();
-    anim.goToAndStop(0, true);
-    anim.play();
-  } catch {}
+    const m = /@(\d+)x(?:\.|$)/i.exec(str);
+    const d = m ? parseInt(m[1], 10) : 1;
+    return Number.isFinite(d) && d >= 1 && d <= 4 ? d : 1;
+  } catch { return 1; }
 }
 
-/** Включить/выключить цикл прямо во время проигрывания */
-export function setLoop(on) {
-  if (anim) anim.loop = !!on;
-}
+/**
+ * Установка фоновой картинки.
+ * @param {object} refs - ссылки на DOM
+ * @param {string} src  - data:/blob:/http(s) URL
+ * @param {object} [opts]
+ * @param {number} [opts.density] - 1|2|3... Если не передан, пробуем распарсить из src/name.
+ */
+export async function setBackgroundFromSrc(refs, src, opts = {}) {
+  const img = refs?.bgImg;
+  if (!img || !src) return;
 
-/** Подгрузка лотти из JSON-объекта */
-export async function loadLottieFromData(refs, lotJson) {
-  if (!refs?.lottieMount || !lotJson) return;
+  // Плотность ассета (важно для корректного 1x-лейаута)
+  const density =
+    Math.max(1, parseInt(opts?.density || '', 10)) ||
+    detectDensityFromName(src);
 
-  // Сносим прежнюю
-  if (anim) {
-    try { anim.destroy(); } catch {}
-    anim = null;
-  }
+  // Проставим data-атрибут, чтобы layout.js мог его использовать
+  img.dataset.density = String(density);
 
-  const loop = !!state.loopOn;        // берём текущее состояние чекбокса
-  const autoplay = true;
-
-  anim = window.lottie.loadAnimation({
-    container: refs.lottieMount,
-    renderer: 'svg',
-    loop,
-    autoplay,
-    animationData: lotJson
+  // Загрузка изображения
+  await new Promise((resolve, reject) => {
+    const onLoad = () => { img.removeEventListener('error', onError); resolve(); };
+    const onError = (e) => { img.removeEventListener('load', onLoad); reject(e); };
+    img.addEventListener('load', onLoad, { once: true });
+    img.addEventListener('error', onError, { once: true });
+    img.src = src;
   });
 
-  // Когда DOM лотти готов — ставим габариты и показываем контент
-  anim.addEventListener('DOMLoaded', () => {
-    const w = Number(lotJson.w || 0) || 512;
-    const h = Number(lotJson.h || 0) || 512;
-    if (refs.lotStage) {
-      refs.lotStage.style.width = w + 'px';
-      refs.lotStage.style.height = h + 'px';
-    }
-    setPlaceholderVisible(refs, false);
+  // Спрячем плейсхолдер после удачной загрузки
+  setPlaceholderVisible(refs, false);
+}
+
+/**
+ * Загрузка Lottie JSON из объекта.
+ * Совместимо с существующими контролами (loop/restart).
+ */
+export function loadLottieFromData(refs, json) {
+  const mount = refs?.lottie;
+  if (!mount || !json) return null;
+
+  // Очищаем предыдущую анимацию
+  try { anim?.destroy?.(); } catch {}
+  mount.innerHTML = '';
+
+  anim = window.lottie?.loadAnimation?.({
+    container: mount,
+    renderer: 'svg',
+    loop: !!state.loopOn,
+    autoplay: !!state.autoplayOn,
+    animationData: json,
+    rendererSettings: {
+      preserveAspectRatio: 'xMidYMid meet',
+      progressiveLoad: true,
+      hideOnTransparent: true,
+    },
+  });
+
+  if (!anim) return null;
+
+  anim.addEventListener?.('DOMLoaded', () => {
     if (refs.wrapper) refs.wrapper.classList.add('has-lottie');
     layoutLottie(refs);
   });
 
-  // На всякий случай: при завершении без loop – остаёмся на конце, кнопка/тап перезапустят
-  anim.addEventListener('complete', () => {
-    // ничего не делаем; restart() всегда доступен
-  });
+  // При завершении без loop остаёмся на конце, кнопка/тап перезапустят
+  anim.addEventListener?.('complete', () => { /* noop */ });
 
   return anim;
+}
+
+export function restart() {
+  if (!anim) return;
+  try {
+    anim.goToAndStop?.(0, true);
+    anim.play?.();
+  } catch {}
+}
+
+export function setLoop(on) {
+  try {
+    if (anim) anim.loop = !!on;
+  } catch {}
 }
 
 /** На всякий экспортим текущее окно анимации (если понадобится где-то ещё) */
