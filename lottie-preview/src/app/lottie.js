@@ -117,16 +117,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
     // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
-    let assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
-// Если пришли явные логические размеры из payload — рассчитываем из них
-try {
-  const dims = meta && meta._lpBgDims;
-  if (dims && dims.cssW > 0) {
-    const est = iw / dims.cssW;
-    if (isFinite(est) && est > 0) assetScale = est;
-  }
-} catch {}
-
+    const assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
 
     // Приводим к «CSS-размеру», как это было бы на сайте
     const cssW = iw / assetScale;

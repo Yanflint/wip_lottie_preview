@@ -53,7 +53,6 @@ try {
     }
   } catch {}
 
-  try { if (data?.lot?.meta?._lpBgDims) meta._lpBgDims = data.lot.meta._lpBgDims; } catch {}
   if (src) await setBackgroundFromSrc(refs, src, meta);
 }
 if (data.lot) {
