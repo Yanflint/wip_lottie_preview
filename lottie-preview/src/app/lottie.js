@@ -27,15 +27,11 @@ export async function setBackgroundFromSrc(refs, src) {
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
-    // Сохраняем для других частей (если пригодится)
     setLastBgSize(iw, ih);
 
-    // Проставляем переменные на .wrapper — он задаёт габариты превью
     const wrap = refs.wrapper;
     if (wrap) {
-      // Соотношение сторон контейнера теперь = картинке
       wrap.style.setProperty('--preview-ar', `${iw} / ${ih}`);
-      // Базовая «естественная» высота (дальше её ограничивают max-* в CSS)
       wrap.style.setProperty('--preview-h', `${ih}px`);
       wrap.classList.add('has-bg');
     }
@@ -44,7 +40,6 @@ export async function setBackgroundFromSrc(refs, src) {
   };
 
   refs.bgImg.onerror = () => {
-    // Если фон не загрузился — оставляем плейсхолдер и дефолтные размеры
     console.warn('Background image failed to load');
   };
 
@@ -81,7 +76,6 @@ export async function loadLottieFromData(refs, data) {
       anim = null;
     }
 
-    // Габариты по данным JSON (пиксель-в-пиксель)
     const w = Number(lotJson.w || 0) || 512;
     const h = Number(lotJson.h || 0) || 512;
     if (refs.lotStage) {
@@ -106,7 +100,6 @@ export async function loadLottieFromData(refs, data) {
       layoutLottie(refs);
     });
 
-    // При завершении без loop ничего не делаем — restart() доступен всегда
     anim.addEventListener('complete', () => {});
 
     return anim;

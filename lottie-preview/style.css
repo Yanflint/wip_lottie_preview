@@ -3,17 +3,20 @@
   --bg:#0b0c10; --muted:#9aa3b2;
   --accent:#6ee7b7; --accent-orange:#FF7700;
   --preview-bg:#0b0f1a;
-  --controls-space: 150px; /* запас под панель кнопок + отступы */
+
+  /* запас под панель/отступы, чтобы превью не упиралось в край окна */
+  --controls-space: 150px;
+
   /* UI-параметры */
-  --ctl-h: 36px;           /* высота кнопки */
-  --btn-font: 13px;        /* размер шрифта в кнопке */
+  --ctl-h: 36px;
+  --btn-font: 13px;
   --btn-pad-y: 8px;
   --btn-pad-x: 12px;
   --btn-radius: 12px;
-  --wrap-r: 16px;          /* радиус короба превью */
-  --btn-dim-bg: #525b72;   /* цвет кнопок ширины/высоты */
+  --wrap-r: 16px;
+  --btn-dim-bg: #525b72;
 
-  /* [ANCHOR:STACK_GAP] — расстояние между превью и блоком кнопок */
+  /* расстояние между превью и блоком кнопок */
   --stack-gap: 16px;
 }
 
@@ -34,7 +37,6 @@ body{
   padding:16px;
 }
 
-/* ===================== П Р Е В Ь Ю  L O T T I E ===================== */
 .app{
   width:100%;
   max-width:1000px;
@@ -42,31 +44,32 @@ body{
   flex-direction:column;
   align-items:center;
   gap:var(--stack-gap);
+  position:relative; /* для локальных z-index */
+  z-index:0;
 }
 
-/* Область превью:
-   🔁 раньше тут были жёсткие 800px и 360/800;
-   теперь используем переменные, которые задаёт JS при загрузке фона:
+/* ===================== П Р Е В Ь Ю  ===================== */
+/* Контейнер превью подстраивается под картинку:
    --preview-h  : базовая высота (естественная высота картинки в px)
    --preview-ar : соотношение сторон (w / h)
-   Без фона сохраняется прежнее поведение (800px и 360/800). */
+   Фолбэк — старое поведение (800px и 360/800). */
 .wrapper{
   position: relative;
-  /* по умолчанию — прежние значения; будут переопределены из JS */
+  z-index: 0;              /* превью ниже контролов */
   height: var(--preview-h, 800px);
   aspect-ratio: var(--preview-ar, 360 / 800);
   width: auto;
 
-  /* чтобы всё поместилось без скролла: */
+  /* Влезаем в окно, сохраняя пропорции */
   max-height: calc(100dvh - var(--controls-space));
   max-width:  min(100vw - 32px, 1000px);
 
   border: none; outline: none;
   border-radius: var(--wrap-r);
-  overflow: visible;
+  overflow: visible; /* нужно, чтобы пунктир выглядывал наружу */
 }
 
-/* Единственная пунктирная рамка */
+/* Пунктирная рамка: не мешает кликам и не перекрывает контролы */
 .wrapper::after{
   content:"";
   position:absolute;
@@ -74,17 +77,21 @@ body{
   border:2px dashed #2b334a;
   border-radius: calc(var(--wrap-r) + 6px);
   pointer-events:none;
-  z-index:2;
+  z-index:1;
 }
 
-/* Внутреннее содержимое */
-.preview{ position:absolute; inset:0; overflow:hidden; z-index:1; }
+.preview{
+  position:absolute; inset:0;
+  overflow:hidden;
+  z-index:0; /* ниже ::after, но внутри wrapper */
+}
 
 .bg, .lottie-layer{ position:absolute; inset:0; }
-.bg{ overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.bg{
+  overflow:hidden; display:flex; align-items:center; justify-content:center;
+}
 
-/* Важно: контейнер уже «подогнан» по aspect-ratio картинки,
-   поэтому изображение просто заполняет его без искажений */
+/* Контейнер уже «подогнан» по aspect-ratio, поэтому просто заполняем высоту */
 .bg img{ display:block; height:100%; width:auto; margin:0 auto; }
 
 .lottie-layer{ overflow:hidden; }
@@ -94,10 +101,12 @@ body{
 }
 .lottie-mount{ width:100%; height:100%; }
 
-/* Плейсхолдер — центр */
+/* Плейсхолдер */
 .placeholder{
-  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  color:var(--muted); font-size:13px; letter-spacing:.2px; background:var(--preview-bg);
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--muted); font-size:13px; letter-spacing:.2px;
+  background:var(--preview-bg);
   border:none; border-radius:12px; text-align:center; padding:12px;
 }
 .placeholder.hidden{ display:none; }
@@ -107,7 +116,7 @@ body{
 .placeholder .ph-1{ font-weight:700; }
 .placeholder .ph-2{ opacity:.8; }
 
-/* DnD-индикатор */
+/* DnD-индикатор поверх всего, но только во время dnd */
 .drop-indicator{
   position:fixed; inset:0; display:none; align-items:center; justify-content:center;
   z-index:1000; pointer-events:none;
@@ -118,10 +127,12 @@ body{
   padding:12px 16px; border-radius:12px; font-weight:700;
 }
 
-/* ===================== К Н О П К И  И  Ч Е К Б О К С ===================== */
+/* ===================== К Н О П К И  ===================== */
 .controls{
   display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
   background:transparent; padding:0; border:none;
+  position: relative;
+  z-index: 5; /* поверх пунктирной рамки и превью */
 }
 
 .btn{
@@ -148,7 +159,10 @@ body{
   border-radius:var(--btn-radius); padding:0 var(--btn-pad-x); min-height:var(--ctl-h);
   font-size:var(--btn-font); line-height:1;
 }
-.chk input{ appearance:none; width:16px; height:16px; border-radius:4px; background:#1f2537; border:1px solid #32405f; display:inline-block; position:relative; }
+.chk input{
+  appearance:none; width:16px; height:16px; border-radius:4px;
+  background:#1f2537; border:1px solid #32405f; display:inline-block; position:relative;
+}
 .chk input:checked{ background:#2c8e6a; border-color:#2c8e6a; }
 .chk input:checked::after{ content:""; position:absolute; inset:3px; background:#fff; border-radius:2px; }
 
@@ -166,8 +180,7 @@ body{
   position:fixed; right:12px; bottom:12px; opacity:.5; font-size:12px;
 }
 
-/* ============ STANDALONE fit modes ============ */
-/* Базовая обвязка для обоих режимов */
+/* ============ STANDALONE fit modes (сохранены) ============ */
 html.standalone .bg,
 html.standalone .lottie-layer{
   position:absolute;
@@ -177,16 +190,12 @@ html.standalone .lottie-layer{
   justify-content:center;
 }
 
-/* ---- Режим по краям экрана (edge) ---- */
+/* Режим по краям экрана (edge) */
 html.standalone.fit-edge .bg,
-html.standalone.fit-edge .lottie-layer{
-  inset:0;
-}
-html.standalone.fit-edge .bg img{
-  width:100vw; height:auto; display:block;
-}
+html.standalone.fit-edge .lottie-layer{ inset:0; }
+html.standalone.fit-edge .bg img{ width:100vw; height:auto; display:block; }
 
-/* ---- Режим по safe-area (safe) ---- */
+/* Режим по safe-area (safe) */
 html.standalone.fit-safe .bg,
 html.standalone.fit-safe .lottie-layer{
   left:  env(safe-area-inset-left);
@@ -195,14 +204,7 @@ html.standalone.fit-safe .lottie-layer{
   bottom:env(safe-area-inset-bottom);
 }
 
-/* ---- Пример полноэкранного режима для некоторых сценариев (если нужен)
-   Оставляю как было — второй блок .wrapper для спец-режимов */
-.wrapper{
-  position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
-  border-radius:0; --wrap-r: 0px;
-}
-
-/* ===================== Update-toast (если используется) ===================== */
+/* ===================== Update-toast ===================== */
 .update-toast{
   position: fixed;
   left: 50%;
@@ -227,7 +229,7 @@ html.standalone.fit-safe .lottie-layer{
   letter-spacing: .2px;
 }
 
-/* Меньше анимации для тех, кто так предпочитает */
+/* Меньше анимации */
 @media (prefers-reduced-motion: reduce){
   .update-toast,
   .update-toast.show{
