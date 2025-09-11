@@ -5,7 +5,9 @@ export function layout({ refs }) {
   const { preview, previewBox, bgImg } = refs;
   if (!preview || !previewBox) return;
 
-  const pad = isMobile() ? 8 : 12;
+  const root = document.documentElement;
+  const noUI = root.classList.contains('standalone') || root.classList.contains('is-standalone');
+  const pad = noUI ? 0 : (isMobile() ? 8 : 12);
   previewBox.style.padding = pad + 'px';
 
   const vw = window.innerWidth;

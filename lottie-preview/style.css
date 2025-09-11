@@ -20,6 +20,22 @@
   --stack-gap: 16px;
 }
 
+
+/* === Standalone/no-UI overrides ===
+   На телефоне без UI (ярлык/A2HS и viewer) убираем резерв под контролы,
+   чтобы превью занимало всю доступную высоту. */
+html.is-standalone.is-mobile,
+html.standalone {
+  --controls-space: 0px;
+}
+/* В standalone разрешаем wrapper занимать полную высоту окна */
+html.is-standalone.is-mobile .wrapper,
+html.standalone .wrapper {
+  max-height: 100dvh;
+}
+
+
+
 *{ box-sizing: border-box; }
 html, body{ height:100%; }
 body{
