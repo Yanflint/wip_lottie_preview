@@ -34,7 +34,7 @@ async function imageElementToDataURL(imgEl) {
   return src;
 }
 
-async async function buildPayload(refs) {
+async function buildPayload(refs) {
   try { layoutLottie(refs); } catch {}
   try { await afterTwoFrames(); } catch {}
   const rawLot = state.lastLottieJSON;
