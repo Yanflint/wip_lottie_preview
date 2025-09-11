@@ -18,6 +18,12 @@
 
   /* расстояние между превью и блоком кнопок */
   --stack-gap: 16px;
+
+  /* стили уведомлений/подсказок */
+  --toast-bg: rgba(23, 28, 44, .72);
+  --toast-bd: rgba(110, 126, 170, .35);
+  --tip-bg: rgba(23, 28, 44, .90);
+  --tip-bd: rgba(110, 126, 170, .45);
 }
 
 *{ box-sizing: border-box; }
@@ -141,10 +147,10 @@ body{
   font-weight:600; font-size:var(--btn-font); line-height:1;
   min-height:var(--ctl-h);
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  transition:transform .05s ease, opacity .2s ease, filter .2s ease;
+  transition:transform .05s ease, opacity .2s ease, filter .2s ease, background-color .2s ease;
   color:#0b0c10; background:var(--accent);
 }
-.btn:disabled{opacity:.5; cursor:not-allowed}
+.btn:disabled{opacity:.6; cursor:not-allowed}
 .btn:active{transform:translateY(1px)}
 .btn:hover:not(:disabled){ filter:brightness(1.05); }
 
@@ -152,6 +158,22 @@ body{
 .btn.accent    { background:var(--accent-orange); color:#fff; }
 
 #sizeBtn, #heightBtn { background:var(--btn-dim-bg); color:#fff; }
+
+/* Спиннер на кнопке (используется на «Поделиться») */
+.btn[data-busy="true"]{
+  position:relative;
+  color:transparent !important;
+}
+.btn[data-busy="true"]::after{
+  content:"";
+  position:absolute; inset:0; margin:auto;
+  width:1.1em; height:1.1em;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.8);
+  border-right-color: transparent;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .chk{
   display:inline-flex; align-items:center; gap:6px;
@@ -166,14 +188,76 @@ body{
 .chk input:checked{ background:#2c8e6a; border-color:#2c8e6a; }
 .chk input:checked::after{ content:""; position:absolute; inset:3px; background:#fff; border-radius:2px; }
 
-/* ===================== TOAST ===================== */
-.toast{
-  position:fixed; left:50%; top:16px; transform:translateX(-50%) translateY(-16px);
-  opacity:0; transition:transform .2s ease, opacity .2s ease;
-  background:#1f2537; color:#fff; border:1px solid #2e374f; border-radius:10px;
-  padding:10px 12px; z-index:2000; pointer-events:none; font-weight:700; letter-spacing:.2px;
+/* ===================== TOAST: «Обновлено» ===================== */
+.update-toast{
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translate(-50%, 8px) scale(.98);
+  opacity: 0;
+  transition: opacity 200ms ease, transform 200ms ease;
+  color: #eaf0ff;
+  background: var(--toast-bg);
+  border: 1px solid var(--toast-bd);
+  border-radius: 999px;
+  padding: 10px 14px;
+  z-index: 3000;
+  pointer-events: none;
+  font-weight: 700;
+  letter-spacing: .2px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.28);
+  backdrop-filter: blur(8px);
 }
-.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+.update-toast.show{
+  opacity:1;
+  transform: translate(-50%, 0) scale(1);
+}
+.update-toast .ut-text{
+  display:inline-flex; align-items:center; gap:8px;
+  font-weight: 700;
+}
+.update-toast .ut-text::before{
+  content:"";
+  width:14px; height:14px; border-radius:50%;
+  border:2px solid #9be7c4;
+  border-top-color: transparent;
+  transform: rotate(45deg);
+  position: relative;
+}
+.update-toast.success .ut-text::before{
+  content:"";
+  width:14px; height:14px;
+  border:none;
+  background:
+    linear-gradient(#9be7c4,#9be7c4) left 4px top 8px / 2px 4px no-repeat,
+    linear-gradient(#9be7c4,#9be7c4) left 6px top 10px / 8px 2px no-repeat;
+  border-radius:2px;
+}
+
+/* ===================== TOOLTIP: «Ссылка скопирована» ===================== */
+.copy-tip{
+  position: fixed;
+  transform: translate(-50%, -8px);
+  opacity: 0;
+  transition: opacity 160ms ease, transform 160ms ease;
+  color: #eaf0ff;
+  background: var(--tip-bg);
+  border: 1px solid var(--tip-bd);
+  border-radius: 10px;
+  padding: 8px 10px;
+  z-index: 3200;
+  pointer-events: none;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .2px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.28);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.copy-tip.show{
+  opacity: 1;
+  transform: translate(-50%, -12px);
+}
 
 /* ===================== В Е Р С И Я ===================== */
 .ver{
@@ -243,35 +327,12 @@ html.standalone.fit-safe .lottie-layer{
   bottom:env(safe-area-inset-bottom);
 }
 
-/* ===================== Update-toast ===================== */
-.update-toast{
-  position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translate(-50%, 16px);
-  opacity: 0;
-  transition: opacity 220ms ease, transform 220ms ease;
-  background: #1f2537;
-  color: #fff;
-  border: 1px solid #2e374f;
-  border-radius: 12px;
-  padding: 12px 14px;
-  z-index: 3000;
-  pointer-events: none;
-}
-.update-toast.show{
-  opacity:1;
-  transform: translate(-50%, 0);
-}
-.update-toast .ut-text{
-  font-weight: 600;
-  letter-spacing: .2px;
-}
-
 /* Меньше анимации */
 @media (prefers-reduced-motion: reduce){
   .update-toast,
-  .update-toast.show{
+  .update-toast.show,
+  .copy-tip,
+  .copy-tip.show{
     transition: opacity 120ms ease !important;
     transform: translate(-50%, 0) !important;
   }
