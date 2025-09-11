@@ -1,11 +1,13 @@
 // src/app/lottie.js
-// Минимальные правки под функционал: авто-пропорции + @2x/@3x и корректное определение мобильного/standalone
+// Стабильный вариант: автопропорции + поддержка @2x/@3x, корректное mobile/standalone.
+// Ничего лишнего — только то, что влияет на превью.
+
 import { state, setLastBgSize } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
 
-/* ========= ENV DETECT: mobile + standalone (без ui-feedback.js) ========= */
+/* ========= ENV DETECT: mobile + standalone ========= */
 (function detectEnv(){
   try {
     const isStandalone =
@@ -17,18 +19,18 @@ let anim = null;
         navigator.userAgent || ''
       );
 
-    if (isStandalone) document.documentElement.classList.add('standalone'); // под старый CSS
-    if (isMobile) document.body.classList.add('is-mobile');                 // под старый CSS
+    if (isStandalone) document.documentElement.classList.add('is-standalone');
+    if (isMobile) document.documentElement.classList.add('is-mobile');
   } catch (_) {}
 })();
 
 /* ========= HELPERS ========= */
 function parseAssetScale(nameOrUrl) {
-  // match @2x, @3x, @1.5x
-  const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(\?|#|$))/i);
+  // распознаём @2x, @3x, @1.5x
+  const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(?:[?#]|$))/i);
   if (!m) return 1;
   const s = parseFloat(m[1]);
-  return isFinite(s) && s > 0 ? Math.max(1, Math.min(4, s)) : 1;
+  return isFinite(s) && s > 0 ? Math.min(Math.max(1, s), 4) : 1;
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
@@ -41,10 +43,10 @@ export function layoutLottie(refs) {
 }
 
 /**
- * Установка фоновой картинки из data:/blob:/http(s)
- * — считываем naturalWidth/naturalHeight
- * — учитываем @2x/@3x/@1.5x из имени файла
- * — прокидываем в .wrapper CSS-переменные:
+ * Установка фоновой картинки.
+ * — читаем naturalWidth/naturalHeight
+ * — учитываем @2x/@3x в имени файла (если его знаем)
+ * — прокидываем CSS-переменные на .wrapper:
  *     --preview-ar : (w/scale) / (h/scale)
  *     --preview-h  : (h/scale)px
  *
@@ -55,7 +57,7 @@ export function layoutLottie(refs) {
 export async function setBackgroundFromSrc(refs, src, meta = {}) {
   if (!refs?.bgImg) return;
 
-  // попытка определить имя файла для парсинга @2x
+  // пробуем угадать имя файла, чтобы вытащить @2x
   const guessName = (() => {
     if (meta.fileName) return meta.fileName;
     const fromAttr = refs.bgImg.getAttribute('data-filename') || refs.bgImg.alt;
@@ -64,19 +66,17 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
       const u = new URL(src);
       const base = (u.pathname || '').split('/').pop();
       return base || src;
-    } catch (_) {
-      return src;
-    }
+    } catch (_) { return src; }
   })();
 
   refs.bgImg.onload = () => {
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
-    // сохраняем фактический размер в пикселях (вдруг нужно ещё где-то)
+    // сохраняем реальные пиксели (если где-то пригодится)
     setLastBgSize(iw, ih);
 
-    // масштаб по имени: mob@2x.png → 2
+    // делим на ретина-коэффициент из имени (mob@2x.png -> 2)
     const assetScale = parseAssetScale(guessName);
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
@@ -98,13 +98,10 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   refs.bgImg.src = src;
 }
 
-/** Жёсткий перезапуск проигрывания */
+/** Перезапуск анимации */
 export function restart() {
   if (!anim) return;
-  try {
-    anim.stop();
-    anim.goToAndPlay(0, true);
-  } catch (_) {}
+  try { anim.stop(); anim.goToAndPlay(0, true); } catch (_) {}
 }
 
 /** Переключение loop "на лету" */
@@ -114,19 +111,16 @@ export function setLoop(on) {
 }
 
 /**
- * Загрузка Lottie из JSON (string|object)
+ * Загрузка Lottie JSON
  * — создаём инстанс
- * — задаём габариты стейджа по w/h из JSON (1:1 пиксели)
+ * — габариты стейджа = w/h из JSON (1:1)
  */
 export async function loadLottieFromData(refs, data) {
   try {
     const lotJson = typeof data === 'string' ? JSON.parse(data) : data;
     if (!lotJson || typeof lotJson !== 'object') return null;
 
-    if (anim) {
-      try { anim.destroy?.(); } catch (_) {}
-      anim = null;
-    }
+    if (anim) { try { anim.destroy?.(); } catch (_) {} anim = null; }
 
     const w = Number(lotJson.w || 0) || 512;
     const h = Number(lotJson.h || 0) || 512;
@@ -135,14 +129,11 @@ export async function loadLottieFromData(refs, data) {
       refs.lotStage.style.height = `${h}px`;
     }
 
-    const loop = !!state.loopOn;
-    const autoplay = true;
-
     anim = window.lottie.loadAnimation({
       container: refs.lottieMount,
       renderer: 'svg',
-      loop,
-      autoplay,
+      loop: !!state.loopOn,
+      autoplay: true,
       animationData: lotJson
     });
 
@@ -152,8 +143,6 @@ export async function loadLottieFromData(refs, data) {
       layoutLottie(refs);
     });
 
-    anim.addEventListener('complete', () => {});
-
     return anim;
   } catch (e) {
     console.error('loadLottieFromData error:', e);
@@ -161,5 +150,5 @@ export async function loadLottieFromData(refs, data) {
   }
 }
 
-/** Экспорт текущей анимации (если нужно где-то ещё) */
+/** Экспорт анимации при необходимости */
 export function getAnim() { return anim; }
