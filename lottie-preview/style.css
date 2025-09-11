@@ -14,19 +14,19 @@
   --btn-dim-bg: #525b72;   /* цвет кнопок ширины/высоты */
 
   /* [ANCHOR:STACK_GAP] — расстояние между превью и блоком кнопок */
-  --stack-gap: 24px;
+  --stack-gap: 16px;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
+*{ box-sizing: border-box; }
+html, body{ height:100%; }
 body{
   margin:0;
-  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  background:linear-gradient(180deg,#0b0c10,#0f1117);
-  color:#eef2f8;
+  color:#dce3ef;
+  background:var(--bg);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, Helvetica, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji;
 }
 
-/* Центрирование контента по экрану */
+/* ===================== В Ы Р А В Н И В А Н И Е  С Е Т К И ===================== */
 .page{
   min-height:100dvh;
   display:grid;
@@ -44,12 +44,17 @@ body{
   gap:var(--stack-gap);
 }
 
-/* Область превью: держим соотношение 360/800 и подстраиваем высоту под экран */
+/* Область превью:
+   🔁 раньше тут были жёсткие 800px и 360/800;
+   теперь используем переменные, которые задаёт JS при загрузке фона:
+   --preview-h  : базовая высота (естественная высота картинки в px)
+   --preview-ar : соотношение сторон (w / h)
+   Без фона сохраняется прежнее поведение (800px и 360/800). */
 .wrapper{
   position: relative;
-  /* базовый размер для больших экранов */
-  height: 800px;
-  aspect-ratio: 360 / 800;   /* ширина высчитывается из высоты */
+  /* по умолчанию — прежние значения; будут переопределены из JS */
+  height: var(--preview-h, 800px);
+  aspect-ratio: var(--preview-ar, 360 / 800);
   width: auto;
 
   /* чтобы всё поместилось без скролла: */
@@ -60,7 +65,6 @@ body{
   border-radius: var(--wrap-r);
   overflow: visible;
 }
-
 
 /* Единственная пунктирная рамка */
 .wrapper::after{
@@ -78,6 +82,9 @@ body{
 
 .bg, .lottie-layer{ position:absolute; inset:0; }
 .bg{ overflow:hidden; display:flex; align-items:center; justify-content:center; }
+
+/* Важно: контейнер уже «подогнан» по aspect-ratio картинки,
+   поэтому изображение просто заполняет его без искажений */
 .bg img{ display:block; height:100%; width:auto; margin:0 auto; }
 
 .lottie-layer{ overflow:hidden; }
@@ -93,27 +100,23 @@ body{
   color:var(--muted); font-size:13px; letter-spacing:.2px; background:var(--preview-bg);
   border:none; border-radius:12px; text-align:center; padding:12px;
 }
-.placeholder .ph{ display:flex; flex-direction:column; align-items:center; }
-.placeholder .ph-1{ color:#fff; margin-bottom:4px; font-weight:600; }
-.placeholder .ph-2{ color:var(--muted); }
 .placeholder.hidden{ display:none; }
-
-/* Во время перетаскивания скрываем плейсхолдер */
-body.dragging .placeholder{ display:none !important; }
-
-/* ===== Drag&Drop overlay — внутри .wrapper и по центру превью ===== */
-.drop-overlay{
-  position:absolute; inset:0;
-  display:none; align-items:center; justify-content:center;
-  background:rgba(255,255,255,.04);
-  z-index:3;
-  pointer-events:none;
+.placeholder .ph{
+  display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:center;
 }
-.drop-overlay .box{
-  border:2px dashed #2b334a; color:#ddd; padding:14px 18px; border-radius:10px; font-size:13px;
-  background:rgba(0,0,0,.35);
+.placeholder .ph-1{ font-weight:700; }
+.placeholder .ph-2{ opacity:.8; }
+
+/* DnD-индикатор */
+.drop-indicator{
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  z-index:1000; pointer-events:none;
 }
-body.dragging .drop-overlay{ display:flex; }
+.drop-indicator.active{ display:flex; }
+.drop-indicator .box{
+  color:#fff; background:rgba(0,0,0,.6); border:2px dashed rgba(255,255,255,.5);
+  padding:12px 16px; border-radius:12px; font-weight:700;
+}
 
 /* ===================== К Н О П К И  И  Ч Е К Б О К С ===================== */
 .controls{
@@ -145,105 +148,23 @@ body.dragging .drop-overlay{ display:flex; }
   border-radius:var(--btn-radius); padding:0 var(--btn-pad-x); min-height:var(--ctl-h);
   font-size:var(--btn-font); line-height:1;
 }
-.chk input{ width:14px; height:14px; margin:0; }
+.chk input{ appearance:none; width:16px; height:16px; border-radius:4px; background:#1f2537; border:1px solid #32405f; display:inline-block; position:relative; }
+.chk input:checked{ background:#2c8e6a; border-color:#2c8e6a; }
+.chk input:checked::after{ content:""; position:absolute; inset:3px; background:#fff; border-radius:2px; }
 
-/* ===================== Л О У Д Е Р  Н А  « П О Д Е Л И Т Ь С Я » ===================== */
-.btn.loading{ opacity:.95; pointer-events:none; position:relative; }
-.btn.loading::after{
-  content:""; width:14px; height:14px; margin-left:6px;
-  border:2px solid rgba(255,255,255,.35);
-  border-top-color:#fff; border-right-color:#fff;
-  border-radius:50%;
-  display:inline-block; animation:spin .6s linear infinite; vertical-align:middle;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ===================== Т О С Т ===================== */
+/* ===================== TOAST ===================== */
 .toast{
-  position:fixed; padding:8px 10px; background:rgba(0,0,0,.85); color:#fff; border-radius:8px;
-  font-size:12px; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
-  z-index:1000; backdrop-filter:blur(4px);
-  transform:translate(-50%, calc(-100% - 8px));
+  position:fixed; left:50%; top:16px; transform:translateX(-50%) translateY(-16px);
+  opacity:0; transition:transform .2s ease, opacity .2s ease;
+  background:#1f2537; color:#fff; border:1px solid #2e374f; border-radius:10px;
+  padding:10px 12px; z-index:2000; pointer-events:none; font-weight:700; letter-spacing:.2px;
 }
-.toast.show{ opacity:1; }
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
-/* Версия (скрыта на мобиле) */
+/* ===================== В Е Р С И Я ===================== */
 .ver{
-  position:fixed; right:8px; bottom:6px; z-index:1000;
-  font-size:11px; line-height:1; padding:4px 6px; color:#bbb;
-  background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
+  position:fixed; right:12px; bottom:12px; opacity:.5; font-size:12px;
 }
-
-/* ===================== М О Б И Л Ь Н Ы Й  Р Е Ж И М ===================== */
-body.is-mobile .page{ padding:0; }
-body.is-mobile .app{ max_width:none; }
-body.is-mobile .controls{ display:none !important; }
-body.is-mobile{ overflow:hidden; }
-body.is-mobile .wrapper{
-  position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
-  border-radius:0; --wrap-r: 0px;
-}
-body.is-mobile .preview{
-  width:360px;
-  left:50%; top:50%; transform-origin:50% 50%;
-  /* height и transform выставляет JS */
-}
-body.is-mobile .ver{ display:none !important; }
-
-/* ==== Только для режима "с иконки" ==== */
-html.standalone, html.standalone body {
-  background: #000;
-  height: 100%;
-  overflow: hidden;
-}
-
-html.standalone .page,
-html.standalone .app,
-html.standalone #wrapper,
-html.standalone #preview{
-  width: 100vw;
-  height: 100dvh;
-  margin: 0; padding: 0; border: 0;
-}
-
-/* убрать пунктир/рамки ТОЛЬКО в standalone */
-html.standalone .wrapper::after{
-  display: none !important;
-}
-
-/* скрываем только UI, НО НЕ placeholder */
-html.standalone .controls,
-html.standalone .drop-overlay{
-  display: none !important;
-}
-
-/* placeholder оставляем — он исчезает, когда появится контент
-   (классы .has-bg / .has-lottie выставляет JS) */
-
-
-/* стало: фон по ширине, обрезка по высоте */
-html.standalone .bg{
-  position: absolute;
-  inset: 0;
-  overflow: hidden;                    /* важно: обрезка по высоте */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-html.standalone .bg img{
-  position: relative;
-  width: 100vw;                        /* фиксируем по ширине экрана */
-  height: auto;                        /* пропорции сохраняются */
-  /* без max-height — можно выходить за экран и обрезаться контейнером */
-  display: block;
-}
-
-
-/* слой Лотти — пассивный */
-html.standalone .lottie-layer, 
-html.standalone .lot-stage, 
-html.standalone .lottie-mount{ pointer-events:none; }
-
 
 /* ============ STANDALONE fit modes ============ */
 /* Базовая обвязка для обоих режимов */
@@ -273,79 +194,33 @@ html.standalone.fit-safe .lottie-layer{
   top:   env(safe-area-inset-top);
   bottom:env(safe-area-inset-bottom);
 }
-html.standalone.fit-safe .bg img{
-  width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
-  height:auto; display:block;
+
+/* ---- Пример полноэкранного режима для некоторых сценариев (если нужен)
+   Оставляю как было — второй блок .wrapper для спец-режимов */
+.wrapper{
+  position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
+  border-radius:0; --wrap-r: 0px;
 }
 
-/* Лотти остаётся 1:1 и центрируется внутри .lottie-layer */
-html.standalone .lot-stage{
-  position:absolute; left:50%; top:50%;
-  transform: translate(-50%, -50%);
-}
-
-/* Режим JS-центрирования по visualViewport */
-html.standalone.fit-vv .bg,
-html.standalone.fit-vv .lottie-layer{
-  position:absolute; /* точные размеры/позицию задаёт JS */
-}
-
-html.standalone.fit-vv .bg img{
-  width:100%;
-  height:auto;
-  display:block;
-}
-
-
-/* === Update Toast ======================================================== */
-:root{
-  --toast-bg: rgba(15, 18, 24, .82);
-  --toast-fg: #e8f7f0;
-  --toast-accent: #17cfa5;
-  --toast-radius: 14px;
-  --toast-shadow: 0 10px 30px rgba(0,0,0,.35);
-  --toast-enter-ms: 260ms;
-  --toast-stay-ms: 1400ms;
-  --toast-exit-ms: 400ms;
-  --toast-translate: 14px;
-  --toast-offset: 8px;
-  --toast-z: 9999;
-}
+/* ===================== Update-toast (если используется) ===================== */
 .update-toast{
   position: fixed;
   left: 50%;
-  top: calc(env(safe-area-inset-top) + var(--toast-offset));
-  transform: translate(-50%, calc(-1 * var(--toast-translate)));
-  background: var(--toast-bg);
-  color: var(--toast-fg);
-  border-radius: var(--toast-radius);
-  box-shadow: var(--toast-shadow);
-  padding: 10px 14px;
-  z-index: var(--toast-z);
+  bottom: 20px;
+  transform: translate(-50%, 16px);
   opacity: 0;
+  transition: opacity 220ms ease, transform 220ms ease;
+  background: #1f2537;
+  color: #fff;
+  border: 1px solid #2e374f;
+  border-radius: 12px;
+  padding: 12px 14px;
+  z-index: 3000;
   pointer-events: none;
-  backdrop-filter: saturate(120%) blur(10px);
-  -webkit-backdrop-filter: saturate(120%) blur(10px);
-  transition:
-    opacity var(--toast-enter-ms) ease,
-    transform var(--toast-enter-ms) ease;
 }
 .update-toast.show{
-  opacity: 1;
+  opacity:1;
   transform: translate(-50%, 0);
-}
-.update-toast:not(.show){
-  transition:
-    opacity var(--toast-exit-ms) ease,
-    transform var(--toast-exit-ms) ease;
-}
-.update-toast .ut-wrap{
-  display:flex; align-items:center; gap:10px;
-}
-.update-toast .ut-ic{
-  width:18px; height:18px; flex:0 0 18px;
-  fill: var(--toast-accent);
-  filter: drop-shadow(0 1px 0 rgba(0,0,0,.15));
 }
 .update-toast .ut-text{
   font-weight: 600;
@@ -359,39 +234,4 @@ html.standalone.fit-vv .bg img{
     transition: opacity 120ms ease !important;
     transform: translate(-50%, 0) !important;
   }
-}
-
-/* === Placeholder (drag-n-drop) centering fix ==============================
-   Делаем надпись «Перетащите PNG / JSON» по центру области превью,
-   поверх фона и кликов/перетаскиваний (events проходят «сквозь»).
-   ======================================================================= */
-.preview > .ph{
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  z-index: 2;
-  pointer-events: none;
-}
-/* === Placeholder (drag-n-drop) centering fix ============================== */
-.preview > .ph{
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  z-index: 2;          /* поверх .bg и .lottie-layer */
-  pointer-events: none;/* DnD и клики проходят сквозь подсказку */
-}
-/* === Lottie stage must fill preview ===================================== */
-.lot-stage {
-  width: 100%;
-  height: 100%;
 }
