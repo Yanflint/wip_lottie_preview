@@ -48,15 +48,16 @@ function collectRefs() {
 }
 
 // 4) Версия + маленькая ссылка на Viewer
+// В main.js замени applyVersion на:
 function applyVersion(refs) {
   const build = (() => {
     try { return new URL(import.meta.url).searchParams.get('v') || 'dev'; }
     catch { return 'dev'; }
   })();
-  if (refs.verEl) {
-    refs.verEl.innerHTML = `build ${build} <span class="dot">·</span> <a class="ver-link" href="/viewer/launch.html" target="_blank" rel="noopener">viewer</a>`;
-  }
+  const span = document.getElementById('verText');
+  if (span) span.textContent = `build ${build}`;
 }
+
 
 // 5) Init
 window.addEventListener('DOMContentLoaded', async () => {

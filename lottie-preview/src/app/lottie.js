@@ -23,10 +23,13 @@ function detectRetinaFactorFromUrl(url) {
 }
 
 function applyPreviewSizeWeb(refs, logicalW, logicalH) {
-  // Веб-редактор: реальный макет 1:1 в CSS-пикселях.
   if (!refs?.wrapper) return;
   refs.wrapper.style.width = logicalW + 'px';
   refs.wrapper.style.height = logicalH + 'px';
+  if (refs.preview) {
+    refs.preview.style.width = logicalW + 'px';
+    refs.preview.style.height = logicalH + 'px';
+  }
 }
 
 export async function setBackgroundFromSrc(refs, src) {

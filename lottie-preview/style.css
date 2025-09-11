@@ -401,3 +401,32 @@ html.standalone .bg img{
   position:absolute; left:50%; top:50%;
   transform: translate(-50%, -50%);
 }
+/* Жёстко 1:1 на вебе. Никаких автоскейлов и ограничителей размера */
+html:not(.standalone) .page,
+html:not(.standalone) .app,
+html:not(.standalone) .preview,
+html:not(.standalone) .wrapper{
+  transform: none !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+html:not(.standalone) .wrapper,
+html:not(.standalone) .preview{
+  box-sizing: content-box !important; /* чтобы бордер/паддинги не меняли логику 1:1 */
+}
+
+/* фоновое изображение в вебе строго под логический размер,
+   задаётся через inline-ширину wrapper; img растягиваем на 100% этого размера */
+html:not(.standalone) .bg img{
+  width: 100% !important;
+  height: auto !important;
+  display: block !important;
+}
+
+.bg img{
+  border-radius: var(--wrap-r, 16px);
+}
+html.standalone .bg img{
+  border-radius: var(--wrap-r, 16px);
+}
