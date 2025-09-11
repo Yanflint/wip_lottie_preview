@@ -1,15 +1,15 @@
 // src/app/lottie.js
+// Минимальные правки под функционал: авто-пропорции + @2x/@3x и корректное определение мобильного/standalone
 import { state, setLastBgSize } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
 
-/* ========= ENV DETECT (PWA + mobile) ========= */
+/* ========= ENV DETECT: mobile + standalone (без ui-feedback.js) ========= */
 (function detectEnv(){
   try {
     const isStandalone =
       window.matchMedia?.('(display-mode: standalone)')?.matches ||
-      // iOS Safari
       (typeof navigator !== 'undefined' && navigator.standalone === true);
 
     const isMobile =
@@ -17,20 +17,18 @@ let anim = null;
         navigator.userAgent || ''
       );
 
-    if (isStandalone) document.documentElement.classList.add('is-standalone');
-    if (isMobile) document.documentElement.classList.add('is-mobile');
+    if (isStandalone) document.documentElement.classList.add('standalone'); // под старый CSS
+    if (isMobile) document.body.classList.add('is-mobile');                 // под старый CSS
   } catch (_) {}
 })();
 
 /* ========= HELPERS ========= */
 function parseAssetScale(nameOrUrl) {
-  // match @2x, @3x, @1.5x before extension
+  // match @2x, @3x, @1.5x
   const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(\?|#|$))/i);
   if (!m) return 1;
   const s = parseFloat(m[1]);
-  if (!isFinite(s) || s <= 0) return 1;
-  // Ограничим разумными рамками
-  return Math.max(1, Math.min(4, s));
+  return isFinite(s) && s > 0 ? Math.max(1, Math.min(4, s)) : 1;
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
@@ -45,7 +43,7 @@ export function layoutLottie(refs) {
 /**
  * Установка фоновой картинки из data:/blob:/http(s)
  * — считываем naturalWidth/naturalHeight
- * — учитываем @2x/@3x/@1.5x из имени
+ * — учитываем @2x/@3x/@1.5x из имени файла
  * — прокидываем в .wrapper CSS-переменные:
  *     --preview-ar : (w/scale) / (h/scale)
  *     --preview-h  : (h/scale)px
@@ -57,21 +55,17 @@ export function layoutLottie(refs) {
 export async function setBackgroundFromSrc(refs, src, meta = {}) {
   if (!refs?.bgImg) return;
 
-  // Пытаемся вычислить название файла для парсинга @2x
+  // попытка определить имя файла для парсинга @2x
   const guessName = (() => {
-    // при передаче meta.fileName используем его
     if (meta.fileName) return meta.fileName;
-    // попробуем достать из атрибутов, если кто-то положил туда
     const fromAttr = refs.bgImg.getAttribute('data-filename') || refs.bgImg.alt;
     if (fromAttr) return fromAttr;
-    // как крайний случай — попробуем вытащить имя из обычного URL
     try {
       const u = new URL(src);
-      const pathname = u.pathname || '';
-      const base = pathname.split('/').pop();
+      const base = (u.pathname || '').split('/').pop();
       return base || src;
     } catch (_) {
-      return src; // data:/blob: сюда свалится — шанса достать имя нет
+      return src;
     }
   })();
 
@@ -79,13 +73,11 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
-    // Сохраняем фактический размер пикселей
+    // сохраняем фактический размер в пикселях (вдруг нужно ещё где-то)
     setLastBgSize(iw, ih);
 
-    // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
+    // масштаб по имени: mob@2x.png → 2
     const assetScale = parseAssetScale(guessName);
-
-    // Приводим к «CSS-размеру», как это было бы на сайте
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
 
@@ -93,7 +85,6 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     if (wrap) {
       wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
       wrap.style.setProperty('--preview-h', `${cssH}px`);
-      wrap.style.setProperty('--asset-scale', String(assetScale));
       wrap.classList.add('has-bg');
     }
 
@@ -125,7 +116,7 @@ export function setLoop(on) {
 /**
  * Загрузка Lottie из JSON (string|object)
  * — создаём инстанс
- * — задаём габариты стейджа по w/h из JSON
+ * — задаём габариты стейджа по w/h из JSON (1:1 пиксели)
  */
 export async function loadLottieFromData(refs, data) {
   try {

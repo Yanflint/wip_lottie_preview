@@ -3,39 +3,30 @@
   --bg:#0b0c10; --muted:#9aa3b2;
   --accent:#6ee7b7; --accent-orange:#FF7700;
   --preview-bg:#0b0f1a;
-
-  /* запас под панель/отступы, чтобы превью не упиралось в край окна */
-  --controls-space: 150px;
-
+  --controls-space: 150px; /* запас под панель кнопок + отступы */
   /* UI-параметры */
-  --ctl-h: 36px;
-  --btn-font: 13px;
+  --ctl-h: 36px;           /* высота кнопки */
+  --btn-font: 13px;        /* размер шрифта в кнопке */
   --btn-pad-y: 8px;
   --btn-pad-x: 12px;
   --btn-radius: 12px;
-  --wrap-r: 16px;
-  --btn-dim-bg: #525b72;
+  --wrap-r: 16px;          /* радиус короба превью */
+  --btn-dim-bg: #525b72;   /* цвет кнопок ширины/высоты */
 
-  /* расстояние между превью и блоком кнопок */
-  --stack-gap: 16px;
-
-  /* стили уведомлений/подсказок */
-  --toast-bg: rgba(23, 28, 44, .72);
-  --toast-bd: rgba(110, 126, 170, .35);
-  --tip-bg: rgba(23, 28, 44, .90);
-  --tip-bd: rgba(110, 126, 170, .45);
+  /* [ANCHOR:STACK_GAP] — расстояние между превью и блоком кнопок */
+  --stack-gap: 24px;
 }
 
-*{ box-sizing: border-box; }
-html, body{ height:100%; }
+*{box-sizing:border-box}
+html,body{height:100%}
 body{
   margin:0;
-  color:#dce3ef;
-  background:var(--bg);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, Helvetica, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji;
+  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  background:linear-gradient(180deg,#0b0c10,#0f1117);
+  color:#eef2f8;
 }
 
-/* ===================== В Ы Р А В Н И В А Н И Е  С Е Т К И ===================== */
+/* Центрирование контента по экрану */
 .page{
   min-height:100dvh;
   display:grid;
@@ -43,6 +34,7 @@ body{
   padding:16px;
 }
 
+/* ===================== П Р Е В Ь Ю  L O T T I E ===================== */
 .app{
   width:100%;
   max-width:1000px;
@@ -50,32 +42,31 @@ body{
   flex-direction:column;
   align-items:center;
   gap:var(--stack-gap);
-  position:relative; /* для локальных z-index */
-  z-index:0;
 }
 
-/* ===================== П Р Е В Ь Ю  ===================== */
-/* Контейнер превью подстраивается под картинку:
-   --preview-h  : базовая высота (естественная высота картинки в px с учётом @2x/@3x)
-   --preview-ar : соотношение сторон (w/h) уже после деления на scale
-   Фолбэк — старое поведение (800px и 360/800). */
+/* Область превью: базовые размеры как раньше, но с умной подстройкой
+   JS проставляет:
+   --preview-h  : «CSS-высота» (учитывает @2x/@3x)
+   --preview-ar : соотношение сторон (w/h) после деления на scale */
 .wrapper{
   position: relative;
-  z-index: 0;              /* превью ниже контролов */
+
+  /* 🔽 Новое: авто-пропорции с фолбэком на старые значения */
   height: var(--preview-h, 800px);
   aspect-ratio: var(--preview-ar, 360 / 800);
   width: auto;
 
-  /* Влезаем в окно, сохраняя пропорции */
+  /* чтобы всё поместилось без скролла: */
   max-height: calc(100dvh - var(--controls-space));
   max-width:  min(100vw - 32px, 1000px);
 
   border: none; outline: none;
   border-radius: var(--wrap-r);
-  overflow: visible; /* нужно, чтобы пунктир выглядывал наружу */
+  overflow: visible;
 }
 
-/* Пунктирная рамка: не мешает кликам и не перекрывает контролы */
+
+/* Единственная пунктирная рамка */
 .wrapper::after{
   content:"";
   position:absolute;
@@ -83,21 +74,14 @@ body{
   border:2px dashed #2b334a;
   border-radius: calc(var(--wrap-r) + 6px);
   pointer-events:none;
-  z-index:1;
+  z-index:2;
 }
 
-.preview{
-  position:absolute; inset:0;
-  overflow:hidden;
-  z-index:0; /* ниже ::after, но внутри wrapper */
-}
+/* Внутреннее содержимое */
+.preview{ position:absolute; inset:0; overflow:hidden; z-index:1; }
 
 .bg, .lottie-layer{ position:absolute; inset:0; }
-.bg{
-  overflow:hidden; display:flex; align-items:center; justify-content:center;
-}
-
-/* По умолчанию: подгоняем по высоте контейнера (контейнер уже держит aspect-ratio) */
+.bg{ overflow:hidden; display:flex; align-items:center; justify-content:center; }
 .bg img{ display:block; height:100%; width:auto; margin:0 auto; }
 
 .lottie-layer{ overflow:hidden; }
@@ -107,38 +91,38 @@ body{
 }
 .lottie-mount{ width:100%; height:100%; }
 
-/* Плейсхолдер */
+/* Плейсхолдер — центр */
 .placeholder{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  color:var(--muted); font-size:13px; letter-spacing:.2px;
-  background:var(--preview-bg);
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--muted); font-size:13px; letter-spacing:.2px; background:var(--preview-bg);
   border:none; border-radius:12px; text-align:center; padding:12px;
 }
+.placeholder .ph{ display:flex; flex-direction:column; align-items:center; }
+.placeholder .ph-1{ color:#fff; margin-bottom:4px; font-weight:600; }
+.placeholder .ph-2{ color:var(--muted); }
 .placeholder.hidden{ display:none; }
-.placeholder .ph{
-  display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:center;
-}
-.placeholder .ph-1{ font-weight:700; }
-.placeholder .ph-2{ opacity:.8; }
 
-/* DnD-индикатор поверх всего, но только во время dnd */
-.drop-indicator{
-  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-  z-index:1000; pointer-events:none;
-}
-.drop-indicator.active{ display:flex; }
-.drop-indicator .box{
-  color:#fff; background:rgba(0,0,0,.6); border:2px dashed rgba(255,255,255,.5);
-  padding:12px 16px; border-radius:12px; font-weight:700;
-}
+/* Во время перетаскивания скрываем плейсхолдер */
+body.dragging .placeholder{ display:none !important; }
 
-/* ===================== К Н О П К И  ===================== */
+/* ===== Drag&Drop overlay — внутри .wrapper и по центру превью ===== */
+.drop-overlay{
+  position:absolute; inset:0;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.04);
+  z-index:3;
+  pointer-events:none;
+}
+.drop-overlay .box{
+  border:2px dashed #2b334a; color:#ddd; padding:14px 18px; border-radius:10px; font-size:13px;
+  background:rgba(0,0,0,.35);
+}
+body.dragging .drop-overlay{ display:flex; }
+
+/* ===================== К Н О П К И  И  Ч Е К Б О К С ===================== */
 .controls{
   display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
   background:transparent; padding:0; border:none;
-  position: relative;
-  z-index: 5; /* поверх пунктирной рамки и превью */
 }
 
 .btn{
@@ -147,10 +131,10 @@ body{
   font-weight:600; font-size:var(--btn-font); line-height:1;
   min-height:var(--ctl-h);
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  transition:transform .05s ease, opacity .2s ease, filter .2s ease, background-color .2s ease;
+  transition:transform .05s ease, opacity .2s ease, filter .2s ease;
   color:#0b0c10; background:var(--accent);
 }
-.btn:disabled{opacity:.6; cursor:not-allowed}
+.btn:disabled{opacity:.5; cursor:not-allowed}
 .btn:active{transform:translateY(1px)}
 .btn:hover:not(:disabled){ filter:brightness(1.05); }
 
@@ -159,153 +143,114 @@ body{
 
 #sizeBtn, #heightBtn { background:var(--btn-dim-bg); color:#fff; }
 
-/* Спиннер на кнопке (используется на «Поделиться») */
-.btn[data-busy="true"]{
-  position:relative;
-  color:transparent !important;
-}
-.btn[data-busy="true"]::after{
-  content:"";
-  position:absolute; inset:0; margin:auto;
-  width:1.1em; height:1.1em;
-  border-radius:50%;
-  border:2px solid rgba(255,255,255,.8);
-  border-right-color: transparent;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
 .chk{
   display:inline-flex; align-items:center; gap:6px;
   color:#dce3ef; background:#273046; border:1px solid #2e374f;
   border-radius:var(--btn-radius); padding:0 var(--btn-pad-x); min-height:var(--ctl-h);
   font-size:var(--btn-font); line-height:1;
 }
-.chk input{
-  appearance:none; width:16px; height:16px; border-radius:4px;
-  background:#1f2537; border:1px solid #32405f; display:inline-block; position:relative;
-}
-.chk input:checked{ background:#2c8e6a; border-color:#2c8e6a; }
-.chk input:checked::after{ content:""; position:absolute; inset:3px; background:#fff; border-radius:2px; }
+.chk input{ width:14px; height:14px; margin:0; }
 
-/* ===================== TOAST: «Обновлено» ===================== */
-.update-toast{
-  position: fixed;
-  left: 50%;
-  bottom: 20px;
-  transform: translate(-50%, 8px) scale(.98);
-  opacity: 0;
-  transition: opacity 200ms ease, transform 200ms ease;
-  color: #eaf0ff;
-  background: var(--toast-bg);
-  border: 1px solid var(--toast-bd);
-  border-radius: 999px;
-  padding: 10px 14px;
-  z-index: 3000;
-  pointer-events: none;
-  font-weight: 700;
-  letter-spacing: .2px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.28);
-  backdrop-filter: blur(8px);
+/* ===================== Л О У Д Е Р  Н А  « П О Д Е Л И Т Ь С Я » ===================== */
+.btn.loading{ opacity:.95; pointer-events:none; position:relative; }
+.btn.loading::after{
+  content:""; width:14px; height:14px; margin-left:6px;
+  border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff; border-right-color:#fff;
+  border-radius:50%;
+  display:inline-block; animation:spin .6s linear infinite; vertical-align:middle;
 }
-.update-toast.show{
-  opacity:1;
-  transform: translate(-50%, 0) scale(1);
-}
-.update-toast .ut-text{
-  display:inline-flex; align-items:center; gap:8px;
-  font-weight: 700;
-}
-.update-toast .ut-text::before{
-  content:"";
-  width:14px; height:14px; border-radius:50%;
-  border:2px solid #9be7c4;
-  border-top-color: transparent;
-  transform: rotate(45deg);
-  position: relative;
-}
-.update-toast.success .ut-text::before{
-  content:"";
-  width:14px; height:14px;
-  border:none;
-  background:
-    linear-gradient(#9be7c4,#9be7c4) left 4px top 8px / 2px 4px no-repeat,
-    linear-gradient(#9be7c4,#9be7c4) left 6px top 10px / 8px 2px no-repeat;
-  border-radius:2px;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ===================== TOOLTIP: «Ссылка скопирована» ===================== */
-.copy-tip{
-  position: fixed;
-  transform: translate(-50%, -8px);
-  opacity: 0;
-  transition: opacity 160ms ease, transform 160ms ease;
-  color: #eaf0ff;
-  background: var(--tip-bg);
-  border: 1px solid var(--tip-bd);
-  border-radius: 10px;
-  padding: 8px 10px;
-  z-index: 3200;
-  pointer-events: none;
-  font-weight: 600;
-  font-size: 12px;
-  letter-spacing: .2px;
-  box-shadow: 0 6px 16px rgba(0,0,0,.28);
-  backdrop-filter: blur(8px);
-  white-space: nowrap;
+/* ===================== Т О С Т ===================== */
+.toast{
+  position:fixed; padding:8px 10px; background:rgba(0,0,0,.85); color:#fff; border-radius:8px;
+  font-size:12px; opacity:0; pointer-events:none; transition:opacity .15s ease-out;
+  z-index:1000; backdrop-filter:blur(4px);
+  transform:translate(-50%, calc(-100% - 8px));
 }
-.copy-tip.show{
-  opacity: 1;
-  transform: translate(-50%, -12px);
-}
+.toast.show{ opacity:1; }
 
-/* ===================== В Е Р С И Я ===================== */
+/* Версия (скрыта на мобиле) */
 .ver{
-  position:fixed; right:12px; bottom:12px; opacity:.5; font-size:12px;
+  position:fixed; right:8px; bottom:6px; z-index:1000;
+  font-size:11px; line-height:1; padding:4px 6px; color:#bbb;
+  background:rgba(0,0,0,.4); border-radius:6px; pointer-events:none; user-select:none;
 }
 
-/* ============ STANDALONE (домашний экран телефона) ============ */
-/* JS добавляет классы .is-standalone и .is-mobile на <html> */
+/* ===================== М О Б И Л Ь Н Ы Й  Р Е Ж И М ===================== */
+body.is-mobile .page{ padding:0; }
+body.is-mobile .app{ max_width:none; }
+body.is-mobile .controls{ display:none !important; }
+body.is-mobile{ overflow:hidden; }
+body.is-mobile .wrapper{
+  position:fixed; inset:0; width:100vw; height:100dvh; background:#000;
+  border-radius:0; --wrap-r: 0px;
+}
+body.is-mobile .preview{
+  width:360px;
+  left:50%; top:50%; transform-origin:50% 50%;
+  /* height и transform выставляет JS */
+}
+body.is-mobile .ver{ display:none !important; }
 
-html.is-standalone.is-mobile .controls{
-  display:none !important; /* скрыть все контролы */
+/* ==== Только для режима "с иконки" ==== */
+html.standalone, html.standalone body {
+  background: #000;
+  height: 100%;
+  overflow: hidden;
 }
 
-html.is-standalone.is-mobile .page{
-  padding:0; /* убрать внешние отступы */
-  min-height:100dvh;
+html.standalone .page,
+html.standalone .app,
+html.standalone #wrapper,
+html.standalone #preview{
+  width: 100vw;
+  height: 100dvh;
+  margin: 0; padding: 0; border: 0;
 }
 
-html.is-standalone.is-mobile .app{
-  max-width:100vw;
-  gap:0;
+/* убрать пунктир/рамки ТОЛЬКО в standalone */
+html.standalone .wrapper::after{
+  display: none !important;
 }
 
-/* Превью во весь экран телефона, по центру.
-   Если высота макета не влезает — обрежется по вертикали (overflow:hidden).
-   Пропорции не меняем. */
-html.is-standalone.is-mobile .wrapper{
-  height:100dvh;
-  max-height:100dvh;
-  width:100vw;
-  max-width:100vw;
-  margin:0;
-  border-radius:0;
-  overflow:hidden;          /* обрезаем лишнее по краям */
+/* скрываем только UI, НО НЕ placeholder */
+html.standalone .controls,
+html.standalone .drop-overlay{
+  display: none !important;
 }
 
-/* Декор убираем на телефоне */
-html.is-standalone.is-mobile .wrapper::after{ display:none; }
+/* placeholder оставляем — он исчезает, когда появится контент
+   (классы .has-bg / .has-lottie выставляет JS) */
 
-/* Для этого режима картинку подгоняем по ширине экрана,
-   чтобы при высоких макетах шла обрезка по вертикали.
-   Центрирование сохраняется за счёт flex на .bg */
-html.is-standalone.is-mobile .bg img{
-  width:100vw;
-  height:auto;
+
+/* стало: фон по ширине, обрезка по высоте */
+html.standalone .bg{
+  position: absolute;
+  inset: 0;
+  overflow: hidden;                    /* важно: обрезка по высоте */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+html.standalone .bg img{
+  position: relative;
+  width: 100vw;                        /* фиксируем по ширине экрана */
+  height: auto;                        /* пропорции сохраняются */
+  /* без max-height — можно выходить за экран и обрезаться контейнером */
+  display: block;
 }
 
-/* ============ STANDALONE fit modes (как было) ============ */
+
+/* слой Лотти — пассивный */
+html.standalone .lottie-layer, 
+html.standalone .lot-stage, 
+html.standalone .lottie-mount{ pointer-events:none; }
+
+
+/* ============ STANDALONE fit modes ============ */
+/* Базовая обвязка для обоих режимов */
 html.standalone .bg,
 html.standalone .lottie-layer{
   position:absolute;
@@ -315,10 +260,16 @@ html.standalone .lottie-layer{
   justify-content:center;
 }
 
+/* ---- Режим по краям экрана (edge) ---- */
 html.standalone.fit-edge .bg,
-html.standalone.fit-edge .lottie-layer{ inset:0; }
-html.standalone.fit-edge .bg img{ width:100vw; height:auto; display:block; }
+html.standalone.fit-edge .lottie-layer{
+  inset:0;
+}
+html.standalone.fit-edge .bg img{
+  width:100vw; height:auto; display:block;
+}
 
+/* ---- Режим по safe-area (safe) ---- */
 html.standalone.fit-safe .bg,
 html.standalone.fit-safe .lottie-layer{
   left:  env(safe-area-inset-left);
@@ -326,13 +277,89 @@ html.standalone.fit-safe .lottie-layer{
   top:   env(safe-area-inset-top);
   bottom:env(safe-area-inset-bottom);
 }
+html.standalone.fit-safe .bg img{
+  width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+  height:auto; display:block;
+}
 
-/* Меньше анимации */
+/* Лотти остаётся 1:1 и центрируется внутри .lottie-layer */
+html.standalone .lot-stage{
+  position:absolute; left:50%; top:50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Режим JS-центрирования по visualViewport */
+html.standalone.fit-vv .bg,
+html.standalone.fit-vv .lottie-layer{
+  position:absolute; /* точные размеры/позицию задаёт JS */
+}
+
+html.standalone.fit-vv .bg img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+
+/* === Update Toast ======================================================== */
+:root{
+  --toast-bg: rgba(15, 18, 24, .82);
+  --toast-fg: #e8f7f0;
+  --toast-accent: #17cfa5;
+  --toast-radius: 14px;
+  --toast-shadow: 0 10px 30px rgba(0,0,0,.35);
+  --toast-enter-ms: 260ms;
+  --toast-stay-ms: 1400ms;
+  --toast-exit-ms: 400ms;
+  --toast-translate: 14px;
+  --toast-offset: 8px;
+  --toast-z: 9999;
+}
+.update-toast{
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + var(--toast-offset));
+  transform: translate(-50%, calc(-1 * var(--toast-translate)));
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  border-radius: var(--toast-radius);
+  box-shadow: var(--toast-shadow);
+  padding: 10px 14px;
+  z-index: var(--toast-z);
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: saturate(120%) blur(10px);
+  -webkit-backdrop-filter: saturate(120%) blur(10px);
+  transition:
+    opacity var(--toast-enter-ms) ease,
+    transform var(--toast-enter-ms) ease;
+}
+.update-toast.show{
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.update-toast:not(.show){
+  transition:
+    opacity var(--toast-exit-ms) ease,
+    transform var(--toast-exit-ms) ease;
+}
+.update-toast .ut-wrap{
+  display:flex; align-items:center; gap:10px;
+}
+.update-toast .ut-ic{
+  width:18px; height:18px; flex:0 0 18px;
+  fill: var(--toast-accent);
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.15));
+}
+.update-toast .ut-text{
+  font-weight: 600;
+  letter-spacing: .2px;
+}
+
+/* Меньше анимации для тех, кто так предпочитает */
 @media (prefers-reduced-motion: reduce){
   .update-toast,
-  .update-toast.show,
-  .copy-tip,
-  .copy-tip.show{
+  .update-toast.show{
     transition: opacity 120ms ease !important;
     transform: translate(-50%, 0) !important;
   }
