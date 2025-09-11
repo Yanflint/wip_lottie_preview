@@ -34,13 +34,33 @@ function parseAssetScale(nameOrUrl) {
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
-export function layoutLottie(refs) {
-  const stage = refs?.lotStage;
-  if (!stage) return;
-  stage.style.left = '50%';
-  stage.style.top = '50%';
-  stage.style.transform = 'translate(-50%, -50%)';
-}
+
+    export function layoutLottie(refs) {
+      const stage = refs?.lotStage;
+      const preview = refs?.preview || refs?.wrapper || refs?.previewBox;
+      if (!stage || !preview) return;
+
+      const cssW = +((state.lastBgSize && state.lastBgSize.w) || 0);
+      const cssH = +((state.lastBgSize && state.lastBgSize.h) || 0);
+
+      const br = preview.getBoundingClientRect();
+      const realW = br.width || 0;
+      const realH = br.height || 0;
+
+      let fitScale = 1;
+      if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
+        fitScale = Math.min(realW / cssW, realH / cssH);
+        if (!isFinite(fitScale) || fitScale <= 0) fitScale = 1;
+      }
+
+      const x = (window.__lotOffsetX || 0);
+      const y = (window.__lotOffsetY || 0);
+      stage.style.left = '50%';
+      stage.style.top  = '50%';
+      stage.style.transformOrigin = '50% 50%';
+      stage.style.transform = `translate(calc(-50% + ${x*fitScale}px), calc(-50% + ${y*fitScale}px)) scale(${fitScale})`;
+    }
+    
 
 /**
  * Установка фоновой картинки из data:/blob:/http(s)

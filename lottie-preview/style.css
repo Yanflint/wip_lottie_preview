@@ -39,7 +39,7 @@ body{
 
 .app{
   width:100%;
-  max-width:1000px;
+  
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -53,7 +53,7 @@ body{
    --preview-h  : базовая высота (естественная высота картинки в px с учётом @2x/@3x)
    --preview-ar : соотношение сторон (w/h) уже после деления на scale
    Фолбэк — старое поведение (800px и 360/800). */
-.wrapper{
+.wrapper{ width: calc(100vw - 32px);
   position: relative;
   z-index: 0;              /* превью ниже контролов */
   height: var(--preview-h, 800px);
@@ -62,7 +62,7 @@ body{
 
   /* Влезаем в окно, сохраняя пропорции */
   max-height: calc(100dvh - var(--controls-space));
-  max-width:  min(100vw - 32px, 1000px);
+  max-width:  calc(100vw - 32px);
 
   border: none; outline: none;
   border-radius: var(--wrap-r);
@@ -92,7 +92,7 @@ body{
 }
 
 /* По умолчанию: подгоняем по высоте контейнера (контейнер уже держит aspect-ratio) */
-.bg img{ display:block; height:100%; width:auto; margin:0 auto; }
+.bg img{ display:block; height:100%; width:auto; margin:0 auto;  object-fit: contain;}
 
 .lottie-layer{ overflow:hidden; }
 .lot-stage{
@@ -200,7 +200,7 @@ html.is-standalone.is-mobile .app{
 /* Превью во весь экран телефона, по центру.
    Если высота макета не влезает — обрежется по вертикали (overflow:hidden).
    Пропорции не меняем. */
-html.is-standalone.is-mobile .wrapper{
+html.is-standalone.is-mobile .wrapper{ width: calc(100vw - 32px);
   height:100dvh;
   max-height:100dvh;
   width:100vw;
