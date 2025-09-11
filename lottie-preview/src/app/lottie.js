@@ -63,21 +63,6 @@ export function layoutLottie(refs) {
   stage.style.transformOrigin = '50% 50%';
   stage.style.transform = `translate(calc(-50% + ${xpx}px), calc(-50% + ${ypx}px)) scale(${fitScale})`;
 }
-
-  // Смещение в логических пикселях (до масштабирования)
-  const x = (window.__lotOffsetX || 0);
-  const y = (window.__lotOffsetY || 0);
-
-  // Применяем: сначала центрирование, затем смещение * scale, затем масштаб
-  stage.style.left = '50%';
-  stage.style.top  = '50%';
-  stage.style.transformOrigin = '50% 50%';
-  stage.style.setProperty('--fit-scale', String(fitScale));
-  stage.style.setProperty('--lot-x-px', (x * fitScale) + 'px');
-  stage.style.setProperty('--lot-y-px', (y * fitScale) + 'px');
-  stage.style.transform = 'translate(calc(-50% + var(--lot-x-px, 0px)), calc(-50% + var(--lot-y-px, 0px))) scale(var(--fit-scale, 1))';
-}
-
 /**
  * Установка фоновой картинки из data:/blob:/http(s)
  * — считываем naturalWidth/naturalHeight
