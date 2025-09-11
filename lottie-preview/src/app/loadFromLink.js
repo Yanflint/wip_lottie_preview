@@ -1,9 +1,7 @@
-// Загружаем по /s/:id. Если id нет и это standalone, пробуем "последний" снимок.
-// Флаг цикла (opts.loop) применяем до создания анимации.
+// src/app/loadFromLink.js
 import { setPlaceholderVisible } from './utils.js';
-import { setLastLottie, state } from './state.js';
+import { setLastLottie, state, setBgDPR } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
-import { loadPinned } from './pinned.js';
 
 function getShareIdFromLocation() {
   const m = location.pathname.match(/\/s\/([^/?#]+)/);
@@ -14,7 +12,7 @@ function getShareIdFromLocation() {
 }
 
 function applyLoopFromPayload(refs, data) {
-  if (data && data.opts && typeof data.opts.loop === 'boolean') {
+  if (data?.opts && typeof data.opts.loop === 'boolean') {
     state.loopOn = !!data.opts.loop;
     if (refs?.loopChk) refs.loopChk.checked = state.loopOn;
   }
@@ -23,16 +21,18 @@ function applyLoopFromPayload(refs, data) {
 async function applyPayload(refs, data) {
   if (!data || typeof data !== 'object') return false;
 
-  // ВАЖНО: сначала применяем флаг цикла
   applyLoopFromPayload(refs, data);
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
-    if (src) await setBackgroundFromSrc(refs, src);
+    const dpr = Number(data.bgMeta?.dpr || 0);
+    if (dpr) setBgDPR(dpr);
+    if (src) await setBackgroundFromSrc(refs, src, { dpr });
   }
+
   if (data.lot) {
     setLastLottie(data.lot);
-    await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
+    await loadLottieFromData(refs, data.lot);
   }
 
   setPlaceholderVisible(refs, false);
@@ -43,34 +43,14 @@ async function applyPayload(refs, data) {
 export async function initLoadFromLink({ refs, isStandalone }) {
   setPlaceholderVisible(refs, true);
 
-  // 1) Пробуем id из URL
   const id = getShareIdFromLocation();
   if (id) {
     try {
-      const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
+      const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
       if (r.ok) {
         const data = await r.json().catch(() => null);
         if (await applyPayload(refs, data)) return;
       }
-    } catch (e) { console.error('share GET error', e); }
+    } catch {}
   }
-
-  // 2) Если ярлык — тянем "последний" снимок с сервера
-  if (isStandalone) {
-    try {
-      const r = await fetch('/api/share?id=last', { cache: 'no-store' });
-      if (r.ok) {
-        const data = await r.json().catch(() => null);
-        if (await applyPayload(refs, data)) return;
-      }
-    } catch (e) { console.error('last GET error', e); }
-  }
-
-  // 3) Резерв: локальный pinned
-  if (isStandalone) {
-    const pinned = loadPinned();
-    if (pinned && await applyPayload(refs, pinned)) return;
-  }
-
-  // 4) Ничего не нашли — остаётся плейсхолдер
 }
