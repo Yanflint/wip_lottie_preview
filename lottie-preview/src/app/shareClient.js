@@ -80,11 +80,7 @@ async function buildPayload(refs) {
       bg = { kind: 'url', value: maybeData, name: metaNow.fileName, assetScale: metaNow.assetScale };
     }
   }
-;
-    } else if (maybeData) {
-      bg = { kind: 'url', value: maybeData, name: (state.lastBgMeta?.fileName || ''), assetScale: (state.lastBgMeta?.assetScale || undefined) };
-    }
-  }
+
 
   // ВАЖНО: передаём флаг цикла
   const opts = { loop: !!state.loopOn };
