@@ -1,4 +1,3 @@
-// src/app/main.js
 import { state } from './state.js';
 import { initDnd }           from './dnd.js';
 import { initControls }      from './controls.js';
@@ -8,7 +7,7 @@ import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js';
 import { showToastIfFlag }   from './updateToast.js';
 
-// 1) Определяем standalone (A2HS)
+// A2HS?
 const isStandalone =
   (window.matchMedia &&
     (window.matchMedia('(display-mode: standalone)').matches ||
@@ -18,17 +17,12 @@ const isStandalone =
 if (isStandalone) document.documentElement.classList.add('standalone');
 state.isStandalone = isStandalone;
 
-// 2) Это режим просмотра (открыт шот /s/:id)?
+// Viewer-страница только когда путь начинается с /s/
 function isViewerPage() {
-  try {
-    const p = location.pathname;
-    if (p.startsWith('/s/')) return true;
-    const q = new URL(location.href).searchParams.get('id');
-    return !!q;
-  } catch { return false; }
+  try { return location.pathname.startsWith('/s/'); } catch { return false; }
 }
 
-// 3) DOM-refs
+// DOM refs
 function collectRefs() {
   return {
     wrapper:      document.getElementById('wrapper'),
@@ -47,50 +41,56 @@ function collectRefs() {
   };
 }
 
-// 4) Версия + маленькая ссылка на Viewer
-// В main.js замени applyVersion на:
-function applyVersion(refs) {
-  const build = (() => {
-    try { return new URL(import.meta.url).searchParams.get('v') || 'dev'; }
-    catch { return 'dev'; }
-  })();
+// Версия (надёжнее вытаскиваем v)
+function detectBuildVersion() {
+  // 1) из import.meta.url
+  try {
+    const v = new URL(import.meta.url).searchParams.get('v');
+    if (v) return v;
+  } catch {}
+  // 2) из тега script
+  try {
+    const s = document.querySelector('script[type="module"][src*="/src/app/main.js"]');
+    if (s) {
+      const v2 = new URL(s.src).searchParams.get('v');
+      if (v2) return v2;
+    }
+  } catch {}
+  return 'dev';
+}
+function applyVersion() {
   const span = document.getElementById('verText');
-  if (span) span.textContent = `build ${build}`;
+  if (span) span.textContent = `build ${detectBuildVersion()}`;
 }
 
-
-// 5) Init
 window.addEventListener('DOMContentLoaded', async () => {
-  const refs = collectRefs();
-  applyVersion(refs);
+  applyVersion();
   showToastIfFlag();
-
-  // Авто-рефреш для /s/last
   initAutoRefreshIfViewingLast();
 
-  // Если это просмотр (/s/:id) — прячем UI и рамки
+  const refs = collectRefs();
+
+  // В режиме просмотра убираем UI/рамки
   if (isViewerPage()) {
     document.documentElement.classList.add('view-mode');
   }
 
   await initLoadFromLink({ refs, isStandalone });
 
-  // Только в редакторе нужен DnD и Share
+  // Только в редакторе включаем DnD и Share
   if (!isViewerPage()) {
     initDnd({ refs });
     initShare({ refs, isStandalone });
   }
 
-  // Контролы (restart/loop) доступны везде
   initControls({ refs });
 
-  // Перелайаут
   const relayout = () => { try { layoutLottie(refs); } catch {} };
   try { layoutLottie(refs); } catch {}
   window.addEventListener('resize', relayout, { passive: true });
   window.addEventListener('orientationchange', relayout, { passive: true });
 
-  // Тап по превью = повтор (в любом режиме)
+  // Тап по превью = перезапуск (в любом режиме)
   const restartByTap = (e) => {
     const isTouch = e.pointerType ? (e.pointerType === 'touch') : (e.touches && e.touches.length === 1);
     if (!isTouch && !isStandalone) return;

@@ -465,3 +465,7 @@ html:not(.standalone) .bg img{
 /* Скругления фона и на мобе */
 .bg img{ border-radius: var(--wrap-r, 16px); }
 html.standalone .bg img{ border-radius: var(--wrap-r, 16px); }
+
+/* DnD overlay safety */
+.drop-overlay{ pointer-events: none; opacity: 0; transition: opacity .15s ease; }
+.drop-overlay.on{ pointer-events: auto; opacity: 1; }

@@ -1,4 +1,3 @@
-// src/app/dnd.js
 import { setBackgroundFromSrc, loadLottieFromData } from './lottie.js';
 import { setPlaceholderVisible } from './utils.js';
 import { setBgDPR } from './state.js';
@@ -12,28 +11,33 @@ export function initDnd({ refs }) {
   const host = refs?.wrapper || document.body;
   const overlay = refs?.dropOverlay;
 
+  // Глобально запрещаем дефолтное поведение (чтобы браузер не «открывал» файл)
+  const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+  window.addEventListener('dragover', prevent);
+  window.addEventListener('drop', prevent);
+
+  let depth = 0;
   const showOverlay = () => overlay && overlay.classList.add('on');
-  const hideOverlay = () => overlay && overlay.classList.remove('on');
+  const hideOverlay = () => {
+    depth = 0;
+    overlay && overlay.classList.remove('on');
+  };
 
-  function prevent(e) { e.preventDefault(); e.stopPropagation(); }
-
-  host.addEventListener('dragenter', (e) => { prevent(e); showOverlay(); });
+  host.addEventListener('dragenter', (e) => { prevent(e); depth++; showOverlay(); });
   host.addEventListener('dragover',  (e) => { prevent(e); showOverlay(); });
-  host.addEventListener('dragleave', (e) => { prevent(e); hideOverlay(); });
+  host.addEventListener('dragleave', (e) => { prevent(e); depth--; if (depth <= 0) hideOverlay(); });
   host.addEventListener('drop', async (e) => {
     prevent(e); hideOverlay();
+
     const files = Array.from(e.dataTransfer?.files || []);
     if (!files.length) return;
 
-    // Берём лучшую пару: одно изображение + один JSON
     const imgFile = files.find(f => f.type.startsWith('image/'));
     const lotFile = files.find(f => f.type === 'application/json' || f.name.toLowerCase().endsWith('.json'));
 
     if (imgFile) {
-      // DPR по имени: @2x/@3x
       const dpr = parseDprFromName(imgFile.name);
       setBgDPR(dpr);
-
       const url = URL.createObjectURL(imgFile);
       await setBackgroundFromSrc(refs, url, { name: imgFile.name, dpr });
       setPlaceholderVisible(refs, false);
