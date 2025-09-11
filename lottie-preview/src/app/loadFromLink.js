@@ -1,6 +1,7 @@
-// src/app/loadFromLink.js
+// Загружаем по /s/:id. Если id нет и это standalone, пробуем "последний" снимок.
+// Флаг цикла (opts.loop) применяем до создания анимации.
 import { setPlaceholderVisible } from './utils.js';
-import { setLastLottie, state, setBgDPR } from './state.js';
+import { setLastLottie, state } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 import { loadPinned } from './pinned.js';
 
@@ -22,17 +23,16 @@ function applyLoopFromPayload(refs, data) {
 async function applyPayload(refs, data) {
   if (!data || typeof data !== 'object') return false;
 
+  // ВАЖНО: сначала применяем флаг цикла
   applyLoopFromPayload(refs, data);
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
-    const dpr = data.bgMeta?.dpr ? Number(data.bgMeta.dpr) : 1;
-    setBgDPR(dpr);
-    if (src) await setBackgroundFromSrc(refs, src, { dpr });
+    if (src) await setBackgroundFromSrc(refs, src);
   }
   if (data.lot) {
     setLastLottie(data.lot);
-    await loadLottieFromData(refs, data.lot);
+    await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
   }
 
   setPlaceholderVisible(refs, false);
@@ -43,6 +43,7 @@ async function applyPayload(refs, data) {
 export async function initLoadFromLink({ refs, isStandalone }) {
   setPlaceholderVisible(refs, true);
 
+  // 1) Пробуем id из URL
   const id = getShareIdFromLocation();
   if (id) {
     try {
@@ -54,6 +55,7 @@ export async function initLoadFromLink({ refs, isStandalone }) {
     } catch (e) { console.error('share GET error', e); }
   }
 
+  // 2) Если ярлык — тянем "последний" снимок с сервера
   if (isStandalone) {
     try {
       const r = await fetch('/api/share?id=last', { cache: 'no-store' });
@@ -64,8 +66,11 @@ export async function initLoadFromLink({ refs, isStandalone }) {
     } catch (e) { console.error('last GET error', e); }
   }
 
+  // 3) Резерв: локальный pinned
   if (isStandalone) {
     const pinned = loadPinned();
     if (pinned && await applyPayload(refs, pinned)) return;
   }
+
+  // 4) Ничего не нашли — остаётся плейсхолдер
 }

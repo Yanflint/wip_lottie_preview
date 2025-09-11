@@ -1,13 +1,6 @@
-import { state } from './state.js';
-import { initDnd }           from './dnd.js';
-import { initControls }      from './controls.js';
-import { initShare }         from './shareClient.js';
-import { initLoadFromLink }  from './loadFromLink.js';
-import { layoutLottie }      from './lottie.js';
-import { initAutoRefreshIfViewingLast } from './autoRefresh.js';
-import { showToastIfFlag }   from './updateToast.js';
+// src/app/main.js
 
-// A2HS?
+// 1) Отметка standalone (A2HS)
 const isStandalone =
   (window.matchMedia &&
     (window.matchMedia('(display-mode: standalone)').matches ||
@@ -15,14 +8,17 @@ const isStandalone =
   (navigator.standalone === true);
 
 if (isStandalone) document.documentElement.classList.add('standalone');
-state.isStandalone = isStandalone;
 
-// Viewer-страница только когда путь начинается с /s/
-function isViewerPage() {
-  try { return location.pathname.startsWith('/s/'); } catch { return false; }
-}
+// 2) Импорты модулей
+import { initDnd }           from './dnd.js';
+import { initControls }      from './controls.js';
+import { initShare }         from './shareClient.js';
+import { initLoadFromLink }  from './loadFromLink.js';
+import { layoutLottie }      from './lottie.js';
+import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
+import { showToastIfFlag } from './updateToast.js';
 
-// DOM refs
+// 3) DOM-refs
 function collectRefs() {
   return {
     wrapper:      document.getElementById('wrapper'),
@@ -32,6 +28,8 @@ function collectRefs() {
     bgImg:        document.getElementById('bgImg'),
     lotStage:     document.getElementById('lotStage'),
     lottieMount:  document.getElementById('lottie'),
+    sizeBtn:      document.getElementById('sizeBtn'),
+    heightBtn:    document.getElementById('heightBtn'),
     restartBtn:   document.getElementById('restartBtn'),
     loopChk:      document.getElementById('loopChk'),
     shareBtn:     document.getElementById('shareBtn'),
@@ -41,56 +39,39 @@ function collectRefs() {
   };
 }
 
-// Версия (надёжнее вытаскиваем v)
-function detectBuildVersion() {
-  // 1) из import.meta.url
+// 4) Версия
+function applyVersion(refs) {
   try {
-    const v = new URL(import.meta.url).searchParams.get('v');
-    if (v) return v;
-  } catch {}
-  // 2) из тега script
-  try {
-    const s = document.querySelector('script[type="module"][src*="/src/app/main.js"]');
-    if (s) {
-      const v2 = new URL(s.src).searchParams.get('v');
-      if (v2) return v2;
-    }
-  } catch {}
-  return 'dev';
-}
-function applyVersion() {
-  const span = document.getElementById('verText');
-  if (span) span.textContent = `build ${detectBuildVersion()}`;
-}
-
-window.addEventListener('DOMContentLoaded', async () => {
-  applyVersion();
-  showToastIfFlag();
-  initAutoRefreshIfViewingLast();
-
-  const refs = collectRefs();
-
-  // В режиме просмотра убираем UI/рамки
-  if (isViewerPage()) {
-    document.documentElement.classList.add('view-mode');
+    const u = new URL(import.meta.url);
+    const v = u.searchParams.get('v') || 'dev';
+    if (refs.verEl) refs.verEl.textContent = `build ${v}`;
+  } catch {
+    if (refs.verEl) refs.verEl.textContent = 'build dev';
   }
+}
+
+// 5) Init
+window.addEventListener('DOMContentLoaded', async () => {
+  const refs = collectRefs();
+  applyVersion(refs);
+showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
+
+  // Авто-рефреш для /s/last (Viewer)
+  initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
   await initLoadFromLink({ refs, isStandalone });
 
-  // Только в редакторе включаем DnD и Share
-  if (!isViewerPage()) {
-    initDnd({ refs });
-    initShare({ refs, isStandalone });
-  }
-
+  initDnd({ refs });
   initControls({ refs });
+  initShare({ refs, isStandalone });
 
+  // Перелайаут
   const relayout = () => { try { layoutLottie(refs); } catch {} };
   try { layoutLottie(refs); } catch {}
   window.addEventListener('resize', relayout, { passive: true });
   window.addEventListener('orientationchange', relayout, { passive: true });
 
-  // Тап по превью = перезапуск (в любом режиме)
+  // Тап = перезапуск (если было добавлено ранее)
   const restartByTap = (e) => {
     const isTouch = e.pointerType ? (e.pointerType === 'touch') : (e.touches && e.touches.length === 1);
     if (!isTouch && !isStandalone) return;
