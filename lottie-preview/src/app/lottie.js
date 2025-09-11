@@ -24,13 +24,19 @@ let anim = null;
 
 /* ========= HELPERS ========= */
 function parseAssetScale(nameOrUrl) {
-  // match @2x, @3x, @1.5x before extension
-  const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(\?|#|$))/i);
-  if (!m) return 1;
-  const s = parseFloat(m[1]);
-  if (!isFinite(s) || s <= 0) return 1;
-  // Ограничим разумными рамками
-  return Math.max(1, Math.min(4, s));
+  try {
+    const base = String(nameOrUrl || '').split('/').pop();
+    const noHash = base.split('#')[0];
+    const noQuery = noHash.split('?')[0];
+    const dot = noQuery.lastIndexOf('.');
+    const stem = dot >= 0 ? noQuery.slice(0, dot) : noQuery;
+    // Ищем @Nx где N — число, без жёсткой привязки к расширению
+    const m = stem.match(/@([0-9]+(?:\.[0-9]+)?)x/i);
+    if (!m) return 1;
+    const s = parseFloat(m[1]);
+    if (!isFinite(s) || s <= 0) return 1;
+    return Math.max(1, Math.min(4, s));
+  } catch { return 1; }
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */

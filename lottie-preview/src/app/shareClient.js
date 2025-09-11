@@ -47,9 +47,16 @@ async function buildPayload(refs) {
   
   // Собираем метаданные фона прямо сейчас, чтобы не тащить устаревшее из state
   function _parseAssetScale(name) {
-    const m = String(name||'').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(?:[?#]|$))/i);
-    return m ? parseFloat(m[1]) : 1;
-  }
+  try {
+    const base = String(name||'').split('/').pop();
+    const noHash = base.split('#')[0];
+    const noQuery = noHash.split('?')[0];
+    const dot = noQuery.lastIndexOf('.');
+    const stem = dot >= 0 ? noQuery.slice(0, dot) : noQuery;
+    const m = stem.match(/@([0-9]+(?:\.[0-9]+)?)x/i);
+    return m ? Math.max(1, Math.min(4, parseFloat(m[1]) || 1)) : 1;
+  } catch { return 1; }
+}
   function _currentBgMeta(el){
     let fileName = '';
     if (el) {
