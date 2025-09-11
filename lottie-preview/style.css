@@ -50,8 +50,8 @@ body{
 
 /* ===================== П Р Е В Ь Ю  ===================== */
 /* Контейнер превью подстраивается под картинку:
-   --preview-h  : базовая высота (естественная высота картинки в px)
-   --preview-ar : соотношение сторон (w / h)
+   --preview-h  : базовая высота (естественная высота картинки в px с учётом @2x/@3x)
+   --preview-ar : соотношение сторон (w/h) уже после деления на scale
    Фолбэк — старое поведение (800px и 360/800). */
 .wrapper{
   position: relative;
@@ -91,7 +91,7 @@ body{
   overflow:hidden; display:flex; align-items:center; justify-content:center;
 }
 
-/* Контейнер уже «подогнан» по aspect-ratio, поэтому просто заполняем высоту */
+/* По умолчанию: подгоняем по высоте контейнера (контейнер уже держит aspect-ratio) */
 .bg img{ display:block; height:100%; width:auto; margin:0 auto; }
 
 .lottie-layer{ overflow:hidden; }
@@ -180,7 +180,48 @@ body{
   position:fixed; right:12px; bottom:12px; opacity:.5; font-size:12px;
 }
 
-/* ============ STANDALONE fit modes (сохранены) ============ */
+/* ============ STANDALONE (домашний экран телефона) ============ */
+/* JS добавляет классы .is-standalone и .is-mobile на <html> */
+
+html.is-standalone.is-mobile .controls{
+  display:none !important; /* скрыть все контролы */
+}
+
+html.is-standalone.is-mobile .page{
+  padding:0; /* убрать внешние отступы */
+  min-height:100dvh;
+}
+
+html.is-standalone.is-mobile .app{
+  max-width:100vw;
+  gap:0;
+}
+
+/* Превью во весь экран телефона, по центру.
+   Если высота макета не влезает — обрежется по вертикали (overflow:hidden).
+   Пропорции не меняем. */
+html.is-standalone.is-mobile .wrapper{
+  height:100dvh;
+  max-height:100dvh;
+  width:100vw;
+  max-width:100vw;
+  margin:0;
+  border-radius:0;
+  overflow:hidden;          /* обрезаем лишнее по краям */
+}
+
+/* Декор убираем на телефоне */
+html.is-standalone.is-mobile .wrapper::after{ display:none; }
+
+/* Для этого режима картинку подгоняем по ширине экрана,
+   чтобы при высоких макетах шла обрезка по вертикали.
+   Центрирование сохраняется за счёт flex на .bg */
+html.is-standalone.is-mobile .bg img{
+  width:100vw;
+  height:auto;
+}
+
+/* ============ STANDALONE fit modes (как было) ============ */
 html.standalone .bg,
 html.standalone .lottie-layer{
   position:absolute;
@@ -190,12 +231,10 @@ html.standalone .lottie-layer{
   justify-content:center;
 }
 
-/* Режим по краям экрана (edge) */
 html.standalone.fit-edge .bg,
 html.standalone.fit-edge .lottie-layer{ inset:0; }
 html.standalone.fit-edge .bg img{ width:100vw; height:auto; display:block; }
 
-/* Режим по safe-area (safe) */
 html.standalone.fit-safe .bg,
 html.standalone.fit-safe .lottie-layer{
   left:  env(safe-area-inset-left);
