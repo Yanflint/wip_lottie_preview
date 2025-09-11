@@ -7,34 +7,35 @@ let anim = null;
 export function layoutLottie(refs) {
   const stage = refs?.lotStage;
   if (!stage) return;
+  stage.style.position = 'absolute';
   stage.style.left = '50%';
   stage.style.top = '50%';
   stage.style.transform = 'translate(-50%, -50%)';
 }
 
-function detectRetinaFactorFromUrl(url) {
-  try {
-    const u = new URL(url, location.href);
-    const name = u.pathname.split('/').pop() || '';
-    const m = name.match(/@([23])x(\.[a-z0-9]+)?$/i) || name.match(/@([23])x(?=\.)/i);
-    if (m && m[1]) return parseInt(m[1], 10);
-  } catch {}
-  return 1;
+function detectRetinaFactorFromNameOrUrl(nameOrUrl = '') {
+  const m = String(nameOrUrl).match(/@([23])x(?=\.|$)/i);
+  return m ? Number(m[1]) : 1;
 }
 
 function applyPreviewSizeWeb(refs, logicalW, logicalH) {
   if (!refs?.wrapper) return;
-  refs.wrapper.style.width = logicalW + 'px';
+  // wrapper и preview — строго 1:1 (CSS-пиксели)
+  refs.wrapper.style.width  = logicalW + 'px';
   refs.wrapper.style.height = logicalH + 'px';
   if (refs.preview) {
-    refs.preview.style.width = logicalW + 'px';
+    refs.preview.style.width  = logicalW + 'px';
     refs.preview.style.height = logicalH + 'px';
   }
 }
 
-export async function setBackgroundFromSrc(refs, src) {
+export async function setBackgroundFromSrc(refs, src, options = {}) {
   if (!refs?.bgImg) return;
   const img = refs.bgImg;
+
+  // Подсказки: dpr/name из DnD; иначе попытаемся из URL; fallback: 1
+  const hintDpr  = options.dpr || state.bgDPR || 1;
+  const hintName = options.name || '';
 
   img.onload = () => {
     setPlaceholderVisible(refs, false);
@@ -43,23 +44,29 @@ export async function setBackgroundFromSrc(refs, src) {
     const natW = img.naturalWidth || img.width || 1;
     const natH = img.naturalHeight || img.height || 1;
 
-  if (!state.isStandalone) {
-    // Веб: учитываем @2x/@3x → логический размер = natural / factor
-    const factor = detectRetinaFactorFromUrl(img.src);
-    const logicalW = Math.round(natW / factor);
-    const logicalH = Math.round(natH / factor);
-    applyPreviewSizeWeb(refs, logicalW, logicalH);
+    // Определяем DPR (приоритет: state.bgDPR → hint → имя/URL → 1)
+    let dpr = state.bgDPR || hintDpr || 1;
+    if (dpr === 1) {
+      // если state/hint не подсказали — попробуем по имени/URL
+      dpr = detectRetinaFactorFromNameOrUrl(hintName) || detectRetinaFactorFromNameOrUrl(img.src) || 1;
+    }
 
-    img.style.width = '100%';
-    img.style.height = 'auto';
-    img.style.display = 'block';
-  } else {
-    // Standalone: подгон по ширине экрана
-    img.style.width = '100vw';
-    img.style.height = 'auto';
-    img.style.display = 'block';
-}
+    // Логический размер (CSS px) для веб-режима: natural / dpr
+    if (!state.isStandalone) {
+      const logicalW = Math.max(1, Math.round(natW / dpr));
+      const logicalH = Math.max(1, Math.round(natH / dpr));
+      applyPreviewSizeWeb(refs, logicalW, logicalH);
 
+      // Картинка заполняет wrapper (1:1)
+      img.style.width = '100%';
+      img.style.height = 'auto';
+      img.style.display = 'block';
+    } else {
+      // Standalone: ширина экрана, обрезка по высоте контейнером
+      img.style.width = '100vw';
+      img.style.height = 'auto';
+      img.style.display = 'block';
+    }
   };
 
   img.onerror = () => {};

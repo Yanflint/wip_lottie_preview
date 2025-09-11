@@ -430,3 +430,38 @@ html:not(.standalone) .bg img{
 html.standalone .bg img{
   border-radius: var(--wrap-r, 16px);
 }
+
+
+/* Версия + памятка про viewer */
+.ver { opacity:.6; font-size:12px; }
+.ver .dot{ opacity:.5; margin:0 .3em; }
+.ver .ver-note{
+  opacity:.75;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  user-select: text;
+}
+
+/* Жёсткий 1:1 на вебе */
+html:not(.standalone) .page,
+html:not(.standalone) .app,
+html:not(.standalone) .preview,
+html:not(.standalone) .wrapper{
+  transform: none !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+html:not(.standalone) .wrapper,
+html:not(.standalone) .preview{
+  box-sizing: content-box !important;
+}
+
+/* Фон заполняет wrapper */
+html:not(.standalone) .bg img{
+  width: 100% !important;
+  height: auto !important;
+  display: block !important;
+}
+
+/* Скругления фона и на мобе */
+.bg img{ border-radius: var(--wrap-r, 16px); }
+html.standalone .bg img{ border-radius: var(--wrap-r, 16px); }

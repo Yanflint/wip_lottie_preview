@@ -1,6 +1,6 @@
 // src/app/loadFromLink.js
 import { setPlaceholderVisible } from './utils.js';
-import { setLastLottie, state } from './state.js';
+import { setLastLottie, state, setBgDPR } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 import { loadPinned } from './pinned.js';
 
@@ -26,7 +26,9 @@ async function applyPayload(refs, data) {
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
-    if (src) await setBackgroundFromSrc(refs, src);
+    const dpr = data.bgMeta?.dpr ? Number(data.bgMeta.dpr) : 1;
+    setBgDPR(dpr);
+    if (src) await setBackgroundFromSrc(refs, src, { dpr });
   }
   if (data.lot) {
     setLastLottie(data.lot);
