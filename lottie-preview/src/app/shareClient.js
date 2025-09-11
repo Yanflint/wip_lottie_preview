@@ -12,6 +12,44 @@ async function postJSON(url, data) {
   return r.json();
 }
 
+function buildShareUrl(id) {
+  const base = `${location.origin}/s/${encodeURIComponent(id)}`;
+  try {
+    const cur = new URL(location.href);
+    const fit = cur.searchParams.get('fit');
+    return fit ? `${base}?fit=${encodeURIComponent(fit)}` : base;
+  } catch {
+    return base;
+  }
+}
+
+async function copyTextFallback(text) {
+  // Пытаемся writeText
+  try {
+    await navigator.clipboard.writeText(String(text));
+    return true;
+  } catch {}
+  // Классический трюк со скрытым input
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = String(text);
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    ta.style.pointerEvents = 'none';
+    ta.style.zIndex = '-1';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    if (ok) return true;
+  } catch {}
+  // Совсем крайний случай — покажем alert, чтобы можно было скопировать вручную
+  try { alert(String(text)); } catch {}
+  return false;
+}
+
 export function initShare({ refs, isStandalone }) {
   const btn = refs?.shareBtn;
   if (!btn) return;
@@ -33,24 +71,16 @@ export function initShare({ refs, isStandalone }) {
       opts: { loop: !!state.loopOn },
     };
 
+    // 1) Сохраняем на бэке
     const res = await postJSON('/api/share', payload);
-    const id = res?.id;
+    const id = res && res.id ? String(res.id) : '';
     if (!id) throw new Error('no id');
 
-    const url = new URL(location.origin + '/s/' + id);
-    // прокинем текущий fit, если есть
-    try {
-      const cur = new URL(location.href);
-      const fit = cur.searchParams.get('fit');
-      if (fit) url.searchParams.set('fit', fit);
-    } catch {}
+    // 2) Строго собираем СТРОКУ ссылки
+    const shareUrl = buildShareUrl(id); // всегда обычная строка
 
-    // Копируем в буфер
-    try {
-      await navigator.clipboard.writeText(url.toString());
-      toast(refs, 'Ссылка скопирована');
-    } catch {
-      toast(refs, url.toString());
-    }
+    // 3) Копируем надёжно
+    const ok = await copyTextFallback(shareUrl);
+    toast(refs, ok ? 'Ссылка скопирована' : shareUrl);
   }));
 }
