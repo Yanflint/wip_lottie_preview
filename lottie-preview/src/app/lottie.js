@@ -1,17 +1,15 @@
 // src/app/lottie.js
-// Стабильный вариант: автопропорции + поддержка @2x/@3x, корректное mobile/standalone.
-// Ничего лишнего — только то, что влияет на превью.
-
 import { state, setLastBgSize } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
 
-/* ========= ENV DETECT: mobile + standalone ========= */
+/* ========= ENV DETECT (PWA + mobile) ========= */
 (function detectEnv(){
   try {
     const isStandalone =
       window.matchMedia?.('(display-mode: standalone)')?.matches ||
+      // iOS Safari
       (typeof navigator !== 'undefined' && navigator.standalone === true);
 
     const isMobile =
@@ -26,11 +24,13 @@ let anim = null;
 
 /* ========= HELPERS ========= */
 function parseAssetScale(nameOrUrl) {
-  // распознаём @2x, @3x, @1.5x
-  const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(?:[?#]|$))/i);
+  // match @2x, @3x, @1.5x before extension
+  const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(\?|#|$))/i);
   if (!m) return 1;
   const s = parseFloat(m[1]);
-  return isFinite(s) && s > 0 ? Math.min(Math.max(1, s), 4) : 1;
+  if (!isFinite(s) || s <= 0) return 1;
+  // Ограничим разумными рамками
+  return Math.max(1, Math.min(4, s));
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
@@ -43,10 +43,10 @@ export function layoutLottie(refs) {
 }
 
 /**
- * Установка фоновой картинки.
- * — читаем naturalWidth/naturalHeight
- * — учитываем @2x/@3x в имени файла (если его знаем)
- * — прокидываем CSS-переменные на .wrapper:
+ * Установка фоновой картинки из data:/blob:/http(s)
+ * — считываем naturalWidth/naturalHeight
+ * — учитываем @2x/@3x/@1.5x из имени
+ * — прокидываем в .wrapper CSS-переменные:
  *     --preview-ar : (w/scale) / (h/scale)
  *     --preview-h  : (h/scale)px
  *
@@ -57,27 +57,35 @@ export function layoutLottie(refs) {
 export async function setBackgroundFromSrc(refs, src, meta = {}) {
   if (!refs?.bgImg) return;
 
-  // пробуем угадать имя файла, чтобы вытащить @2x
+  // Пытаемся вычислить название файла для парсинга @2x
   const guessName = (() => {
+    // при передаче meta.fileName используем его
     if (meta.fileName) return meta.fileName;
+    // попробуем достать из атрибутов, если кто-то положил туда
     const fromAttr = refs.bgImg.getAttribute('data-filename') || refs.bgImg.alt;
     if (fromAttr) return fromAttr;
+    // как крайний случай — попробуем вытащить имя из обычного URL
     try {
       const u = new URL(src);
-      const base = (u.pathname || '').split('/').pop();
+      const pathname = u.pathname || '';
+      const base = pathname.split('/').pop();
       return base || src;
-    } catch (_) { return src; }
+    } catch (_) {
+      return src; // data:/blob: сюда свалится — шанса достать имя нет
+    }
   })();
 
   refs.bgImg.onload = () => {
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
-    // сохраняем реальные пиксели (если где-то пригодится)
+    // Сохраняем фактический размер пикселей
     setLastBgSize(iw, ih);
 
-    // делим на ретина-коэффициент из имени (mob@2x.png -> 2)
+    // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
     const assetScale = parseAssetScale(guessName);
+
+    // Приводим к «CSS-размеру», как это было бы на сайте
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
 
@@ -85,6 +93,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     if (wrap) {
       wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
       wrap.style.setProperty('--preview-h', `${cssH}px`);
+      wrap.style.setProperty('--asset-scale', String(assetScale));
       wrap.classList.add('has-bg');
     }
 
@@ -98,10 +107,13 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   refs.bgImg.src = src;
 }
 
-/** Перезапуск анимации */
+/** Жёсткий перезапуск проигрывания */
 export function restart() {
   if (!anim) return;
-  try { anim.stop(); anim.goToAndPlay(0, true); } catch (_) {}
+  try {
+    anim.stop();
+    anim.goToAndPlay(0, true);
+  } catch (_) {}
 }
 
 /** Переключение loop "на лету" */
@@ -111,16 +123,19 @@ export function setLoop(on) {
 }
 
 /**
- * Загрузка Lottie JSON
+ * Загрузка Lottie из JSON (string|object)
  * — создаём инстанс
- * — габариты стейджа = w/h из JSON (1:1)
+ * — задаём габариты стейджа по w/h из JSON
  */
 export async function loadLottieFromData(refs, data) {
   try {
     const lotJson = typeof data === 'string' ? JSON.parse(data) : data;
     if (!lotJson || typeof lotJson !== 'object') return null;
 
-    if (anim) { try { anim.destroy?.(); } catch (_) {} anim = null; }
+    if (anim) {
+      try { anim.destroy?.(); } catch (_) {}
+      anim = null;
+    }
 
     const w = Number(lotJson.w || 0) || 512;
     const h = Number(lotJson.h || 0) || 512;
@@ -129,11 +144,14 @@ export async function loadLottieFromData(refs, data) {
       refs.lotStage.style.height = `${h}px`;
     }
 
+    const loop = !!state.loopOn;
+    const autoplay = true;
+
     anim = window.lottie.loadAnimation({
       container: refs.lottieMount,
       renderer: 'svg',
-      loop: !!state.loopOn,
-      autoplay: true,
+      loop,
+      autoplay,
       animationData: lotJson
     });
 
@@ -143,6 +161,8 @@ export async function loadLottieFromData(refs, data) {
       layoutLottie(refs);
     });
 
+    anim.addEventListener('complete', () => {});
+
     return anim;
   } catch (e) {
     console.error('loadLottieFromData error:', e);
@@ -150,5 +170,5 @@ export async function loadLottieFromData(refs, data) {
   }
 }
 
-/** Экспорт анимации при необходимости */
+/** Экспорт текущей анимации (если нужно где-то ещё) */
 export function getAnim() { return anim; }
