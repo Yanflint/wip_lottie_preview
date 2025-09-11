@@ -14,18 +14,6 @@ function getShareIdFromLocation() {
   return q || null;
 }
 
-
-function getPosFromLocation() {
-  try {
-    const u = new URL(location.href);
-    const ox = Number(u.searchParams.get('ox') || '0') || 0;
-    const oy = Number(u.searchParams.get('oy') || '0') || 0;
-    if (ox !== 0 || oy !== 0) return { x: ox, y: oy };
-  } catch {}
-  return null;
-}
-
-
 function applyLoopFromPayload(refs, data) {
   if (data && data.opts && typeof data.opts.loop === 'boolean') {
     state.loopOn = !!data.opts.loop;
@@ -38,11 +26,12 @@ async function applyPayload(refs, data) {
 
   // ВАЖНО: сначала применяем флаг цикла
   applyLoopFromPayload(refs, data);
-  if (data && data.opts && data.opts.pos) { try { setLotOffset(data.opts.pos.x, data.opts.pos.y); } catch {} }
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
-    if (src) await setBackgroundFromSrc(refs, src);
+    const meta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
+    if (!meta.fileName && data.lot && data.lot.meta && data.lot.meta._lpBgMeta) { meta.fileName = data.lot.meta._lpBgMeta.fileName; meta.assetScale = data.lot.meta._lpBgMeta.assetScale; }
+    if (src) await setBackgroundFromSrc(refs, src, meta);
   }
   if (data.lot) {
     try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
@@ -58,35 +47,15 @@ async function applyPayload(refs, data) {
 export async function initLoadFromLink({ refs, isStandalone }) {
   setPlaceholderVisible(refs, true);
 
-  // Применяем смещение из URL (?ox=&oy=), если есть
-  try { const p = getPosFromLocation(); if (p) { setLotOffset(p.x, p.y); try { layoutLottie(refs); } catch {} } } catch {}
-
   // 1) Пробуем id из URL
   const id = getShareIdFromLocation();
   if (id) {
     try {
       const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
-        if (r.ok) {
-          const data = await r.json().catch(() => null);
-          if (await applyPayload(refs, data)) {
-            // ДОПОЛНЕНИЕ: если позиция не пришла от сервера — восстановим из URL или pinned
-            try {
-              const hasPos = !!(data && data.opts && data.opts.pos && (typeof data.opts.pos.x === 'number' || typeof data.opts.pos.y === 'number'));
-              if (!hasPos) {
-                const p = getPosFromLocation();
-                if (p) { setLotOffset(p.x, p.y); try { layoutLottie(refs); } catch {} }
-                else {
-                  try {
-                    const { loadPinned } = await import('./pinned.js');
-                    const pinned = loadPinned && loadPinned();
-                    if (pinned && pinned.opts && pinned.opts.pos) { setLotOffset(pinned.opts.pos.x, pinned.opts.pos.y); try { layoutLottie(refs); } catch {} }
-                  } catch {}
-                }
-              }
-            } catch {}
-            return;
-          }
-        }
+      if (r.ok) {
+        const data = await r.json().catch(() => null);
+        if (await applyPayload(refs, data)) return;
+      }
     } catch (e) { console.error('share GET error', e); }
   }
 
