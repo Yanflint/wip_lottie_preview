@@ -14,11 +14,9 @@ import { initDnd }           from './dnd.js';
 import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
-import { layoutLottie }      from './lottie.js';
+import { layoutLottie } from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { showToastIfFlag } from './updateToast.js';
-import { bumpLotOffset } from './state.js';
-import { layoutLottie } from './lottie.js';
 
 // 3) DOM-refs
 function collectRefs() {
@@ -82,24 +80,4 @@ showToastIfFlag(); // покажет "Обновлено", если страни
   };
   refs.preview?.addEventListener('pointerdown', restartByTap, { passive: true });
   refs.preview?.addEventListener('touchstart',  restartByTap, { passive: true });
-
-
-// стрелки двигают лотти; Shift = x10
-window.addEventListener('keydown', (e) => {
-  const keys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
-  if (!keys.includes(e.key)) return;
-  const tag = (document.activeElement?.tagName || '').toLowerCase();
-  if (['input','textarea','select'].includes(tag)) return;
-  const step = e.shiftKey ? 10 : 1;
-  let dx = 0, dy = 0;
-  if (e.key === 'ArrowLeft')  dx = -step;
-  if (e.key === 'ArrowRight') dx = +step;
-  if (e.key === 'ArrowUp')    dy = -step;
-  if (e.key === 'ArrowDown')  dy = +step;
-  bumpLotOffset(dx, dy);
-  layoutLottie(refs);
-  e.preventDefault();
-}, { passive: false });
-
-window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} });
 });

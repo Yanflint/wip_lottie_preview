@@ -1,7 +1,6 @@
 // Загружаем по /s/:id. Если id нет и это standalone, пробуем "последний" снимок.
 // Флаг цикла (opts.loop) применяем до создания анимации.
 import { setPlaceholderVisible } from './utils.js';
-import { setLotOffset } from './state.js';
 import { setLastLottie, state } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 import { loadPinned } from './pinned.js';
@@ -29,10 +28,9 @@ async function applyPayload(refs, data) {
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
-    if (src) await setBackgroundFromSrc(refs, src, (typeof data.bg==='object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {});
+    if (src) await setBackgroundFromSrc(refs, src);
   }
   if (data.lot) {
-    try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
     setLastLottie(data.lot);
     await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
   }
