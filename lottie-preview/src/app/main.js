@@ -1,4 +1,3 @@
-import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 // src/app/main.js
 
 // 1) Отметка standalone (A2HS)
@@ -15,6 +14,7 @@ import { initDnd }           from './dnd.js';
 import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
+import { layoutLottie } from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { showToastIfFlag } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
