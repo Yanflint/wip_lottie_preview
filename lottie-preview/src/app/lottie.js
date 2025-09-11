@@ -24,13 +24,19 @@ let anim = null;
 
 /* ========= HELPERS ========= */
 function parseAssetScale(nameOrUrl) {
-  // match @2x, @3x, @1.5x before extension
-  const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(\?|#|$))/i);
-  if (!m) return 1;
-  const s = parseFloat(m[1]);
-  if (!isFinite(s) || s <= 0) return 1;
-  // Ограничим разумными рамками
-  return Math.max(1, Math.min(4, s));
+  try {
+    if (!nameOrUrl) return 1;
+    // Strip query/hash
+    const s = String(nameOrUrl).replace(/[?#].*$/, '');
+    // Extract the last path component
+    const base = s.split('/').pop() || s;
+    // Look for @<number>x just before extension or end
+    const m = base.match(/@([0-9]+(?:\.[0-9]+)?)x(?=\.[a-z0-9]+$|$)/i);
+    const val = m ? Number(m[1]) : NaN;
+    return (val && isFinite(val) && val > 0) ? val : 1;
+  } catch (_) {
+    return 1;
+  }
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
@@ -80,14 +86,14 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
     // Сохраняем фактический размер пикселей
-    setLastBgSize(iw, ih);
-
     // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
     const assetScale = parseAssetScale(guessName);
 
     // Приводим к «CSS-размеру», как это было бы на сайте
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
+    // Сохраняем CSS-размер для layout (учитывая ретину)
+    setLastBgSize(cssW, cssH);
 
     const wrap = refs.wrapper;
     if (wrap) {
