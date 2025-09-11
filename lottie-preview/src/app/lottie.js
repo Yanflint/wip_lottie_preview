@@ -34,12 +34,40 @@ function parseAssetScale(nameOrUrl) {
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
+/** Центрируем и масштабируем лотти-стейдж синхронно с фоном */
 export function layoutLottie(refs) {
   const stage = refs?.lotStage;
-  if (!stage) return;
+  const wrap  = refs?.wrapper || refs?.previewBox || refs?.preview;
+  if (!stage || !wrap) return;
+
+  // Логический (CSS) размер фона — то, что мы сохранили с учётом ретины
+  const cssW = +((state.lastBgSize && state.lastBgSize.w) || 0);
+  const cssH = +((state.lastBgSize && state.lastBgSize.h) || 0);
+
+  // Реальный текущий размер контейнера превью
+  const br = wrap.getBoundingClientRect();
+  const realW = br.width || 0;
+  const realH = br.height || 0;
+
+  // Масштаб подгонки (как object-fit: contain)
+  let fitScale = 1;
+  if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
+    fitScale = Math.min(realW / cssW, realH / cssH);
+    if (!isFinite(fitScale) || fitScale <= 0) fitScale = 1;
+  }
+
+  // Смещение в логических пикселях (до масштабирования)
+  const x = (window.__lotOffsetX || 0);
+  const y = (window.__lotOffsetY || 0);
+
+  // Применяем: сначала центрирование, затем смещение * scale, затем масштаб
   stage.style.left = '50%';
-  stage.style.top = '50%';
-  stage.style.transform = 'translate(-50%, -50%)';
+  stage.style.top  = '50%';
+  stage.style.transformOrigin = '50% 50%';
+  stage.style.setProperty('--fit-scale', String(fitScale));
+  stage.style.setProperty('--lot-x-px', (x * fitScale) + 'px');
+  stage.style.setProperty('--lot-y-px', (y * fitScale) + 'px');
+  stage.style.transform = 'translate(calc(-50% + var(--lot-x-px, 0px)), calc(-50% + var(--lot-y-px, 0px))) scale(var(--fit-scale, 1))';
 }
 
 /**

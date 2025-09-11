@@ -1,4 +1,5 @@
 import { isMobile, afterTwoFrames } from './utils.js';
+import { layoutLottie } from './lottie.js';
 import { state } from './state.js';
 
 export function layout({ refs }) {
@@ -22,12 +23,18 @@ export function layout({ refs }) {
     previewBox.style.height = h + 'px';
     preview.style.maxWidth = 'unset';
     preview.style.maxHeight = 'unset';
-  } else {
+  }
+
+  // Синхронизируем лотти со scale фона
+  try { layoutLottie(refs); } catch {} else {
     preview.style.maxWidth = Math.min(1200, vw - pad * 2) + 'px';
     preview.style.maxHeight = (vh - pad * 2) + 'px';
     previewBox.style.width = '';
     previewBox.style.height = '';
   }
+
+  // Синхронизируем лотти со scale фона
+  try { layoutLottie(refs); } catch {}
 }
 
 export function initLayout({ refs }) {
