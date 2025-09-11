@@ -6,7 +6,7 @@
   <title>Lottie-превью</title>
 
   <!-- PWA -->
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#000000" />
 
   <!-- iOS: запуск без UI Safari -->
@@ -16,8 +16,11 @@
   <link rel="apple-touch-icon" href="/icons/icon-180.png" />
 
   <!-- favicon чтобы не было 404 -->
-  <link rel="icon" type="image/png"
-        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEA...BCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="/>
+  <link
+    rel="icon"
+    type="image/png"
+    href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEA...BCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/Urn1ogAAAAASUVORK5CYII="
+  />
 
   <!-- Lottie -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
@@ -32,13 +35,18 @@
       <div id="wrapper" class="wrapper" aria-label="Область превью">
         <div id="preview" class="preview">
 
-          <div class="ph">
-            <div class="ph-1">Перетащите файл:</div>
-            <div class="ph-2">PNG / JSON</div>
+          <!-- Placeholder: подсказка для DnD -->
+          <div id="ph" class="placeholder">
+            <div class="ph">
+              <div class="ph-1">Перетащите файл:</div>
+              <div class="ph-2">PNG / JSON</div>
+            </div>
           </div>
 
-          <div class="bg"><img id="bgImg" alt=""></div>
+          <!-- Фон (макет сайта) -->
+          <div class="bg"><img id="bgImg" alt="" /></div>
 
+          <!-- Lottie-слой -->
           <div class="lottie-layer">
             <div id="lotStage" class="lot-stage">
               <div id="lottie" class="lottie-mount"></div>
@@ -46,18 +54,20 @@
           </div>
         </div>
 
+        <!-- Оверлей при DnD -->
         <div id="dropOverlay" class="drop-overlay">
           <div class="box">Отпустите файл здесь</div>
         </div>
       </div>
 
+      <!-- Панель управления -->
       <div id="mode" class="controls">
         <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
         <button class="btn primary"  id="heightBtn">Высота: 800px</button>
 
         <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
         <label class="chk" title="Играть зацикленно">
-          <input type="checkbox" id="loopChk"> Зацикленно
+          <input type="checkbox" id="loopChk" /> Зацикленно
         </label>
 
         <button class="btn accent" id="shareBtn" title="Сохранить и получить короткую ссылку">Поделиться</button>
@@ -79,7 +89,7 @@
       document.documentElement.classList.add('standalone');
 
       // Режим подгонки: ?fit=edge | ?fit=safe (по умолчанию safe)
-      const fit = new URL(location.href).searchParams.get('fit');
+      const fit  = new URL(location.href).searchParams.get('fit');
       const mode = (fit === 'edge' || fit === 'safe') ? fit : 'safe';
       document.documentElement.classList.add(`fit-${mode}`);
     }
@@ -88,7 +98,7 @@
   <!-- Основной модуль приложения -->
   <script type="module" src="/src/app/main.js?v=0.01"></script>
 
-  <!-- ВАЖНО: инициализация динамического лэйаута и в вебе -->
+  <!-- Инициализация динамического лэйаута (чтобы рама росла под картинку и в вебе) -->
   <script type="module">
     import { initLayout } from '/src/app/layout.js';
     import { getRefs }     from '/src/app/dom.js';
