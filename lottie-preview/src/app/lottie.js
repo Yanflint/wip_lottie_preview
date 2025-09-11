@@ -43,22 +43,23 @@ export async function setBackgroundFromSrc(refs, src) {
     const natW = img.naturalWidth || img.width || 1;
     const natH = img.naturalHeight || img.height || 1;
 
-    if (!state.isStandalone) {
-      // Веб: учитываем @2x/@3x, чтобы логический размер был корректным
-      const factor = detectRetinaFactorFromUrl(img.src);
-      const logicalW = Math.round(natW / factor);
-      const logicalH = Math.round(natH / factor);
-      applyPreviewSizeWeb(refs, logicalW, logicalH);
-      // саму картинку кладём 100% по ширине wrapper, чтобы 1:1 совпало
-      img.style.width = '100%';
-      img.style.height = 'auto';
-      img.style.display = 'block';
-    } else {
-      // Standalone (A2HS): ширина экрана, обрезка по высоте контейнером — как было
-      img.style.width = '100vw';
-      img.style.height = 'auto';
-      img.style.display = 'block';
-    }
+  if (!state.isStandalone) {
+    // Веб: учитываем @2x/@3x → логический размер = natural / factor
+    const factor = detectRetinaFactorFromUrl(img.src);
+    const logicalW = Math.round(natW / factor);
+    const logicalH = Math.round(natH / factor);
+    applyPreviewSizeWeb(refs, logicalW, logicalH);
+
+    img.style.width = '100%';
+    img.style.height = 'auto';
+    img.style.display = 'block';
+  } else {
+    // Standalone: подгон по ширине экрана
+    img.style.width = '100vw';
+    img.style.height = 'auto';
+    img.style.display = 'block';
+}
+
   };
 
   img.onerror = () => {};
