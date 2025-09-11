@@ -24,18 +24,16 @@ let anim = null;
 
 /* ========= HELPERS ========= */
 function parseAssetScale(nameOrUrl) {
-  try {
-    if (!nameOrUrl) return 1;
-    const s = String(nameOrUrl).replace(/[?#].*$/, '');
-    const base = s.split('/').pop() || s;
-    const m = base.match(/@([0-9]+(?:\.[0-9]+)?)x(?=\.[a-z0-9]+$|$)/i);
-    const val = m ? Number(m[1]) : NaN;
-    return (val && isFinite(val) && val > 0) ? val : 1;
-  } catch { return 1; }
+  // match @2x, @3x, @1.5x before extension
+  const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(\?|#|$))/i);
+  if (!m) return 1;
+  const s = parseFloat(m[1]);
+  if (!isFinite(s) || s <= 0) return 1;
+  // Ограничим разумными рамками
+  return Math.max(1, Math.min(4, s));
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
-/** Центрируем лотти-стейдж с учётом смещения */
 export function layoutLottie(refs) {
   const stage = refs?.lotStage;
   if (!stage) return;
@@ -43,9 +41,7 @@ export function layoutLottie(refs) {
   const y = (window.__lotOffsetY || 0);
   stage.style.left = '50%';
   stage.style.top = '50%';
-  stage.style.setProperty('--lot-x', x + 'px');
-  stage.style.setProperty('--lot-y', y + 'px');
-  stage.style.transform = 'translate(calc(-50% + var(--lot-x, 0px)), calc(-50% + var(--lot-y, 0px)))';
+  stage.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
 }
 
 /**
@@ -86,14 +82,14 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
     // Сохраняем фактический размер пикселей
+    setLastBgSize(iw, ih);
+
     // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
     const assetScale = parseAssetScale(guessName);
 
     // Приводим к «CSS-размеру», как это было бы на сайте
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
-    // Сохраняем CSS-размер для layout (учитывая ретину)
-    setLastBgSize(cssW, cssH);
 
     const wrap = refs.wrapper;
     if (wrap) {

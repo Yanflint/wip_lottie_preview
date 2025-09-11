@@ -276,11 +276,3 @@ html.standalone.fit-safe .lottie-layer{
     transform: translate(-50%, 0) !important;
   }
 }
-
-
-
-/* === Standalone/no-UI overrides === */
-html.is-standalone.is-mobile,
-html.standalone { --controls-space: 0px; }
-html.is-standalone.is-mobile .wrapper,
-html.standalone .wrapper { max-height: 100dvh; }

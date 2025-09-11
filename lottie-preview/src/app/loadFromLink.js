@@ -14,9 +14,7 @@ function getShareIdFromLocation() {
   return q || null;
 }
 
-
 function applyLoopFromPayload(refs, data) {
-
   if (data && data.opts && typeof data.opts.loop === 'boolean') {
     state.loopOn = !!data.opts.loop;
     if (refs?.loopChk) refs.loopChk.checked = state.loopOn;

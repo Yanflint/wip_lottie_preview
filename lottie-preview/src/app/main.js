@@ -11,14 +11,13 @@ if (isStandalone) document.documentElement.classList.add('standalone');
 
 // 2) Импорты модулей
 import { initDnd }           from './dnd.js';
-import { bumpLotOffset, getLotOffset } from './state.js';
-import { layoutLottie } from './lottie.js';
 import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { showToastIfFlag } from './updateToast.js';
+import { bumpLotOffset } from './state.js';
 
 // 3) DOM-refs
 function collectRefs() {
@@ -84,11 +83,10 @@ showToastIfFlag(); // покажет "Обновлено", если страни
   refs.preview?.addEventListener('touchstart',  restartByTap, { passive: true });
 
 
-// Горячие клавиши: стрелки двигают лотти; Shift = x10
+// Клавиатура: стрелки двигают лотти; Shift = x10
 window.addEventListener('keydown', (e) => {
   const keys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
   if (!keys.includes(e.key)) return;
-  // не мешаем, если фокус в input/textarea/select
   const tag = (document.activeElement?.tagName || '').toLowerCase();
   if (['input','textarea','select'].includes(tag)) return;
   const step = e.shiftKey ? 10 : 1;
