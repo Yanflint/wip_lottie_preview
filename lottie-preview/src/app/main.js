@@ -80,6 +80,7 @@ showToastIfFlag(); // покажет "Обновлено", если страни
 
   // Тап = перезапуск (если было добавлено ранее)
   const restartByTap = (e) => {
+    if (isViewer) return;
     const isTouch = e.pointerType ? (e.pointerType === 'touch') : (e.touches && e.touches.length === 1);
     if (!isTouch && !isStandalone) return;
     if (refs.mode && refs.mode.contains(e.target)) return;
