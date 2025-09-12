@@ -380,7 +380,3 @@ button::-moz-focus-inner{ border:0 !important; }
 
 /* Share button non-bold */
 #shareBtn{ font-weight: 400; }
-
-
-/* Hide placeholder during DND */
-body.dragging .placeholder{ display:none !important; }
