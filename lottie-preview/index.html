@@ -24,8 +24,30 @@
 
   <!-- ВАЖНО: абсолютный путь, чтобы работало по /s/:id -->
   <link rel="stylesheet" href="/style.css" />
+
+  <style>
+    /* viewer mode overrides */
+    html.viewer .controls,
+    html.viewer #mode,
+    html.viewer #dropOverlay,
+    html.viewer .placeholder { display: none !important; }
+    html.viewer .wrapper::after { display: none !important; }
+    html.viewer .wrapper {
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+    }
+    html.viewer body, html.viewer html { background: #000; }
+  </style>
 </head>
+
+
 <body>
+  <script>
+    // bootstrap viewer class ASAP
+    (function(){ try { if(/^\/s\//.test(location.pathname)) document.documentElement.classList.add('viewer'); } catch(e){} })();
+  </script>
+
   <div class="page">
     <div class="app">
 
@@ -53,10 +75,7 @@
       </div>
 
       <div id="mode" class="controls">
-        <button class="btn primary"  id="sizeBtn">Ширина: 360px</button>
-        <button class="btn primary"  id="heightBtn">Высота: 800px</button>
-
-        <button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
+<button class="btn secondary" id="restartBtn" title="Повторить анимацию" aria-label="Повтор">▶</button>
         <label class="chk" title="Играть зацикленно">
           <input type="checkbox" id="loopChk"> Зацикленно
         </label>

@@ -185,7 +185,12 @@ export async function loadLottieFromData(refs, data) {
     }
 
     const loop = !!state.loopOn;
-    const autoplay = true;
+    
+// Autoplay: off in web viewer mode (path /s/*), on elsewhere (incl. PWA standalone)
+const isStandalone = !!(window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches)) || (navigator.standalone === true);
+const isViewer = document.documentElement.classList.contains('viewer');
+const autoplay = isViewer && !isStandalone ? false : true;
+
 
     anim = window.lottie.loadAnimation({
       container: refs.lottieMount,

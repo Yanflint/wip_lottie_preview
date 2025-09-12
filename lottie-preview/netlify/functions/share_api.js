@@ -7,6 +7,7 @@
 import * as blobs from '@netlify/blobs';
 
 const LAST_KEY = '__last__';
+const INDEX_PREFIX = 'index/';
 
 // ─── утилиты ──────────────────────────────────────────────────────────────────
 function makeStoreFromEnv() {
