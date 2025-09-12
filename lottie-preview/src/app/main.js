@@ -152,6 +152,16 @@ window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} }
       });
       document.body.appendChild(rb); // ensure it's on top layer
 
+      // Debug visibility gating (hidden by default; enable via ?debug=1 or localStorage('lp_debug'='1'))
+      try {
+        const sp = new URL(location.href).searchParams;
+        const dbgParam = (sp.get('debug')||'').toLowerCase();
+        const dbgPref  = (typeof localStorage!=='undefined' && (localStorage.getItem('lp_debug')||'').toLowerCase()) || '';
+        const debugOn  = (dbgParam==='1'||dbgParam==='true'||dbgParam==='on') || (!dbgParam && (dbgPref==='1'||dbgPref==='true'||dbgPref==='on'));
+        ov.style.display = debugOn ? '' : 'none';
+        rb.style.display = debugOn ? '' : 'none';
+      } catch {}
+
       // Expose updater
       window.__updateOverlay = (m) => {
         try {
