@@ -34,11 +34,9 @@
       const url = new URL('/s/last', location.origin);
       url.searchParams.set('fit', 'vv'); // vv|safe|edge — vv даёт наилучшее центрирование
       // Мгновенная навигация без возможности "Назад", чтобы ярлык всегда попадал на актуальное
-      try { location.replace(url.toString()); } catch (_) { location.href = url.toString(); }
+      location.replace(url.toString());
     })();
-    setTimeout(()=>{ try{ if(!/\/s\//.test(location.pathname)) location.href=url.toString(); }catch(_){ location.href=url.toString(); } }, 1500);
-      document.body.innerHTML = '<p style="font:16px system-ui,Arial;margin:16px">Открыть последнюю: <a href="'+url.toString()+'">Open latest</a></p>';
-    </script>
+  </script>
   <noscript>
     <meta http-equiv="refresh" content="0;url=/s/last">
   </noscript>
