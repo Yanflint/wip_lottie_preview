@@ -55,7 +55,7 @@ export async function initLoadFromLink({ refs, isStandalone }) {
   const id = getShareIdFromLocation();
   if (id) {
     try {
-      const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
+      const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
       if (r.ok) {
         const data = await r.json().catch(() => null);
         if (await applyPayload(refs, data)) return;
