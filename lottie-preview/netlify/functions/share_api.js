@@ -106,13 +106,13 @@ function fnv1a(str) {
 function resV1(body, status=200, extraHeaders={}) {
   return {
     statusCode: status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...extraHeaders },
+    headers: Object.assign({ 'content-type': 'application/json; charset=utf-8' }, extraHeaders || {}),
     body: JSON.stringify(body)
   };
 }
+// resV2 removed for CJS build
 
-function resV2(body, status=200, extraHeaders={}) {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...extraHeaders } });
+});
 }
 
 // ─── основной хэндлер ─────────────────────────────────────────────────────────
