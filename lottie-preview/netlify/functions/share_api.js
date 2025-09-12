@@ -76,14 +76,14 @@ async function setJson(store, key, obj) {
 }
 
 async function getRaw(store, key) {
-  // пытаемся найти JSON удобным способом…
+  // пытаемся найти JSON удобным способом...
   if (typeof store.getJSON === 'function') {
     try {
       const j = await store.getJSON(key);
       if (j != null) return { text: JSON.stringify(j), json: j };
     } catch (e) {}
   }
-  // …или как строку/стрим
+  // ...или как строку/стрим
   try {
     const v = await store.get(key);
     if (v == null) return { text: null, json: null };
@@ -112,13 +112,9 @@ function resV1(body, status=200, extraHeaders={}) {
 }
 // resV2 removed for CJS build
 
-});
-}
-
 // ─── основной хэндлер ─────────────────────────────────────────────────────────
 async function handle(method, getBody, getQuery) {
   let store = getStoreSmart();
-, status:500, headers:{} }; }
 
   try {
     if (method === 'POST') {
