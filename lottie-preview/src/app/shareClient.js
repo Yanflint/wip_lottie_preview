@@ -79,7 +79,42 @@ export function initShare({ refs }) {
   const btn = refs?.shareBtn;
   if (!btn) return;
 
-  \1
+  btn.addEventListener('click', async () => {
+    // Предвалидация: показываем баблики, если чего-то не хватает
+    const hasLot = !!state.lastLottieJSON;
+    const hasBg  = !!(refs?.bgImg && refs.bgImg.src);
+    if (!hasLot && !hasBg) { showToastNear(refs.toastEl, btn, 'Загрузите графику'); return; }
+    if (!hasLot && hasBg)  { showToastNear(refs.toastEl, btn, 'Загрузите анимацию'); return; }
+    if (hasLot && !hasBg)  { showToastNear(refs.toastEl, btn, 'Загрузите фон'); return; }
+
+    await withLoading(btn, async () => {
+      const payload = await buildPayload(refs);
+
+      // Сохраняем на сервер (короткая ссылка)
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(`share failed: ${res.status}${t ? ' ' + t : ''}`);
+      }
+      const { id } = await res.json();
+      const shortUrl = `${location.origin}/s/${id}`;
+
+      // Параллельно закрепляем локально (для A2HS)
+      savePinned(payload);
+
+      await copyToClipboard(shortUrl);
+      showToastNear(refs.toastEl, btn, 'Ссылка скопирована');
+    });
+  });
+}
+) {
+  const btn = refs?.shareBtn;
+  if (!btn) return;
+
     // Предвалидация: показываем баблики, если чего-то не хватает
     const hasLot = !!state.lastLottieJSON;
     const hasBg  = !!(refs?.bgImg && refs.bgImg.src);
