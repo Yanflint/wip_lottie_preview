@@ -142,6 +142,8 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     };
     refs.bgImg.onerror = () => resolve();
     refs.bgImg.src = src;
+  });
+}
 
 /** Жёсткий перезапуск проигрывания */
 export function restart() {
