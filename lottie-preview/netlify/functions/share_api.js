@@ -4,37 +4,36 @@
 //   HEAD /api/share?id=last       → ETag: "<hash>"
 // Основной GET без rev отдаёт полный payload.
 
-const blobs = require('@netlify/blobs');
+let blobs = null; try { blobs = require('@netlify/blobs'); } catch (e) { blobs = null; }
 
 const LAST_KEY = '__last__';
 const INDEX_PREFIX = 'index/';
 
 // smart store selection: try Netlify blobs auto, then env, then in-memory (dev)
+
+
+
 function getStoreSmart() {
-  try {
-    // Netlify auto store
-    const st = blobs.getStore('shares');
-    if (st) return st;
-  } catch (e) {}
-  try {
-    return makeStoreFromEnv();
-  } catch (e) {
-    console.error('share_api env store not available:', e?.message || e);
+  if (blobs && typeof blobs.getStore === 'function') {
+    try {
+      const st = blobs.getStore('shares');
+      if (st) return st;
+    } catch (e) {}
   }
-  // in-memory fallback for local/dev
+  if (blobs) {
+    try { return makeStoreFromEnv(); } catch (e) {}
+  }
   if (!globalThis.__MEM_STORE__) globalThis.__MEM_STORE__ = new Map();
   const M = globalThis.__MEM_STORE__;
   return {
     async get(key){ return M.has(key) ? M.get(key) : null; },
     async set(key, v){ M.set(key, v); return true; },
-    async getJSON(key){ const t = M.get(key); try { return t ? JSON.parse(t) : null; } catch { return null; } },
+    async getJSON(key){ const t = M.get(key); try { return t ? JSON.parse(t) : null; } catch (e) { return null; } },
     async setJSON(key, obj){ M.set(key, JSON.stringify(obj)); return true; },
     async list(){ return Array.from(M.keys()); }
   };
 }
 
-
-// ─── утилиты ──────────────────────────────────────────────────────────────────
 function makeStoreFromEnv() {
   const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID;
   const token  = process.env.NETLIFY_BLOBS_TOKEN   || process.env.NETLIFY_API_TOKEN;
@@ -127,7 +126,7 @@ async function handle(method, getBody, getQuery) {
 
       await setJson(store, id, payload);
       await setJson(store, LAST_KEY, payload);
-
+      const rev = fnv1a(JSON.stringify(payload));
       return { body: { id, rev }, status: 200, headers:{} };
     }
 
@@ -170,7 +169,15 @@ async function handle(method, getBody, getQuery) {
 exports.handler = async (event) => {
   const { body, status, headers } = await handle(
     (event.httpMethod || 'GET').toUpperCase(),
-    async () => (event.body ? JSON.parse(event.body) : {}),
+    async () => {
+      try {
+        let raw = event.body || '';
+        if (event.isBase64Encoded) {
+          raw = Buffer.from(raw, 'base64').toString('utf8');
+        }
+        return raw ? JSON.parse(raw) : {};
+      } catch { return {}; }
+    },
     (k) => (event.queryStringParameters ? event.queryStringParameters[k] : null)
   );
   return resV1(body, status, headers);
