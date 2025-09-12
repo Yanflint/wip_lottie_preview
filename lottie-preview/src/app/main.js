@@ -118,16 +118,17 @@ window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} }
 
   // ===== [TEST OVERLAY UI] only in viewer mode =====
   try {
-    if (isViewer && refs?.wrapper) {
-      // Create container
+    if (isViewer) {
+      // Metrics overlay
       const ov = document.createElement('div');
       ov.id = 'debugOverlay';
       ov.className = 'debug-overlay';
       ov.setAttribute('aria-live','polite');
       ov.textContent = '—';
-      refs.wrapper.appendChild(ov);
+      // attach to wrapper if exists else body
+      (refs?.wrapper || document.body).appendChild(ov);
 
-      // Create refresh button
+      // Refresh button fixed at bottom-right above build/version
       const rb = document.createElement('button');
       rb.id = 'forceRefreshBtn';
       rb.className = 'overlay-refresh-btn';
@@ -140,7 +141,7 @@ window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} }
         try { sessionStorage.setItem('lp_show_toast','1'); } catch {}
         location.replace(location.href);
       });
-      refs.wrapper.appendChild(rb);
+      document.body.appendChild(rb); // ensure it's on top layer
 
       // Expose updater
       window.__updateOverlay = (m) => {

@@ -22,13 +22,15 @@ function applyLoopFromPayload(refs, data) {
 }
 
 async function applyPayload(refs, data) {
+  let _hid=false; try {
+
   if (!data || typeof data !== 'object') return false;
 
   // ВАЖНО: сначала применяем флаг цикла
   applyLoopFromPayload(refs, data);
 
   // временно спрячем слой лотти до пересчёта, чтобы не было "вспышки" старого расположения
-  try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; } catch {}
+  try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; _hid=true; } catch {}
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
@@ -44,7 +46,10 @@ async function applyPayload(refs, data) {
 
   setPlaceholderVisible(refs, false);
   layoutLottie(refs);
+  
+  } finally { try { if (_hid && refs?.lotStage) refs.lotStage.style.visibility = ''; } catch {} }
   return true;
+return true;
 }
 
 export async function initLoadFromLink({ refs, isStandalone }) {

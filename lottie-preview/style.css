@@ -310,9 +310,14 @@ html.standalone.fit-safe .lottie-layer{
   box-shadow: 0 4px 16px rgba(0,0,0,0.35);
 }
 
+
+
+
+/* ===== [TEST OVERLAY refresh button at bottom-right] ===== */
 .overlay-refresh-btn{
-  position:absolute;
-  top:8px; right:8px;
+  position:fixed;
+  right:12px;
+  bottom:44px; /* sits above .ver bottom:12px */
   z-index:10000;
   pointer-events:auto;
   font-size:12px;
