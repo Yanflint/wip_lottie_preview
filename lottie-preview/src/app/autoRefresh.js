@@ -28,6 +28,40 @@ async function fetchRev(){
   const j=await r.json(); return String(j.rev||'');
 }
 
+
+async function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// [PATCH-STABLE] Ensure GET payload matches current rev (ETag) for '__last__'
+async function fetchStableLastPayload(maxMs=2000){
+  const deadline = Date.now() + maxMs;
+  while (Date.now() < deadline){
+    // 1) fetch payload with no-store and capture ETag
+    const pr = await fetch('/api/share?id=last', { cache: 'no-store' });
+    if (!pr.ok) throw new Error('payload get failed '+pr.status);
+    const et = (pr.headers.get('ETag') || '').replace(/"/g,'');
+    const data = await pr.json().catch(()=>null);
+
+    // 2) fetch current rev
+    let revNow = '';
+    try{
+      const rr = await fetch('/api/share?id=last&rev=1', { cache: 'no-store' });
+      if (rr.ok){ const j = await rr.json().catch(()=>({})); revNow = String(j.rev||''); }
+    }catch{}
+
+    // 3) If ETag equals current rev and data looks complete — return
+    const hasLot = !!(data && typeof data === 'object' && data.lot);
+    if (hasLot && et && revNow && et === revNow) return { data, etag: et };
+
+    // else short sleep and retry
+    await sleep(250);
+  }
+  // final attempt return whatever we have (best effort)
+  const pr2 = await fetch('/api/share?id=last', { cache: 'no-store' });
+  const data2 = await pr2.json().catch(()=>null);
+  const et2 = (pr2.headers.get('ETag') || '').replace(/"/g,'');
+  return { data: data2, etag: et2 };
+}
+
 export function initAutoRefreshIfViewingLast(){
   if(!isViewingLast()) return;
 
@@ -46,12 +80,8 @@ export function initAutoRefreshIfViewingLast(){
       else if(rev && rev!==baseline){
         // [PATCH]: pre-fetch full payload to ensure Lottie data is present (avoid showing stale lot pos)
         try {
-          const pr = await fetch('/api/share?id=last', { cache: 'no-store' });
-          if (!pr.ok) throw new Error('preload failed '+pr.status);
-          const data = await pr.json().catch(() => null);
+          const { data } = await fetchStableLastPayload(2000);
           const hasLot = !!(data && typeof data === 'object' && data.lot);
-          const hasBgMaybe = !!(data && (data.bg || (data.lot && data.lot.meta && data.lot.meta._lpBgMeta)));
-          // If payload looks complete, proceed with hard refresh; otherwise, retry soon without switching baseline
           if (hasLot) {
             try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
             location.replace(location.href); // жёсткий рефреш, сохраняя ?fit
