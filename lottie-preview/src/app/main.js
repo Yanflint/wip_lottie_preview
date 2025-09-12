@@ -81,9 +81,6 @@ showToastIfFlag(); // покажет "Обновлено", если страни
   initControls({ refs });
   initShare({ refs, isStandalone });
 
-  /* DISABLE TAB FOCUS */
-  try { document.querySelectorAll('button').forEach(b => b.setAttribute('tabindex','-1')); } catch {}
-
   // Перелайаут
   const relayout = () => { try { layoutLottie(refs); } catch {} };
   try { layoutLottie(refs); } catch {}

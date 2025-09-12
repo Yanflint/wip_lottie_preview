@@ -79,14 +79,7 @@ export function initShare({ refs }) {
   const btn = refs?.shareBtn;
   if (!btn) return;
 
-  \1
-    // Предвалидация: показываем баблики, если чего-то не хватает
-    const hasLot = !!state.lastLottieJSON;
-    const hasBg  = !!(refs?.bgImg && refs.bgImg.src);
-    if (!hasLot && !hasBg) { showToastNear(refs.toastEl, btn, 'Загрузите графику'); return; }
-    if (!hasLot && hasBg)  { showToastNear(refs.toastEl, btn, 'Загрузите анимацию'); return; }
-    if (hasLot && !hasBg)  { showToastNear(refs.toastEl, btn, 'Загрузите фон'); return; }
-
+  btn.addEventListener('click', async () => {
     await withLoading(btn, async () => {
       const payload = await buildPayload(refs);
 
