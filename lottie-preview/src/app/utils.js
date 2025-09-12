@@ -14,37 +14,17 @@ export async function withLoading(btn, fn) {
   }
 }
 
-
 export function showToastNear(toastEl, el, msg) {
   if (!toastEl) return;
   toastEl.textContent = msg;
   const r = el?.getBoundingClientRect?.();
   if (r) {
-    const centerX = r.left + r.width / 2;
-
-    // измеряем высоту бабла
-    let toastH = toastEl.offsetHeight || 0;
-    if (!toastH) {
-      const prevVis  = toastEl.style.visibility;
-      const prevTop  = toastEl.style.top;
-      const prevLeft = toastEl.style.left;
-      const hadShow  = toastEl.classList.contains('show');
-      toastEl.style.visibility = 'hidden';
-      toastEl.classList.add('show');
-      toastEl.style.left = centerX + 'px';
-      toastEl.style.top  = '0px';
-      toastH = toastEl.offsetHeight || 24;
-      // откат
-      toastEl.classList.toggle('show', hadShow);
-      toastEl.style.visibility = prevVis;
-      toastEl.style.left = prevLeft;
-      toastEl.style.top  = prevTop;
-    }
-
-    const gap = Math.max(4, r.height / 2); // половина высоты кнопки
-    let top = r.top - gap - toastH;
-    if (top < 8) top = 8; // запас сверху
-    toastEl.style.left = centerX + 'px';
+    // Базовый отступ над кнопкой
+    let top = r.top - 24; // подняли выше, чтобы не наслаивался на кнопку
+    // Ошибочные баблики — ещё выше
+    try { if (typeof msg === 'string' && msg.startsWith('Загрузите')) top -= 8; } catch {}
+    if (top < 8) top = 8;
+    toastEl.style.left = (r.left + r.width / 2) + 'px';
     toastEl.style.top  = top + 'px';
   }
   toastEl.classList.add('show');
