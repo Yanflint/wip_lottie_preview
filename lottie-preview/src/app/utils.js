@@ -19,10 +19,20 @@ export function showToastNear(toastEl, el, msg) {
   toastEl.textContent = msg;
   const r = el?.getBoundingClientRect?.();
   if (r) {
-    const top = Math.max(8, r.top - 10); // чуть выше кнопки
+    // Базовый отступ над кнопкой
+    let top = r.top - 24; // подняли выше, чтобы не наслаивался на кнопку
+    // Ошибочные баблики (подсказки "Загрузите...") — ещё выше
+    try {
+      if (typeof msg === 'string' && msg.startsWith('Загрузите')) top -= 8;
+    } catch {}
+    if (top < 8) top = 8;
     toastEl.style.left = (r.left + r.width / 2) + 'px';
     toastEl.style.top  = top + 'px';
   }
+  toastEl.classList.add('show');
+  clearTimeout(showToastNear._t);
+  showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1600);
+}
   toastEl.classList.add('show');
   clearTimeout(showToastNear._t);
   showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1600);
