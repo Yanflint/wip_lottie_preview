@@ -298,3 +298,7 @@ html.viewer .preview,
 html.standalone .preview {
   overflow: hidden !important;
 }
+
+/* viewer lottie fade-in */
+html.viewer .lottie-layer { opacity: 0; transition: opacity .12s ease; }
+html.viewer .has-lottie .lottie-layer { opacity: 1; }

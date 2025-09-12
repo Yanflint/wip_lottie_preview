@@ -9,6 +9,31 @@ import * as blobs from '@netlify/blobs';
 const LAST_KEY = '__last__';
 const INDEX_PREFIX = 'index/';
 
+// smart store selection: try Netlify blobs auto, then env, then in-memory (dev)
+function getStoreSmart() {
+  try {
+    // Netlify auto store
+    const st = blobs.getStore('shares');
+    if (st) return st;
+  } catch {}
+  try {
+    return makeStoreFromEnv();
+  } catch (e) {
+    console.error('share_api env store not available:', e?.message || e);
+  }
+  // in-memory fallback for local/dev
+  if (!globalThis.__MEM_STORE__) globalThis.__MEM_STORE__ = new Map();
+  const M = globalThis.__MEM_STORE__;
+  return {
+    async get(key){ return M.has(key) ? M.get(key) : null; },
+    async set(key, v){ M.set(key, v); return true; },
+    async getJSON(key){ const t = M.get(key); try { return t ? JSON.parse(t) : null; } catch { return null; } },
+    async setJSON(key, obj){ M.set(key, JSON.stringify(obj)); return true; },
+    async list(){ return Array.from(M.keys()); }
+  };
+}
+
+
 // ─── утилиты ──────────────────────────────────────────────────────────────────
 function makeStoreFromEnv() {
   const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID;
@@ -92,9 +117,8 @@ function resV2(body, status=200, extraHeaders={}) {
 
 // ─── основной хэндлер ─────────────────────────────────────────────────────────
 async function handle(method, getBody, getQuery) {
-  let store;
-  try { store = makeStoreFromEnv(); }
-  catch (e) { console.error('share_api config error:', e); return { body:{ error:e.message }, status:500, headers:{} }; }
+  let store = getStoreSmart();
+, status:500, headers:{} }; }
 
   try {
     if (method === 'POST') {

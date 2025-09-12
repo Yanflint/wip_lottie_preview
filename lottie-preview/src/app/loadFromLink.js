@@ -24,6 +24,7 @@ function getShareIdFromLocation() {
 }
 
 function applyLoopFromPayload(refs, data) {
+  try { if (isViewer && refs?.lottieMount) refs.lottieMount.style.visibility = ''; } catch {}
   if (data && data.opts && typeof data.opts.loop === 'boolean') {
     state.loopOn = !!data.opts.loop;
     if (refs?.loopChk) refs.loopChk.checked = state.loopOn;
@@ -31,6 +32,8 @@ function applyLoopFromPayload(refs, data) {
 }
 
 async function applyPayload(refs, data) {
+  const isViewer = document.documentElement.classList.contains('viewer');
+  try { if (isViewer && refs?.lottieMount) refs.lottieMount.style.visibility = 'hidden'; } catch {}
   if (!data || typeof data !== 'object') return false;
 
   // ВАЖНО: сначала применяем флаг цикла
@@ -46,6 +49,7 @@ async function applyPayload(refs, data) {
     try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
     setLastLottie(data.lot);
     await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
+    try { if (isViewer) { /* reflow */ await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); layoutLottie(refs); } } catch {}
   }
 
   setPlaceholderVisible(refs, false);
