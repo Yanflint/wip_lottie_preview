@@ -1,5 +1,23 @@
 // src/app/main.js
 
+// 0) Глобальный перехват ошибок — чтобы на мобиле не оставался «чёрный экран»
+(function(){
+  function showErrOverlay(msg) {
+    try {
+      const d = document.createElement('div');
+      d.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#111;color:#fff;padding:16px;overflow:auto;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;';
+      d.innerHTML = '<div style="max-width:720px;margin:0 auto"><h2 style="margin:0 0 12px">⚠️ Ошибка</h2><pre style="white-space:pre-wrap;word-break:break-word">'+msg+'</pre><button id="__reload" style="margin-top:12px;padding:8px 12px;border-radius:8px;background:#2a2a2a;color:#fff;border:0">Перезагрузить</button></div>';
+      document.body.appendChild(d);
+      d.querySelector('#__reload')?.addEventListener('click', ()=>location.reload());
+    } catch {}
+  }
+  function onGlobalError(ev){ try { showErrOverlay(String(ev?.error?.stack||ev?.message||ev)); } catch {} }
+  function onUnhandled(ev){ try { showErrOverlay('Unhandled: '+String(ev?.reason||ev)); } catch {} }
+  window.addEventListener('error', onGlobalError);
+  window.addEventListener('unhandledrejection', onUnhandled);
+})();
+
+
 // 1) Отметка standalone (A2HS)
 const isStandalone =
   (window.matchMedia &&

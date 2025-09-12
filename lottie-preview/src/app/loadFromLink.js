@@ -38,13 +38,13 @@ async function applyPayload(refs, data) {
     try { setLotOffset(0,0); } catch {}
     try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
     setLastLottie(data.lot);
-    await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
+    try { await loadLottieFromData(refs, data.lot); } catch (e) { console.error('loadLottieFromData failed', e); } // учтёт state.loopOn
   }
 
   setPlaceholderVisible(refs, false);
   // Ждём 2 кадра, чтобы визуальный viewport, фон и контейнер гарантированно стабилизировались (особенно iOS A2HS)
   await afterTwoFrames();
-  layoutLottie(refs);
+  try { layoutLottie(refs); } catch (e) { console.error('layoutLottie failed', e); }
   return true;
 }
 

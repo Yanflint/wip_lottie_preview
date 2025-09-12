@@ -113,7 +113,28 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   })();
 
   await new Promise((resolve) => {
+    const apply = () => {
+      const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
+      const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
+      const assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0)
+        ? meta.assetScale
+        : parseAssetScale(guessName);
+      const cssW = iw / assetScale;
+      const cssH = ih / assetScale;
+      const wrap = refs.wrapper;
+      if (wrap) {
+        wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
+        wrap.style.setProperty('--preview-h', `${cssH}px`);
+        wrap.style.setProperty('--asset-scale', String(assetScale));
+        setLastBgSize(cssW, cssH);
+        setLastBgMeta({ fileName: guessName, assetScale });
+        wrap.classList.add('has-bg');
+      }
+      setPlaceholderVisible(refs, false);
+    };
     refs.bgImg.onload = () => {
+      apply();
+      resolve();
       const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
       const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
@@ -141,6 +162,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
       resolve();
     };
     refs.bgImg.onerror = () => resolve();
+    if (refs.bgImg.complete && (refs.bgImg.naturalWidth||0)>0) { apply(); resolve(); return; }
     refs.bgImg.src = src;
   });
 }
