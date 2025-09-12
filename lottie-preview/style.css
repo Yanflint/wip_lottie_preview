@@ -301,4 +301,4 @@ html.standalone .preview {
 
 /* viewer lottie fade-in */
 html.viewer .lottie-layer { opacity: 0; transition: opacity .12s ease; }
-html.viewer .has-lottie .lottie-layer { opacity: 1; }
+html.viewer .lottie-ready .lottie-layer { opacity: 1; }

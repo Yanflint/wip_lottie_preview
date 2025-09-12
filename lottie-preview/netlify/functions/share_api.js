@@ -4,7 +4,7 @@
 //   HEAD /api/share?id=last       → ETag: "<hash>"
 // Основной GET без rev отдаёт полный payload.
 
-import * as blobs from '@netlify/blobs';
+const blobs = require('@netlify/blobs');
 
 const LAST_KEY = '__last__';
 const INDEX_PREFIX = 'index/';
@@ -171,7 +171,7 @@ async function handle(method, getBody, getQuery) {
 }
 
 // v1
-export const handler = async (event) => {
+exports.handler = async (event) => {
   const { body, status, headers } = await handle(
     (event.httpMethod || 'GET').toUpperCase(),
     async () => (event.body ? JSON.parse(event.body) : {}),
@@ -180,13 +180,4 @@ export const handler = async (event) => {
   return resV1(body, status, headers);
 };
 
-// v2 (если Netlify включит Edge/Next runtime)
-export default async (request) => {
-  const url = new URL(request.url);
-  const { body, status, headers } = await handle(
-    request.method.toUpperCase(),
-    async () => (await request.json().catch(() => ({}))),
-    (k) => url.searchParams.get(k)
-  );
-  return resV2(body, status, headers);
-};
+// (edge runtime disabled in CJS build)
