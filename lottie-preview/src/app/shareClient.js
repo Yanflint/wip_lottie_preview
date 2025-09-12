@@ -77,11 +77,19 @@ async function copyToClipboard(text) {
 
 export function initShare({ refs }) {
   const btn = refs?.shareBtn;
+  try { if (btn) btn.setAttribute('tabindex','-1'); } catch {}
   if (!btn) return;
 
   btn.addEventListener('click', async () => {
     await withLoading(btn, async () => {
-      const payload = await buildPayload(refs);
+      
+      const hasLot = !!state.lastLottieJSON;
+      const hasBg  = !!(refs?.bgImg && refs.bgImg.src);
+      if (!hasBg && !hasLot) { showToastNear(refs.toastEl, btn, 'Загрузите графику'); return; }
+      if (!hasBg) { showToastNear(refs.toastEl, btn, 'Загрузите фон'); return; }
+      if (!hasLot) { showToastNear(refs.toastEl, btn, 'Загрузите анимацию'); return; }
+      try { btn.setAttribute('data-loading-label','Создаю'); } catch {}
+    const payload = await buildPayload(refs);
 
       // Сохраняем на сервер (короткая ссылка)
       const res = await fetch('/api/share', {
