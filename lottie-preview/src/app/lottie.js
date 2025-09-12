@@ -81,6 +81,27 @@ if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
   stage.style.top  = '50%';
   stage.style.transformOrigin = '50% 50%';
   stage.style.transform = `translate(calc(-50% + ${xpx}px), calc(-50% + ${ypx}px)) scale(${fitScale})`;
+  // [TEST OVERLAY] capture metrics for debug overlay
+  try {
+    const stageRect = stage.getBoundingClientRect ? stage.getBoundingClientRect() : { width: 0, height: 0 };
+    const baseW = parseFloat(stage.style.width || '0') || stageRect.width / (fitScale || 1) || 0;
+    const baseH = parseFloat(stage.style.height || '0') || stageRect.height / (fitScale || 1) || 0;
+    window.__lpMetrics = {
+      fitScale: fitScale,
+      baseW: Math.round(baseW),
+      baseH: Math.round(baseH),
+      dispW: Math.round(stageRect.width),
+      dispH: Math.round(stageRect.height),
+      offsetX: x,
+      offsetY: y,
+      offsetXpx: Math.round(xpx),
+      offsetYpx: Math.round(ypx)
+    };
+    if (typeof window.__updateOverlay === 'function') {
+      window.__updateOverlay(window.__lpMetrics);
+    }
+  } catch {}
+
 }
 /**
  * Установка фоновой картинки из data:/blob:/http(s)
@@ -95,6 +116,9 @@ if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
  * @param {object} [meta] - опционально { fileName?: string }
  */
 export async function setBackgroundFromSrc(refs, src, meta = {}) {
+  // [PATCH] make function awaitable until image is loaded
+  let __bgResolve = null; const __bgDone = new Promise((r)=>{ __bgResolve = r; });
+
   if (!refs?.bgImg) return;
 
   // Пытаемся вычислить название файла для парсинга @2x
@@ -116,6 +140,8 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   })();
 
   refs.bgImg.onload = () => {
+    try { __bgResolve && __bgResolve(); } catch {}
+
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
@@ -141,10 +167,13 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   };
 
   refs.bgImg.onerror = () => {
+    try { __bgResolve && __bgResolve(); } catch {}
+
     console.warn('Background image failed to load');
   };
 
   refs.bgImg.src = src;
+  try { await __bgDone; } catch {}
 }
 
 /** Жёсткий перезапуск проигрывания */
