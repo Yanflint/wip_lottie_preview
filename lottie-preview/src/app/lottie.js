@@ -1,5 +1,5 @@
 // src/app/lottie.js
-import { state, setLastBgSize, setLastBgMeta } from './state.js';
+import { state, setLastBgSize, setLastBgMeta, setLotOffset, getLastBgSize, bumpCompositionNonce } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
@@ -126,7 +126,21 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
 
-    const wrap = refs.wrapper;
+    
+    // === FIX: reset placement and bump nonce if aspect ratio changed ===
+    try {
+      const prev = (typeof getLastBgSize === 'function') ? getLastBgSize() : (state.lastBgSize || { w: 0, h: 0 });
+      const prevAR = (prev.w > 0 && prev.h > 0) ? (prev.w / prev.h) : 0;
+      const nextAR = (cssW > 0 && cssH > 0) ? (cssW / cssH) : 0;
+      if (prev.w > 0 && prev.h > 0 && Math.abs(prevAR - nextAR) > 1e-3) {
+        // New background has a different aspect ratio within the same session.
+        // Start placement "as first time": zero offsets, re-layout, and bump composition nonce.
+        try { setLotOffset(0, 0); } catch {}
+        try { bumpCompositionNonce(); } catch {}
+      }
+    } catch {}
+    // === /FIX ===
+const wrap = refs.wrapper;
     if (wrap) {
       wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
       wrap.style.setProperty('--preview-h', `${cssH}px`);

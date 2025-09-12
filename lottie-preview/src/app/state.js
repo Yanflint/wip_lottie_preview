@@ -45,3 +45,15 @@ export function bumpLotOffset(dx, dy) {
 export function getLotOffset() {
   return state.lotOffset || { x: 0, y: 0 };
 }
+
+// ==== [Patched by fix] compositionNonce + helpers (non-breaking) ====
+try { if (typeof state.compositionNonce !== 'number') state.compositionNonce = 0; } catch {}
+export function bumpCompositionNonce() {
+  try {
+    state.compositionNonce = (state.compositionNonce || 0) + 1;
+    try { window.__compositionNonce = state.compositionNonce; } catch {}
+  } catch {}
+}
+export function getLastBgSize() {
+  try { return state.lastBgSize || { w: 0, h: 0 }; } catch { return { w: 0, h: 0 }; }
+}

@@ -39,7 +39,10 @@ async function buildPayload(refs) {
   if (!lot) throw new Error('Нет данных Lottie');
   // Встраиваем позицию в метаданные
   try { const pos = (state.lotOffset || {x:0,y:0}); lot.meta = lot.meta || {}; lot.meta._lpPos = { x: +pos.x||0, y: +pos.y||0 }; } catch {}
-  if (!lot) throw new Error('Нет данных Lottie');
+  
+  // Ensure a unique nonce per composition to avoid stale cache/state reuse on server/viewer
+  try { lot.meta._lpNonce = (typeof window !== 'undefined' && window.__compositionNonce) ? window.__compositionNonce : Date.now(); } catch {}
+if (!lot) throw new Error('Нет данных Lottie');
 
   let bg = null;
   const imgEl = refs?.bgImg;
