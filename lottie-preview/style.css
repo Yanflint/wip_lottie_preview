@@ -172,22 +172,7 @@ body{
 .chk input:checked::after{ content:""; position:absolute; inset:3px; background:#fff; border-radius:2px; }
 
 /* ===================== TOAST ===================== */
-.toast{
-  position:fixed;
-  left:50%;
-  top:16px;
-  transform:translateX(-50%) translateY(6px); /* появляется чуть выше кнопки с небольшим сдвигом */
-  opacity:0;
-  transition:transform .22s ease, opacity .22s ease;
-  background:#2dbf6f; /* зелёный */
-  color:#fff;         /* белый текст */
-  border:none;        /* без обводок */
-  border-radius:var(--btn-radius, 12px);
-  padding:10px 14px;
-  z-index:2000;
-  pointer-events:none;
-  font-weight:400;    /* регуляр */
-  font-size: max(12px, calc(var(--btn-font, 14px) * .9)); /* чуть меньше, чем на кнопке */
+\1font-size: 12px; /* чуть меньше, чем на кнопке */
   letter-spacing: 0;  /* единый со шрифтами */
   box-shadow: 0 6px 24px rgba(0,0,0,.18);
 }
@@ -392,3 +377,10 @@ button::-moz-focus-inner{ border:0 !important; }
 
 /* Нулевые отступы у чекбокса цикла */
 #loopChk{ margin-left:0; margin-right:0; }
+
+/* Share button non-bold */
+#shareBtn{ font-weight: 400; }
+
+
+/* Hide placeholder during DND */
+body.dragging .placeholder{ display:none !important; }
