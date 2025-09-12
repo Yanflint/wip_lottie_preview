@@ -68,7 +68,7 @@ showToastIfFlag(); // покажет "Обновлено", если страни
 
   await initLoadFromLink({ refs, isStandalone });
 
-  initDnd({ refs });
+  if (!isViewer) initDnd({ refs });
   initControls({ refs });
   initShare({ refs, isStandalone });
 
@@ -101,6 +101,7 @@ showToastIfFlag(); // покажет "Обновлено", если страни
 window.addEventListener('keydown', (e) => {
   const keys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
   if (!keys.includes(e.key)) return;
+  if (isViewer) return;
   const tag = (document.activeElement?.tagName || '').toLowerCase();
   if (['input','textarea','select'].includes(tag)) return;
   const step = e.shiftKey ? 10 : 1;

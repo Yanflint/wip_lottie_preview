@@ -200,7 +200,14 @@ const autoplay = isViewer && !isStandalone ? false : true;
       animationData: lotJson
     });
 
-    anim.addEventListener('DOMLoaded', () => {
+    
+anim.addEventListener('DOMLoaded', () => {
+  try {
+    if (typeof autoplay !== 'undefined' && autoplay === false && typeof anim.goToAndStop === 'function') {
+      anim.goToAndStop(0, true);
+    }
+  } catch {}
+
       setPlaceholderVisible(refs, false);
       if (refs.wrapper) refs.wrapper.classList.add('has-lottie');
       layoutLottie(refs);
