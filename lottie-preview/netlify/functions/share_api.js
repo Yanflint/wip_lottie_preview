@@ -15,7 +15,7 @@ function getStoreSmart() {
     // Netlify auto store
     const st = blobs.getStore('shares');
     if (st) return st;
-  } catch {}
+  } catch (e) {}
   try {
     return makeStoreFromEnv();
   } catch (e) {
@@ -81,7 +81,7 @@ async function getRaw(store, key) {
     try {
       const j = await store.getJSON(key);
       if (j != null) return { text: JSON.stringify(j), json: j };
-    } catch {}
+    } catch (e) {}
   }
   // …или как строку/стрим
   try {
@@ -175,7 +175,7 @@ exports.handler = async (event) => {
   const { body, status, headers } = await handle(
     (event.httpMethod || 'GET').toUpperCase(),
     async () => (event.body ? JSON.parse(event.body) : {}),
-    (k) => event.queryStringParameters?.[k]
+    (k) => (event.queryStringParameters ? event.queryStringParameters[k] : null)
   );
   return resV1(body, status, headers);
 };
