@@ -13,8 +13,9 @@ async function imageElementToDataURL(imgEl) {
   if (src.startsWith('blob:')) {
     await new Promise((res, rej) => {
       if (imgEl.complete && imgEl.naturalWidth) return res();
-      imgEl.onload = () => res();
-      imgEl.onerror = (e) => rej(e);
+      const _once = () => { try { imgEl.removeEventListener('load', _once); } catch {} res(); };
+      imgEl.addEventListener('load', _once, { once: true });
+imgEl.onerror = (e) => rej(e);
     });
     try {
       const w = imgEl.naturalWidth || imgEl.width || 1;
