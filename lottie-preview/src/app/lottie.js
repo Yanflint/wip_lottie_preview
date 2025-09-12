@@ -95,6 +95,7 @@ if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
  * @param {object} [meta] - опционально { fileName?: string }
  */
 export async function setBackgroundFromSrc(refs, src, meta = {}) {
+  return await new Promise((resolve) => {
   if (!refs?.bgImg) return;
 
   // Пытаемся вычислить название файла для парсинга @2x
@@ -138,6 +139,8 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     }
 
     setPlaceholderVisible(refs, false);
+    try { resolve(); } catch {}
+  
   };
 
   refs.bgImg.onerror = () => {
@@ -213,6 +216,7 @@ const autoplay = isViewer && !isStandalone ? false : true;
     console.error('loadLottieFromData error:', e);
     return null;
   }
+  });
 }
 
 /** Экспорт текущей анимации (если нужно где-то ещё) */

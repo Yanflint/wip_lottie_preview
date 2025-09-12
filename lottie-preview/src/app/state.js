@@ -1,5 +1,5 @@
 export const state = {
-  VERSION: '58',
+  VERSION: '59',
   loopOn: false,
   autoplayOn: true,
   lastLottieJSON: null,

@@ -1,6 +1,6 @@
 // Загружаем по /s/:id. Если id нет и это standalone, пробуем "последний" снимок.
 // Флаг цикла (opts.loop) применяем до создания анимации.
-import { setPlaceholderVisible } from './utils.js';
+import { setPlaceholderVisible, afterTwoFrames } from './utils.js';
 import { setLotOffset } from './state.js';
 import { setLastLottie, state } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
@@ -34,12 +34,16 @@ async function applyPayload(refs, data) {
     if (src) await setBackgroundFromSrc(refs, src, meta);
   }
   if (data.lot) {
+    // Сбрасываем прошлое смещение, чтобы не мелькало старое положение
+    try { setLotOffset(0,0); } catch {}
     try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
     setLastLottie(data.lot);
     await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
   }
 
   setPlaceholderVisible(refs, false);
+  // Ждём 2 кадра, чтобы визуальный viewport, фон и контейнер гарантированно стабилизировались (особенно iOS A2HS)
+  await afterTwoFrames();
   layoutLottie(refs);
   return true;
 }
