@@ -3,9 +3,9 @@
 // Мгновенная проверка при возврате в фокус/тач. Бэкофф до 30с при ошибках.
 // Перед перезагрузкой ставим флаг в sessionStorage, чтобы показать тост "Обновлено".
 
-const BASE_INTERVAL = 5000;
+const BASE_INTERVAL = 10000;
 const JITTER = 0.20;
-const MAX_BACKOFF = 30000;
+const MAX_BACKOFF = 60000;
 const TOAST_FLAG = 'lp_show_toast';
 
 function isViewingLast() {
