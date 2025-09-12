@@ -6,16 +6,7 @@ import { setLastLottie, state } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
 import { loadPinned } from './pinned.js';
 
-
-function getRevFromLocation() {
-  try {
-    const u = new URL(location.href);
-    const r = u.searchParams.get('rev');
-    return r && r.replace(/"/g,'') || null;
-  } catch { return null; }
-}
 function getShareIdFromLocation() {
-
   const m = location.pathname.match(/\/s\/([^/?#]+)/);
   if (m && m[1]) return m[1];
   const u = new URL(location.href);
@@ -24,7 +15,6 @@ function getShareIdFromLocation() {
 }
 
 function applyLoopFromPayload(refs, data) {
-  try { if (isViewer && refs?.lottieMount) refs.lottieMount.style.visibility = ''; } catch {}
   if (data && data.opts && typeof data.opts.loop === 'boolean') {
     state.loopOn = !!data.opts.loop;
     if (refs?.loopChk) refs.loopChk.checked = state.loopOn;
@@ -32,8 +22,6 @@ function applyLoopFromPayload(refs, data) {
 }
 
 async function applyPayload(refs, data) {
-  const isViewer = document.documentElement.classList.contains('viewer');
-  try { if (isViewer && refs?.lottieMount) refs.lottieMount.style.visibility = 'hidden'; } catch {}
   if (!data || typeof data !== 'object') return false;
 
   // ВАЖНО: сначала применяем флаг цикла
@@ -49,7 +37,6 @@ async function applyPayload(refs, data) {
     try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
     setLastLottie(data.lot);
     await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
-    try { if (isViewer) { /* reflow */ await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); layoutLottie(refs); } } catch {}
   }
 
   setPlaceholderVisible(refs, false);
@@ -62,47 +49,20 @@ export async function initLoadFromLink({ refs, isStandalone }) {
 
   // 1) Пробуем id из URL
   const id = getShareIdFromLocation();
-  const wantRev = getRevFromLocation();
-  
-if (id) {
-  try {
-    // Если указан rev — дождёмся совпадения ETag перед загрузкой JSON
-    if (wantRev) {
-      const maxTries = 25; // ~2.5сек при 100мс
-      for (let i = 0; i < maxTries; i++) {
-        const head = await fetch(`/api/share?id=${encodeURIComponent(id)}`, { method: 'HEAD', cache: 'no-store' });
-        const et = (head.headers.get('ETag') || '').replace(/"/g, '');
-        if (et && et === wantRev) break;
-        await new Promise(r => setTimeout(r, 100));
+  if (id) {
+    try {
+      const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
+      if (r.ok) {
+        const data = await r.json().catch(() => null);
+        if (await applyPayload(refs, data)) return;
       }
-    }
-    const r = await fetch(`/api/share?id=${encodeURIComponent(id)}&ts=${Date.now()}`, { cache: 'no-store' });
-    if (r.ok) {
-      const data = await r.json().catch(() => null);
-      if (data && await applyPayload(refs, data)) {
-        // Проверка корректной инициализации
-        try {
-          const okW = (refs?.lottieMount?.firstElementChild?.getBoundingClientRect?.().width || 0) > 0;
-          const okH = (refs?.lottieMount?.firstElementChild?.getBoundingClientRect?.().height || 0) > 0;
-          const hasBg = !!(refs?.bgImg?.naturalWidth);
-          if (!(okW && okH && hasBg)) {
-            const r2 = await fetch(`/api/share?id=${encodeURIComponent(id)}&ts=${Date.now()}`, { cache: 'no-store' });
-            if (r2.ok) {
-              const d2 = await r2.json().catch(() => null);
-              if (d2) await applyPayload(refs, d2);
-            }
-          }
-        } catch {}
-        return;
-      }
-    }
-  } catch (e) { console.error('id GET error', e); }
-}
+    } catch (e) { console.error('share GET error', e); }
+  }
 
   // 2) Если ярлык — тянем "последний" снимок с сервера
   if (isStandalone) {
     try {
-      const r = await fetch(`/api/share?id=last&ts=${Date.now()}`, { cache: 'no-store' });
+      const r = await fetch('/api/share?id=last', { cache: 'no-store' });
       if (r.ok) {
         const data = await r.json().catch(() => null);
         if (await applyPayload(refs, data)) return;

@@ -144,18 +144,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     console.warn('Background image failed to load');
   };
 
-  
-// /* CACHEBUST_BG */ avoid stale cached bg in A2HS
-try {
-  if (typeof src === 'string' && /^https?:/i.test(src)) {
-    const u = new URL(src, location.href);
-    if (!u.searchParams.has('ts')) u.searchParams.set('ts', Date.now().toString());
-    refs.bgImg.src = u.toString();
-  } else {
-    refs.bgImg.src = src;
-  }
-} catch { refs.bgImg.src = src; }
-
+  refs.bgImg.src = src;
 }
 
 /** Жёсткий перезапуск проигрывания */
@@ -211,14 +200,7 @@ const autoplay = isViewer && !isStandalone ? false : true;
       animationData: lotJson
     });
 
-    
-anim.addEventListener('DOMLoaded', () => {
-  try {
-    if (typeof autoplay !== 'undefined' && autoplay === false && typeof anim.goToAndStop === 'function') {
-      anim.goToAndStop(0, true);
-    }
-  } catch {}
-
+    anim.addEventListener('DOMLoaded', () => {
       setPlaceholderVisible(refs, false);
       if (refs.wrapper) refs.wrapper.classList.add('has-lottie');
       layoutLottie(refs);

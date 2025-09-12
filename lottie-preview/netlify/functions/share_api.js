@@ -4,36 +4,12 @@
 //   HEAD /api/share?id=last       → ETag: "<hash>"
 // Основной GET без rev отдаёт полный payload.
 
-let blobs = null; try { blobs = require('@netlify/blobs'); } catch (e) { blobs = null; }
+import * as blobs from '@netlify/blobs';
 
 const LAST_KEY = '__last__';
 const INDEX_PREFIX = 'index/';
 
-// smart store selection: try Netlify blobs auto, then env, then in-memory (dev)
-
-
-
-function getStoreSmart() {
-  if (blobs && typeof blobs.getStore === 'function') {
-    try {
-      const st = blobs.getStore('shares');
-      if (st) return st;
-    } catch (e) {}
-  }
-  if (blobs) {
-    try { return makeStoreFromEnv(); } catch (e) {}
-  }
-  if (!globalThis.__MEM_STORE__) globalThis.__MEM_STORE__ = new Map();
-  const M = globalThis.__MEM_STORE__;
-  return {
-    async get(key){ return M.has(key) ? M.get(key) : null; },
-    async set(key, v){ M.set(key, v); return true; },
-    async getJSON(key){ const t = M.get(key); try { return t ? JSON.parse(t) : null; } catch (e) { return null; } },
-    async setJSON(key, obj){ M.set(key, JSON.stringify(obj)); return true; },
-    async list(){ return Array.from(M.keys()); }
-  };
-}
-
+// ─── утилиты ──────────────────────────────────────────────────────────────────
 function makeStoreFromEnv() {
   const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID;
   const token  = process.env.NETLIFY_BLOBS_TOKEN   || process.env.NETLIFY_API_TOKEN;
@@ -75,14 +51,14 @@ async function setJson(store, key, obj) {
 }
 
 async function getRaw(store, key) {
-  // пытаемся найти JSON удобным способом...
+  // пытаемся найти JSON удобным способом…
   if (typeof store.getJSON === 'function') {
     try {
       const j = await store.getJSON(key);
       if (j != null) return { text: JSON.stringify(j), json: j };
-    } catch (e) {}
+    } catch {}
   }
-  // ...или как строку/стрим
+  // …или как строку/стрим
   try {
     const v = await store.get(key);
     if (v == null) return { text: null, json: null };
@@ -105,15 +81,20 @@ function fnv1a(str) {
 function resV1(body, status=200, extraHeaders={}) {
   return {
     statusCode: status,
-    headers: Object.assign({ 'content-type': 'application/json; charset=utf-8' }, extraHeaders || {}),
+    headers: { 'content-type': 'application/json; charset=utf-8', ...extraHeaders },
     body: JSON.stringify(body)
   };
 }
-// resV2 removed for CJS build
+
+function resV2(body, status=200, extraHeaders={}) {
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...extraHeaders } });
+}
 
 // ─── основной хэндлер ─────────────────────────────────────────────────────────
 async function handle(method, getBody, getQuery) {
-  let store = getStoreSmart();
+  let store;
+  try { store = makeStoreFromEnv(); }
+  catch (e) { console.error('share_api config error:', e); return { body:{ error:e.message }, status:500, headers:{} }; }
 
   try {
     if (method === 'POST') {
@@ -126,8 +107,8 @@ async function handle(method, getBody, getQuery) {
 
       await setJson(store, id, payload);
       await setJson(store, LAST_KEY, payload);
-      const rev = fnv1a(JSON.stringify(payload));
-      return { body: { id, rev }, status: 200, headers:{} };
+
+      return { body: { id }, status: 200, headers:{} };
     }
 
     if (method === 'GET' || method === 'HEAD') {
@@ -166,21 +147,22 @@ async function handle(method, getBody, getQuery) {
 }
 
 // v1
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const { body, status, headers } = await handle(
     (event.httpMethod || 'GET').toUpperCase(),
-    async () => {
-      try {
-        let raw = event.body || '';
-        if (event.isBase64Encoded) {
-          raw = Buffer.from(raw, 'base64').toString('utf8');
-        }
-        return raw ? JSON.parse(raw) : {};
-      } catch { return {}; }
-    },
-    (k) => (event.queryStringParameters ? event.queryStringParameters[k] : null)
+    async () => (event.body ? JSON.parse(event.body) : {}),
+    (k) => event.queryStringParameters?.[k]
   );
   return resV1(body, status, headers);
 };
 
-// (edge runtime disabled in CJS build)
+// v2 (если Netlify включит Edge/Next runtime)
+export default async (request) => {
+  const url = new URL(request.url);
+  const { body, status, headers } = await handle(
+    request.method.toUpperCase(),
+    async () => (await request.json().catch(() => ({}))),
+    (k) => url.searchParams.get(k)
+  );
+  return resV2(body, status, headers);
+};

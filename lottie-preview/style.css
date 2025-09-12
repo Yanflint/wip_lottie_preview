@@ -291,14 +291,3 @@ html.standalone.fit-safe .lottie-layer{
   /* Разрешаем горизонтальный скролл при широкой картинке */
   html, body{ overflow-x: auto; }
 }
-
-
-/* viewer/standalone clipping fix */
-html.viewer .preview,
-html.standalone .preview {
-  overflow: hidden !important;
-}
-
-/* viewer lottie fade-in */
-html.viewer .lottie-layer { opacity: 0; transition: opacity .12s ease; }
-html.viewer .lottie-ready .lottie-layer { opacity: 1; }
