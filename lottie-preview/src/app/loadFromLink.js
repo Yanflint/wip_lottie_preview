@@ -59,47 +59,41 @@ export async function initLoadFromLink({ refs, isStandalone }) {
   // 1) Пробуем id из URL
   const id = getShareIdFromLocation();
   const wantRev = getRevFromLocation();
-  if (id) {
-
-try {
-  // Если указан rev — дождёмся совпадения ETag перед загрузкой JSON
-  if (wantRev) {
-    const maxTries = 25; // ~2.5сек при 100мс
-    let ok = false;
-    for (let i=0; i<maxTries; i++) {
-      const head = await fetch(`/api/share?id=${encodeURIComponent(id)}`, { method: 'HEAD', cache: 'no-store' });
-      const et = (head.headers.get('ETag') || '').replace(/"/g, '');
-      if (et && et === wantRev) { ok = true; break; }
-      await new Promise(r => setTimeout(r, 100));
+  
+if (id) {
+  try {
+    // Если указан rev — дождёмся совпадения ETag перед загрузкой JSON
+    if (wantRev) {
+      const maxTries = 25; // ~2.5сек при 100мс
+      for (let i = 0; i < maxTries; i++) {
+        const head = await fetch(`/api/share?id=${encodeURIComponent(id)}`, { method: 'HEAD', cache: 'no-store' });
+        const et = (head.headers.get('ETag') || '').replace(/"/g, '');
+        if (et && et === wantRev) break;
+        await new Promise(r => setTimeout(r, 100));
+      }
     }
-  }
-} catch {}
-try {
-  const r = await fetch(`/api/share?id=${encodeURIComponent(id)}&ts=${Date.now()}`, { cache: 'no-store' });
-  if (r.ok) {
-    const data = await r.json().catch(() => null);
-    if (data && await applyPayload(refs, data)) {
-      // Проверка корректной инициализации
-      try {
-        const okW = (refs?.lottieMount?.firstElementChild?.getBoundingClientRect?.().width || 0) > 0;
-        const okH = (refs?.lottieMount?.firstElementChild?.getBoundingClientRect?.().height || 0) > 0;
-        const hasBg = !!(refs?.bgImg?.naturalWidth);
-        if (!(okW && okH && hasBg)) {
-          const r2 = await fetch(`/api/share?id=${encodeURIComponent(id)}&ts=${Date.now()}`, { cache: 'no-store' });
-          if (r2.ok) {
-            const d2 = await r2.json().catch(() => null);
-            if (d2) await applyPayload(refs, d2);
+    const r = await fetch(`/api/share?id=${encodeURIComponent(id)}&ts=${Date.now()}`, { cache: 'no-store' });
+    if (r.ok) {
+      const data = await r.json().catch(() => null);
+      if (data && await applyPayload(refs, data)) {
+        // Проверка корректной инициализации
+        try {
+          const okW = (refs?.lottieMount?.firstElementChild?.getBoundingClientRect?.().width || 0) > 0;
+          const okH = (refs?.lottieMount?.firstElementChild?.getBoundingClientRect?.().height || 0) > 0;
+          const hasBg = !!(refs?.bgImg?.naturalWidth);
+          if (!(okW && okH && hasBg)) {
+            const r2 = await fetch(`/api/share?id=${encodeURIComponent(id)}&ts=${Date.now()}`, { cache: 'no-store' });
+            if (r2.ok) {
+              const d2 = await r2.json().catch(() => null);
+              if (d2) await applyPayload(refs, d2);
+            }
           }
-        }
-      } catch {}
-      return;
+        } catch {}
+        return;
+      }
     }
-  }
-} catch (e) { console.error('id GET error', e); }
-
-  }
-    } catch (e) { console.error('share GET error', e); }
-  }
+  } catch (e) { console.error('id GET error', e); }
+}
 
   // 2) Если ярлык — тянем "последний" снимок с сервера
   if (isStandalone) {
