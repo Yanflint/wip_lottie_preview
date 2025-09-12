@@ -1,6 +1,6 @@
 // Загружаем по /s/:id. Если id нет и это standalone, пробуем "последний" снимок.
 // Флаг цикла (opts.loop) применяем до создания анимации.
-import { setPlaceholderVisible } from './utils.js';
+import { setPlaceholderVisible, afterTwoFrames } from './utils.js';
 import { setLotOffset } from './state.js';
 import { setLastLottie, state } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
@@ -26,6 +26,9 @@ async function applyPayload(refs, data) {
 
   // ВАЖНО: сначала применяем флаг цикла
   applyLoopFromPayload(refs, data);
+
+  // временно спрячем слой лотти до пересчёта, чтобы не было "вспышки" старого расположения
+  try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; } catch {}
 
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
