@@ -44,10 +44,33 @@ export function initAutoRefreshIfViewingLast(){
       const rev=await fetchRev();
       if(!baseline){ baseline=rev; }
       else if(rev && rev!==baseline){
-        try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
-        location.replace(location.href); // жёсткий рефреш, сохраняя ?fit
-        return;
+        // [PATCH]: pre-fetch full payload to ensure Lottie data is present (avoid showing stale lot pos)
+        try {
+          const pr = await fetch('/api/share?id=last', { cache: 'no-store' });
+          if (!pr.ok) throw new Error('preload failed '+pr.status);
+          const data = await pr.json().catch(() => null);
+          const hasLot = !!(data && typeof data === 'object' && data.lot);
+          const hasBgMaybe = !!(data && (data.bg || (data.lot && data.lot.meta && data.lot.meta._lpBgMeta)));
+          // If payload looks complete, proceed with hard refresh; otherwise, retry soon without switching baseline
+          if (hasLot) {
+            try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
+            location.replace(location.href); // жёсткий рефреш, сохраняя ?fit
+            return;
+          } else {
+            // Payload not ready yet; try again quickly (no exponential backoff)
+            currentDelay = Math.min(currentDelay, 1500);
+            schedule(currentDelay);
+            return;
+          }
+        } catch (e) {
+          // Network hiccup; retry a bit sooner than backoff
+          currentDelay = Math.min(MAX_BACKOFF, Math.max(1500, currentDelay));
+          schedule(currentDelay);
+          return;
+        }
       }
+// [PATCH] Verify payload completeness before triggering hard reload on rev change.
+
       reset();
     }catch{
       currentDelay=Math.min(MAX_BACKOFF, Math.max(BASE_INTERVAL, currentDelay*2));
