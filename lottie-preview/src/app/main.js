@@ -14,7 +14,6 @@ import { initDnd }           from './dnd.js';
 import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
-import { initViewportFit }  from './viewportFit.js';
 import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { showToastIfFlag } from './updateToast.js';

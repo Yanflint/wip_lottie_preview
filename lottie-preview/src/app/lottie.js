@@ -1,5 +1,5 @@
 // src/app/lottie.js
-import { state, setLastBgSize, setLastBgMeta, setBgAccounted } from './state.js';
+import { state, setLastBgSize, setLastBgMeta } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
@@ -24,19 +24,13 @@ let anim = null;
 
 /* ========= HELPERS ========= */
 function parseAssetScale(nameOrUrl) {
-  try {
-    const base = String(nameOrUrl || '').split('/').pop();
-    const noHash = base.split('#')[0];
-    const noQuery = noHash.split('?')[0];
-    const dot = noQuery.lastIndexOf('.');
-    const stem = dot >= 0 ? noQuery.slice(0, dot) : noQuery;
-    // Ищем @Nx где N — число, без жёсткой привязки к расширению
-    const m = stem.match(/@([0-9]+(?:\.[0-9]+)?)x/i);
-    if (!m) return 1;
-    const s = parseFloat(m[1]);
-    if (!isFinite(s) || s <= 0) return 1;
-    return Math.max(1, Math.min(4, s));
-  } catch { return 1; }
+  // match @2x, @3x, @1.5x before extension
+  const m = String(nameOrUrl || '').match(/@(\d+(?:\.\d+)?)x(?=\.[a-z0-9]+(\?|#|$))/i);
+  if (!m) return 1;
+  const s = parseFloat(m[1]);
+  if (!isFinite(s) || s <= 0) return 1;
+  // Ограничим разумными рамками
+  return Math.max(1, Math.min(4, s));
 }
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
@@ -49,7 +43,9 @@ export function layoutLottie(refs) {
   const cssW = +((state.lastBgSize && state.lastBgSize.w) || 0);
   const cssH = +((state.lastBgSize && state.lastBgSize.h) || 0);
 
-  // Реальные размеры фона, а не рамки превью
+  
+  // Берём реальные рендерные размеры фоновой картинки (если есть),
+  // чтобы масштаб лотти соответствовал именно фону, а не контейнеру превью.
   let realW = 0, realH = 0;
   const bgEl = refs?.bgImg;
   if (bgEl && bgEl.getBoundingClientRect) {
@@ -57,14 +53,21 @@ export function layoutLottie(refs) {
     realW = bgr.width || 0;
     realH = bgr.height || 0;
   }
+  // Фолбэк: если по какой-то причине фон недоступен — используем контейнер
   if (!(realW > 0 && realH > 0)) {
     const br = wrap.getBoundingClientRect();
     realW = br.width || 0;
     realH = br.height || 0;
   }
 
+
   let fitScale = 1;
+  
   if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
+    // Масштаб подгоняем так, чтобы 1 CSS-пиксель лотти = 1 CSS-пиксель фона
+    fitScale = Math.min(realW / cssW, realH / cssH);
+  }
+if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
     fitScale = Math.min(realW / cssW, realH / cssH);
     if (!isFinite(fitScale) || fitScale <= 0) fitScale = 1;
   }
@@ -77,8 +80,7 @@ export function layoutLottie(refs) {
   stage.style.left = '50%';
   stage.style.top  = '50%';
   stage.style.transformOrigin = '50% 50%';
-  const __mul = (state.bgAccountedAssetScale ? 1 : (state.lotMul||1));
-  stage.style.transform = `translate(calc(-50% + ${xpx}px), calc(-50% + ${ypx}px)) scale(${fitScale * __mul})`;
+  stage.style.transform = `translate(calc(-50% + ${xpx}px), calc(-50% + ${ypx}px)) scale(${fitScale})`;
 }
 /**
  * Установка фоновой картинки из data:/blob:/http(s)
@@ -118,24 +120,13 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
     // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
-    let assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
-// Если пришли явные логические размеры из payload — рассчитываем из них
-try {
-  const dims = meta && meta._lpBgDims;
-  if (dims && dims.cssW > 0) {
-    const est = iw / dims.cssW;
-    if (isFinite(est) && est > 0) assetScale = est;
-  }
-} catch {}
-
+    const assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
 
     // Приводим к «CSS-размеру», как это было бы на сайте
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
 
     const wrap = refs.wrapper;
-  // Отмечаем, что CSS-габариты учитывают assetScale
-  try { setBgAccounted(assetScale > 1); } catch {}
     if (wrap) {
       wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
       wrap.style.setProperty('--preview-h', `${cssH}px`);
