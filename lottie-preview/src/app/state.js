@@ -11,7 +11,6 @@ export const state = {
   A2HS: false,                 // режим «на рабочем столе» (PWA / standalone)
   lastBgSize: { w: 0, h: 0 },  // последние известные размеры фонового изображения
   lastBgMeta: { fileName: '', assetScale: 1 }, // метаданные фона
-  lastBgSignature: '',             // сигнатура последнего фона (name|iwxih|assetScale)
 };
 
 export function setLoop(on)       { state.loopOn = !!on; }
@@ -45,25 +44,4 @@ export function bumpLotOffset(dx, dy) {
 }
 export function getLotOffset() {
   return state.lotOffset || { x: 0, y: 0 };
-}
-
-// ==== [Patched by fix] compositionNonce + helpers (non-breaking) ====
-try { if (typeof state.compositionNonce !== 'number') state.compositionNonce = 0; } catch {}
-export function bumpCompositionNonce() {
-  try {
-    state.compositionNonce = (state.compositionNonce || 0) + 1;
-    try { window.__compositionNonce = state.compositionNonce; } catch {}
-  } catch {}
-}
-export function getLastBgSize() {
-  try { return state.lastBgSize || { w: 0, h: 0 }; } catch { return { w: 0, h: 0 }; }
-}
-
-
-// ==== [Patched v2] bg signature helpers ====
-export function setLastBgSignature(sig) {
-  try { state.lastBgSignature = String(sig || ''); } catch {}
-}
-export function getLastBgSignature() {
-  try { return state.lastBgSignature || ''; } catch { return ''; }
 }

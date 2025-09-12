@@ -1,5 +1,5 @@
 // src/app/lottie.js
-import { state, setLastBgSize, setLastBgMeta, setLotOffset, getLastBgSize, bumpCompositionNonce, setLastBgSignature, getLastBgSignature } from './state.js';
+import { state, setLastBgSize, setLastBgMeta } from './state.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
@@ -126,33 +126,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     const cssW = iw / assetScale;
     const cssH = ih / assetScale;
 
-    
-    
-    // === FIX v2: reset only if background truly changed AND aspect ratio differs ===
-    try {
-      const prev = (typeof getLastBgSize === 'function') ? getLastBgSize() : (state.lastBgSize || { w: 0, h: 0 });
-      const prevAR = (prev.w > 0 && prev.h > 0) ? (prev.w / prev.h) : 0;
-
-      const nextAR = (cssW > 0 && cssH > 0) ? (cssW / cssH) : 0;
-      // Build a stable signature of the actual asset (name + intrinsic + assetScale)
-      const newSig = `${(meta && meta.fileName) || guessName || ''}|${iw}x${ih}|${assetScale}`;
-      const oldSig = (typeof getLastBgSignature === 'function') ? getLastBgSignature() : (state.lastBgSignature || '');
-
-      const aspectChanged = (prev.w > 0 && prev.h > 0) && (nextAR > 0) && (Math.abs(prevAR - nextAR) > 1e-6);
-      const isNewBackground = newSig !== oldSig;
-
-      if (isNewBackground && aspectChanged) {
-        // New background of different aspect: start placement "as first time"
-        try { setLotOffset(0, 0); } catch {}
-        try { bumpCompositionNonce(); } catch {}
-      }
-
-      // Persist signature after potential reset
-      try { setLastBgSignature(newSig); } catch {}
-    } catch {}
-    // === /FIX v2 ===
-
-const wrap = refs.wrapper;
+    const wrap = refs.wrapper;
     if (wrap) {
       wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
       wrap.style.setProperty('--preview-h', `${cssH}px`);
