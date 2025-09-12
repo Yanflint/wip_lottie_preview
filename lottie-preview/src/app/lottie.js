@@ -81,6 +81,27 @@ if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
   stage.style.top  = '50%';
   stage.style.transformOrigin = '50% 50%';
   stage.style.transform = `translate(calc(-50% + ${xpx}px), calc(-50% + ${ypx}px)) scale(${fitScale})`;
+  // [TEST OVERLAY] capture metrics for debug overlay
+  try {
+    const stageRect = stage.getBoundingClientRect ? stage.getBoundingClientRect() : { width: 0, height: 0 };
+    const baseW = parseFloat(stage.style.width || '0') || stageRect.width / (fitScale || 1) || 0;
+    const baseH = parseFloat(stage.style.height || '0') || stageRect.height / (fitScale || 1) || 0;
+    window.__lpMetrics = {
+      fitScale: fitScale,
+      baseW: Math.round(baseW),
+      baseH: Math.round(baseH),
+      dispW: Math.round(stageRect.width),
+      dispH: Math.round(stageRect.height),
+      offsetX: x,
+      offsetY: y,
+      offsetXpx: Math.round(xpx),
+      offsetYpx: Math.round(ypx)
+    };
+    if (typeof window.__updateOverlay === 'function') {
+      window.__updateOverlay(window.__lpMetrics);
+    }
+  } catch {}
+
 }
 /**
  * Установка фоновой картинки из data:/blob:/http(s)

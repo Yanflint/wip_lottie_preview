@@ -115,4 +115,46 @@ window.addEventListener('keydown', (e) => {
 }, { passive: false });
 
 window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} });
+
+  // ===== [TEST OVERLAY UI] only in viewer mode =====
+  try {
+    if (isViewer && refs?.wrapper) {
+      // Create container
+      const ov = document.createElement('div');
+      ov.id = 'debugOverlay';
+      ov.className = 'debug-overlay';
+      ov.setAttribute('aria-live','polite');
+      ov.textContent = '—';
+      refs.wrapper.appendChild(ov);
+
+      // Create refresh button
+      const rb = document.createElement('button');
+      rb.id = 'forceRefreshBtn';
+      rb.className = 'overlay-refresh-btn';
+      rb.type = 'button';
+      rb.textContent = 'Обновить';
+      rb.title = 'Принудительно перезагрузить ссылку';
+      rb.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try { sessionStorage.setItem('lp_show_toast','1'); } catch {}
+        location.replace(location.href);
+      });
+      refs.wrapper.appendChild(rb);
+
+      // Expose updater
+      window.__updateOverlay = (m) => {
+        try {
+          const txt = [
+            `offset: x=${m?.offsetX ?? 0} (px), y=${m?.offsetY ?? 0} (px)`,
+            `offset*scale: x=${m?.offsetXpx ?? 0}px, y=${m?.offsetYpx ?? 0}px`,
+            `size: ${m?.baseW ?? 0}×${m?.baseH ?? 0} (base), ${m?.dispW ?? 0}×${m?.dispH ?? 0} (display)`,
+            `scale: ${m?.fitScale?.toFixed ? m.fitScale.toFixed(4) : m?.fitScale ?? 1}`
+          ].join('\n');
+          ov.textContent = txt;
+        } catch {}
+      };
+    }
+  } catch {}
+
 });
