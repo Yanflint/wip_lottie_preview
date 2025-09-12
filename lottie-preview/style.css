@@ -166,29 +166,29 @@ body{
 .chk input:checked{ background:#2c8e6a; border-color:#2c8e6a; }
 .chk input:checked::after{ content:""; position:absolute; inset:3px; background:#fff; border-radius:2px; }
 
-
 /* ===================== TOAST ===================== */
 .toast{
   position:fixed;
   left:50%;
   top:16px;
-  transform:translateX(-50%) translateY(-16px);
+  transform:translateX(-50%) translateY(6px); /* появляется чуть выше кнопки с небольшим сдвигом */
   opacity:0;
-  transition:transform .25s ease, opacity .25s ease;
-  background:#2dbf6f; /* зелёненький */
-  color:#0b2b19;
-  border:none; /* без обводок */
-  border-radius:14px;
+  transition:transform .22s ease, opacity .22s ease;
+  background:#2dbf6f; /* зелёный */
+  color:#fff;         /* белый текст */
+  border:none;        /* без обводок */
+  border-radius:var(--btn-radius, 12px);
   padding:10px 14px;
   z-index:2000;
   pointer-events:none;
-  font-weight:700;
-  letter-spacing:.2px;
+  font-weight:400;    /* регуляр */
+  font-size: max(12px, calc(var(--btn-font, 14px) * .9)); /* чуть меньше, чем на кнопке */
+  letter-spacing: 0;  /* единый со шрифтами */
   box-shadow: 0 6px 24px rgba(0,0,0,.18);
 }
 .toast.show{
   opacity:1;
-  transform:translateX(-50%) translateY(0);
+  transform:translateX(-50%) translateY(-2px); /* лёгкий подъём */
 }
 /* ===================== В Е Р С И Я ===================== */
 .ver{
@@ -345,55 +345,45 @@ html.standalone.fit-safe .lottie-layer{
 }
 .overlay-refresh-btn:active{ transform: translateY(1px); }
 
-
-
-/* ===================== BUTTON LOADING ===================== */
-.btn.loading{
-  position: relative;
-  pointer-events: none;
-}
-.btn.loading .spinner{
-  width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.45);
-  border-top-color: rgba(255,255,255,1);
-  animation: spin .9s linear infinite;
-  display:inline-block;
-}
-.btn.loading .loading-content{
-  margin-right: 8px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+/* PNG-фон со скруглениями, как у превью */
+.bg img{ border-radius: var(--wrap-r, 18px); }
 
 /* ===================== DROP OVERLAY (DND HOVER) ===================== */
 .wrapper{ position: relative; }
 .drop-overlay{
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--wrap-r);
-  z-index: 8; /* above preview, below controls */
+  position: absolute; inset: 0; display: none;
+  align-items: center; justify-content: center;
+  border-radius: var(--wrap-r, 18px);
+  z-index: 8;
 }
 .drop-overlay::before{
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,.5); /* фейд 50% */
+  content:""; position:absolute; inset:0;
+  background: rgba(0,0,0,.5);
   border-radius: inherit;
 }
 .drop-overlay .box{
-  position: relative;
-  z-index: 1;
-  color: #fff;
-  background: rgba(0,0,0,.6); /* мягкая подложка */
-  padding: 10px 14px;
-  border-radius: 12px; /* без обводок */
-  font-weight: 700;
+  position:relative; z-index:1;
+  color:#fff; background: rgba(0,0,0,.6);
+  padding:10px 14px; border-radius: 12px; font-weight:700;
   box-shadow: 0 8px 24px rgba(0,0,0,.25);
 }
-body.dragging .drop-overlay{ display: flex; }
+body.dragging .drop-overlay{ display:flex; }
 
-/* ===================== FOCUS OUTLINE OFF FOR BUTTONS ===================== */
-button:focus{ outline: none !important; box-shadow: none !important; }
-button::-moz-focus-inner{ border: 0 !important; }
+/* Убираем фокус-обводку у кнопок */
+button:focus{ outline:none !important; box-shadow:none !important; }
+button::-moz-focus-inner{ border:0 !important; }
+
+/* В режиме загрузки не затемняем, просто блокируем повторный клик */
+.btn.loading{ position: relative; pointer-events: none; }
+.btn.loading .spinner{
+  width:16px; height:16px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.45);
+  border-top-color:rgba(255,255,255,1);
+  animation: spin .9s linear infinite;
+  display:inline-block;
+}
+.btn.loading .loading-content{ margin-right:8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Нулевые отступы у чекбокса цикла */
+#loopChk{ margin-left:0; margin-right:0; }

@@ -1,15 +1,15 @@
 export async function withLoading(btn, fn) {
   if (!btn) return fn();
   const prevHTML = btn.innerHTML;
-  const prevDisabled = btn.disabled;
-  btn.disabled = true;
   btn.classList.add('loading');
+  btn.setAttribute('aria-busy', 'true');
+  btn.style.filter = ''; /* не затемняем */
   btn.innerHTML = `<span class="loading-content">Создание</span><span class="spinner" aria-hidden="true"></span>`;
   try {
     return await fn();
   } finally {
     btn.classList.remove('loading');
-    btn.disabled = prevDisabled;
+    btn.removeAttribute('aria-busy');
     btn.innerHTML = prevHTML;
   }
 }

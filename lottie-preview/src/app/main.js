@@ -83,6 +83,8 @@ showToastIfFlag(); // покажет "Обновлено", если страни
 
   /* DISABLE TAB FOCUS */
   try { document.querySelectorAll('button').forEach(b => b.setAttribute('tabindex','-1')); } catch {}
+  /* REMOVE SHARE TITLE */
+  try { refs.shareBtn?.removeAttribute('title'); } catch {}
 
   // Перелайаут
   const relayout = () => { try { layoutLottie(refs); } catch {} };
