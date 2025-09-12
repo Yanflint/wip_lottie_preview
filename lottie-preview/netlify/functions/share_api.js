@@ -108,7 +108,7 @@ async function handle(method, getBody, getQuery) {
       await setJson(store, id, payload);
       await setJson(store, LAST_KEY, payload);
 
-      return { body: { id }, status: 200, headers:{} };
+      return { body: { id, rev }, status: 200, headers:{} };
     }
 
     if (method === 'GET' || method === 'HEAD') {

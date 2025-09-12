@@ -93,8 +93,8 @@ export function initShare({ refs }) {
         const t = await res.text().catch(() => '');
         throw new Error(`share failed: ${res.status}${t ? ' ' + t : ''}`);
       }
-      const { id } = await res.json();
-      const shortUrl = `${location.origin}/s/${id}`;
+      const { id, rev } = await res.json();
+      const shortUrl = `${location.origin}/s/${id}` + (rev ? `?rev=${rev}` : '');
 
       // Параллельно закрепляем локально (для A2HS)
       savePinned(payload);
