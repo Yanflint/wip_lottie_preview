@@ -62,7 +62,7 @@ export async function initLoadFromLink({ refs, isStandalone }) {
   // 2) Если ярлык — тянем "последний" снимок с сервера
   if (isStandalone) {
     try {
-      const r = await fetch('/api/share?id=last', { cache: 'no-store' });
+      const r = await fetch(`/api/share?id=last&ts=${Date.now()}`, { cache: 'no-store' });
       if (r.ok) {
         const data = await r.json().catch(() => null);
         if (await applyPayload(refs, data)) return;
