@@ -10,7 +10,10 @@ export function showToastNear(toastEl, el, msg) {
   if (!toastEl) return;
   toastEl.textContent = msg;
   const r = el?.getBoundingClientRect?.();
-  if (r) { toastEl.style.left = (r.left + r.width/2)+'px'; toastEl.style.top = (r.top)+'px'; }
+  if (r) {
+    toastEl.style.left = (r.left + r.width/2)+'px';
+    toastEl.style.top = (r.top - 12)+'px'; // show above the control
+  }
   toastEl.classList.add('show');
   clearTimeout(showToastNear._t);
   showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1400);

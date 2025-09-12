@@ -1,30 +1,6 @@
 // Загружаем по /s/:id. Если id нет и это standalone, пробуем "последний" снимок.
 // Флаг цикла (opts.loop) применяем до создания анимации.
-import { setPlaceholderVisible, afterTwoFrames } from './utils.js';
-
-async function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-async function fetchStableLastPayload(maxMs=2000){
-  const deadline = Date.now() + maxMs;
-  while (Date.now() < deadline){
-    const pr = await fetch('/api/share?id=last', { cache: 'no-store' });
-    if (!pr.ok) throw new Error('payload get failed '+pr.status);
-    const et = (pr.headers.get('ETag') || '').replace(/"/g,'');
-    const data = await pr.json().catch(()=>null);
-    let revNow = '';
-    try{
-      const rr = await fetch('/api/share?id=last&rev=1', { cache: 'no-store' });
-      if (rr.ok){ const j = await rr.json().catch(()=>({})); revNow = String(j.rev||''); }
-    }catch{}
-    const hasLot = !!(data && typeof data === 'object' && data.lot);
-    if (hasLot && et && revNow && et === revNow) return { data, etag: et };
-    await sleep(250);
-  }
-  const pr2 = await fetch('/api/share?id=last', { cache: 'no-store' });
-  const data2 = await pr2.json().catch(()=>null);
-  const et2 = (pr2.headers.get('ETag') || '').replace(/"/g,'');
-  return { data: data2, etag: et2 };
-}
-
+import { setPlaceholderVisible } from './utils.js';
 import { setLotOffset } from './state.js';
 import { setLastLottie, state } from './state.js';
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
@@ -46,18 +22,11 @@ function applyLoopFromPayload(refs, data) {
 }
 
 async function applyPayload(refs, data) {
-  let _hid=false; try {
-
   if (!data || typeof data !== 'object') return false;
 
   // ВАЖНО: сначала применяем флаг цикла
   applyLoopFromPayload(refs, data);
 
-  // временно спрячем слой лотти до пересчёта, чтобы не было "вспышки" старого расположения
-  try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; _hid=true; } catch {}
-
-  // скрываем лотти до полного применения размеров и конвертации
-  try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; } catch {}
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
     const meta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
@@ -72,10 +41,7 @@ async function applyPayload(refs, data) {
 
   setPlaceholderVisible(refs, false);
   layoutLottie(refs);
-  
-  } finally { try { if (_hid && refs?.lotStage) refs.lotStage.style.visibility = ''; } catch {} }
   return true;
-return true;
 }
 
 export async function initLoadFromLink({ refs, isStandalone }) {
@@ -85,14 +51,11 @@ export async function initLoadFromLink({ refs, isStandalone }) {
   const id = getShareIdFromLocation();
   if (id) {
     try {
-      let data=null;
-    if (id === 'last' || id === '__last__') {
-      try { const st = await fetchStableLastPayload(2000); data = st?.data || null; } catch {}
-    } else {
-      const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
-      if (r.ok) data = await r.json().catch(() => null);
-    }
-    if (data && await applyPayload(refs, data)) return;
+      const r = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
+      if (r.ok) {
+        const data = await r.json().catch(() => null);
+        if (await applyPayload(refs, data)) return;
+      }
     } catch (e) { console.error('share GET error', e); }
   }
 

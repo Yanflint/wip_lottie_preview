@@ -13,15 +13,6 @@ if (isStandalone) document.documentElement.classList.add('standalone');
 const isViewer = /^\/s\//.test(location.pathname);
 if (isViewer) document.documentElement.classList.add('viewer');
 
-// [PATCH] Boot hard refresh once per session, to avoid stale payload
-try {
-  if (isViewer && sessionStorage.getItem('lp_boot_refreshed') !== '1') {
-    sessionStorage.setItem('lp_boot_refreshed','1');
-    location.replace(location.href);
-  }
-} catch {}
-
-
 // 2) Импорты модулей
 import { initDnd }           from './dnd.js';
 import { state }           from './state.js';
@@ -124,57 +115,4 @@ window.addEventListener('keydown', (e) => {
 }, { passive: false });
 
 window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} });
-
-  // ===== [TEST OVERLAY UI] only in viewer mode =====
-  try {
-    if (isViewer) {
-      // Metrics overlay
-      const ov = document.createElement('div');
-      ov.id = 'debugOverlay';
-      ov.className = 'debug-overlay';
-      ov.setAttribute('aria-live','polite');
-      ov.textContent = '—';
-      // attach to wrapper if exists else body
-      (refs?.wrapper || document.body).appendChild(ov);
-
-      // Refresh button fixed at bottom-right above build/version
-      const rb = document.createElement('button');
-      rb.id = 'forceRefreshBtn';
-      rb.className = 'overlay-refresh-btn';
-      rb.type = 'button';
-      rb.textContent = 'Обновить';
-      rb.title = 'Принудительно перезагрузить ссылку';
-      rb.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        try { sessionStorage.setItem('lp_show_toast','1'); } catch {}
-        location.replace(location.href);
-      });
-      document.body.appendChild(rb); // ensure it's on top layer
-
-      // Debug visibility gating (hidden by default; enable via ?debug=1 or localStorage('lp_debug'='1'))
-      try {
-        const sp = new URL(location.href).searchParams;
-        const dbgParam = (sp.get('debug')||'').toLowerCase();
-        const dbgPref  = (typeof localStorage!=='undefined' && (localStorage.getItem('lp_debug')||'').toLowerCase()) || '';
-        const debugOn  = (dbgParam==='1'||dbgParam==='true'||dbgParam==='on') || (!dbgParam && (dbgPref==='1'||dbgPref==='true'||dbgPref==='on'));
-        ov.style.display = debugOn ? '' : 'none';
-        rb.style.display = debugOn ? '' : 'none';
-      } catch {}
-
-      // Expose updater
-      window.__updateOverlay = (m) => {
-        try {
-          const txt = [
-            `offset: x=${m?.offsetX ?? 0} (px), y=${m?.offsetY ?? 0} (px)`,
-            `offset*scale: x=${m?.offsetXpx ?? 0}px, y=${m?.offsetYpx ?? 0}px`,
-            `size: ${m?.baseW ?? 0}×${m?.baseH ?? 0} (base), ${m?.dispW ?? 0}×${m?.dispH ?? 0} (display)`,
-            `scale: ${m?.fitScale?.toFixed ? m.fitScale.toFixed(4) : m?.fitScale ?? 1}`
-          ].join('\n');
-          ov.textContent = txt;
-        } catch {}
-      };
-    }
-  } catch {}
-
 });
