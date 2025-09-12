@@ -166,15 +166,30 @@ body{
 .chk input:checked{ background:#2c8e6a; border-color:#2c8e6a; }
 .chk input:checked::after{ content:""; position:absolute; inset:3px; background:#fff; border-radius:2px; }
 
+
 /* ===================== TOAST ===================== */
 .toast{
-  position:fixed; left:50%; top:16px; transform:translateX(-50%) translateY(-16px);
-  opacity:0; transition:transform .2s ease, opacity .2s ease;
-  background:#1f2537; color:#fff; border:1px solid #2e374f; border-radius:10px;
-  padding:10px 12px; z-index:2000; pointer-events:none; font-weight:700; letter-spacing:.2px;
+  position:fixed;
+  left:50%;
+  top:16px;
+  transform:translateX(-50%) translateY(-16px);
+  opacity:0;
+  transition:transform .25s ease, opacity .25s ease;
+  background:#2dbf6f; /* зелёненький */
+  color:#0b2b19;
+  border:none; /* без обводок */
+  border-radius:14px;
+  padding:10px 14px;
+  z-index:2000;
+  pointer-events:none;
+  font-weight:700;
+  letter-spacing:.2px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.18);
 }
-.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
-
+.toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
 /* ===================== В Е Р С И Я ===================== */
 .ver{
   position:fixed; right:12px; bottom:12px; opacity:.5; font-size:12px;
@@ -329,3 +344,56 @@ html.standalone.fit-safe .lottie-layer{
   backdrop-filter: blur(4px);
 }
 .overlay-refresh-btn:active{ transform: translateY(1px); }
+
+
+
+/* ===================== BUTTON LOADING ===================== */
+.btn.loading{
+  position: relative;
+  pointer-events: none;
+}
+.btn.loading .spinner{
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.45);
+  border-top-color: rgba(255,255,255,1);
+  animation: spin .9s linear infinite;
+  display:inline-block;
+}
+.btn.loading .loading-content{
+  margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===================== DROP OVERLAY (DND HOVER) ===================== */
+.wrapper{ position: relative; }
+.drop-overlay{
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--wrap-r);
+  z-index: 8; /* above preview, below controls */
+}
+.drop-overlay::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5); /* фейд 50% */
+  border-radius: inherit;
+}
+.drop-overlay .box{
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  background: rgba(0,0,0,.6); /* мягкая подложка */
+  padding: 10px 14px;
+  border-radius: 12px; /* без обводок */
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+body.dragging .drop-overlay{ display: flex; }
+
+/* ===================== FOCUS OUTLINE OFF FOR BUTTONS ===================== */
+button:focus{ outline: none !important; box-shadow: none !important; }
+button::-moz-focus-inner{ border: 0 !important; }

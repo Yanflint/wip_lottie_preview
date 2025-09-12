@@ -1,8 +1,18 @@
 export async function withLoading(btn, fn) {
   if (!btn) return fn();
-  const text = btn.textContent;
+  const prevHTML = btn.innerHTML;
+  const prevDisabled = btn.disabled;
+  btn.disabled = true;
   btn.classList.add('loading');
-  try { return await fn(); }
+  btn.innerHTML = `<span class="loading-content">Создание</span><span class="spinner" aria-hidden="true"></span>`;
+  try {
+    return await fn();
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = prevDisabled;
+    btn.innerHTML = prevHTML;
+  }
+}
   finally { btn.classList.remove('loading'); btn.textContent = text; }
 }
 
@@ -10,7 +20,15 @@ export function showToastNear(toastEl, el, msg) {
   if (!toastEl) return;
   toastEl.textContent = msg;
   const r = el?.getBoundingClientRect?.();
-  if (r) { toastEl.style.left = (r.left + r.width/2)+'px'; toastEl.style.top = (r.top)+'px'; }
+  if (r) {
+    const top = Math.max(8, r.top - 10); // чуть выше кнопки
+    toastEl.style.left = (r.left + r.width/2) + 'px';
+    toastEl.style.top  = top + 'px';
+  }
+  toastEl.classList.add('show');
+  clearTimeout(showToastNear._t);
+  showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1600);
+}
   toastEl.classList.add('show');
   clearTimeout(showToastNear._t);
   showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1400);
