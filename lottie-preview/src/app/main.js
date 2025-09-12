@@ -16,7 +16,7 @@ if (isViewer) document.documentElement.classList.add('viewer');
 // 2) Импорты модулей
 import { initDnd }           from './dnd.js';
 import { state }           from './state.js';
-import { getAnim }         from './lottie.js';
+import { getAnim, restart } from './lottie.js';
 import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
@@ -88,13 +88,11 @@ showToastIfFlag(); // покажет "Обновлено", если страни
   refs.preview?.addEventListener('pointerdown', restartByTap, { passive: true });
   refs.preview?.addEventListener('touchstart',  restartByTap, { passive: true });
 
-  // In viewer mode: click to play/pause
+  // In viewer mode: click to RESTART animation (always from start)
   if (isViewer && refs.preview) {
     refs.preview.addEventListener('click', (e) => {
       if (refs.mode && refs.mode.contains(e.target)) return;
-      const a = getAnim && getAnim();
-      if (!a) return;
-      try { a.isPaused ? a.play() : a.pause(); } catch {}
+      try { restart(); } catch {}
     });
   }
 
