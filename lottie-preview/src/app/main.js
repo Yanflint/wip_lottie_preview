@@ -115,9 +115,4 @@ window.addEventListener('keydown', (e) => {
 }, { passive: false });
 
 window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} });
-
-  /* disable tab focus globally */
-  try { document.querySelectorAll('button, a, input, select, textarea, [tabindex]')
-    .forEach(el => el.setAttribute('tabindex','-1')); } catch {}
-
 });

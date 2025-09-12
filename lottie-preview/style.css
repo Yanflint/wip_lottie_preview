@@ -154,7 +154,7 @@ body{
 #sizeBtn, #heightBtn { background:var(--btn-dim-bg); color:#fff; }
 
 .chk{
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  display:inline-flex; align-items:center; gap:6px;
   color:#dce3ef; background:#273046; border:1px solid #2e374f;
   border-radius:var(--btn-radius); padding:0 var(--btn-pad-x); min-height:var(--ctl-h);
   font-size:var(--btn-font); line-height:1;
@@ -186,7 +186,7 @@ body{
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
-.toast.show{ opacity:1; transform:translate(-50%, calc(-100% - 0px)); }
+.toast.show{ opacity:1; transform:translate(-50%, calc(-100% - 8px)); }
 
 /* ===================== В Е Р С И Я ===================== */
 .ver{
@@ -304,42 +304,3 @@ html.standalone.fit-safe .lottie-layer{
   /* Разрешаем горизонтальный скролл при широкой картинке */
   html, body{ overflow-x: auto; }
 }
-
-
-/* spinner loading (DOM-based) */
-.btn.loading{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.btn.loading .btn-load{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.btn.loading .btn-load .lbl{
-  color: #fff;
-  letter-spacing: .2px;
-}
-.btn.loading .btn-load .spin{
-  width: 14px; height: 14px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.25);
-  border-top-color: #fff;
-  animation: btnspin .8s linear infinite;
-}
-@keyframes btnspin { to { transform: rotate(360deg); } }
-
-/* hide placeholder text under DnD overlay */
-body.dragging .placeholder{ opacity: 0; }
-
-
-/* share button focus */
-#shareBtn:focus, #shareBtn:focus-visible{
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-
-/* global focus disable (as requested) */
-:focus{ outline: none !important; box-shadow: none !important; }
