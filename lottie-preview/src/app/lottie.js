@@ -212,5 +212,7 @@ const autoplay = isViewer && !isStandalone ? false : true;
     return null;
   }
 
+}
+
 /** Экспорт текущей анимации (если нужно где-то ещё) */
 export function getAnim() { return anim; }
