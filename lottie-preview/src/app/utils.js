@@ -13,8 +13,6 @@ export async function withLoading(btn, fn) {
     btn.innerHTML = prevHTML;
   }
 }
-  finally { btn.classList.remove('loading'); btn.textContent = text; }
-}
 
 export function showToastNear(toastEl, el, msg) {
   if (!toastEl) return;
@@ -22,16 +20,12 @@ export function showToastNear(toastEl, el, msg) {
   const r = el?.getBoundingClientRect?.();
   if (r) {
     const top = Math.max(8, r.top - 10); // чуть выше кнопки
-    toastEl.style.left = (r.left + r.width/2) + 'px';
+    toastEl.style.left = (r.left + r.width / 2) + 'px';
     toastEl.style.top  = top + 'px';
   }
   toastEl.classList.add('show');
   clearTimeout(showToastNear._t);
   showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1600);
-}
-  toastEl.classList.add('show');
-  clearTimeout(showToastNear._t);
-  showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1400);
 }
 
 export function setDropActive(on) {
@@ -39,7 +33,8 @@ export function setDropActive(on) {
 }
 
 export function setPlaceholderVisible(refs, on) {
-  const el = refs?.phEl; if (!el) return;
+  const el = refs?.phEl;
+  if (!el) return;
   el.classList.toggle('hidden', !on);
 }
 
@@ -47,6 +42,7 @@ export function setPlaceholderVisible(refs, on) {
 export function isMobile() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
+
 export function afterTwoFrames() {
   return new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
 }
