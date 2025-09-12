@@ -13,6 +13,15 @@ if (isStandalone) document.documentElement.classList.add('standalone');
 const isViewer = /^\/s\//.test(location.pathname);
 if (isViewer) document.documentElement.classList.add('viewer');
 
+// [PATCH] Boot hard refresh once per session, to avoid stale payload
+try {
+  if (isViewer && sessionStorage.getItem('lp_boot_refreshed') !== '1') {
+    sessionStorage.setItem('lp_boot_refreshed','1');
+    location.replace(location.href);
+  }
+} catch {}
+
+
 // 2) Импорты модулей
 import { initDnd }           from './dnd.js';
 import { state }           from './state.js';

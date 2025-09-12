@@ -116,6 +116,9 @@ if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
  * @param {object} [meta] - опционально { fileName?: string }
  */
 export async function setBackgroundFromSrc(refs, src, meta = {}) {
+  // [PATCH] make function awaitable until image is loaded
+  let __bgResolve = null; const __bgDone = new Promise((r)=>{ __bgResolve = r; });
+
   if (!refs?.bgImg) return;
 
   // Пытаемся вычислить название файла для парсинга @2x
@@ -137,6 +140,8 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   })();
 
   refs.bgImg.onload = () => {
+    try { __bgResolve && __bgResolve(); } catch {}
+
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
 
@@ -162,10 +167,13 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   };
 
   refs.bgImg.onerror = () => {
+    try { __bgResolve && __bgResolve(); } catch {}
+
     console.warn('Background image failed to load');
   };
 
   refs.bgImg.src = src;
+  try { await __bgDone; } catch {}
 }
 
 /** Жёсткий перезапуск проигрывания */

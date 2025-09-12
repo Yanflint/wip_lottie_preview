@@ -56,6 +56,8 @@ async function applyPayload(refs, data) {
   // временно спрячем слой лотти до пересчёта, чтобы не было "вспышки" старого расположения
   try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; _hid=true; } catch {}
 
+  // скрываем лотти до полного применения размеров и конвертации
+  try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; } catch {}
   if (data.bg) {
     const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
     const meta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
