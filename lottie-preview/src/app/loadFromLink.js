@@ -129,6 +129,7 @@ async function applyPayload(refs, data) {
   if (stagingStage && newAnim) {
     // показать новую, спрятать старую
     stagingStage.style.opacity = '1';
+    stagingStage.style.pointerEvents = '';
     if (refs?.lotStage) refs.lotStage.style.opacity = '0';
 
     // заменить ссылки refs на новую сцену

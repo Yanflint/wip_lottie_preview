@@ -194,7 +194,9 @@ export async function loadLottieFromData(refs, data) {
     const lotJson = typeof data === 'string' ? JSON.parse(data) : data;
     if (!lotJson || typeof lotJson !== 'object') return null;
 
-    if (anim) {
+    
+    try { if (refs?.lotStage) refs.lotStage.style.visibility = ''; } catch {}
+if (anim) {
       try { anim.destroy?.(); } catch (_) {}
       anim = null;
     }
