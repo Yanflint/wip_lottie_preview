@@ -1,6 +1,6 @@
 // src/app/autoRefresh.js
 import { applyPayloadWithRefs } from './loadFromLink.js';
-import { getAnim } from './lottie.js'; } from './loadFromLink.js';
+import { getAnim } from './lottie.js';
 // Live-пулинг для /s/last: 5с ±20% (только когда вкладка видима).
 // Мгновенная проверка при возврате в фокус/тач. Бэкофф до 30с при ошибках.
 // Перед перезагрузкой ставим флаг в sessionStorage, чтобы показать тост "Обновлено".
