@@ -1,6 +1,6 @@
 // [ADDED] atomic-swap imports
-import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
-import { setLotOffset } from './state.js';
+import { setBackgroundFromSrc, loadLottieFromData, layoutLottie, setLoop } from './lottie.js';
+import { setLotOffset, setLastLottie, setLastBgMeta, state } from './state.js';
 import { showUpdateToast } from './updateToast.js';
 
 // src/app/autoRefresh.js
@@ -51,33 +51,50 @@ async function __applyAtomicUpdate(data){
   if (!data || typeof data !== 'object') return false;
   const refs = __collectRefsForViewer();
 
-  // 1) Parse and preload background (if any)
+  // A) Apply loop option early (mirrors applyLoopFromPayload)
+  try {
+    if (data && data.opts && typeof data.opts.loop === 'boolean') {
+      state.loopOn = !!data.opts.loop;
+      if (refs?.loopChk) refs.loopChk.checked = state.loopOn;
+      try { setLoop(state.loopOn); } catch(e) {}
+    }
+  } catch(e) {}
+
+  // B) Parse and preload background (if any)
   let bgSrc = null, bgMeta = {};
   try {
     if (data.bg) {
       if (typeof data.bg === 'string') bgSrc = data.bg;
       else { bgSrc = data.bg.value; bgMeta = { fileName: data.bg.name, assetScale: data.bg.assetScale }; }
     }
-  } catch(e){}
-  if (bgSrc) { await __preloadImage(bgSrc); }
+    // If meta is missing, try from lot meta (_lpBgMeta)
+    if ((!bgMeta.fileName || !bgMeta.assetScale) && data.lot && data.lot.meta && data.lot.meta._lpBgMeta) {
+      const bm = data.lot.meta._lpBgMeta;
+      if (!bgMeta.fileName && bm.fileName) bgMeta.fileName = bm.fileName;
+      if (!bgMeta.assetScale && bm.assetScale) bgMeta.assetScale = bm.assetScale;
+    }
+  } catch(e) {}
+  if (bgSrc) { try { await __preloadImage(bgSrc); } catch(e) {} }
 
-  // 2) Read optional offset from lot meta (to avoid jump)
+  // C) Read offset from lot meta (_lpPos) to avoid jump
   try {
-    const m = data.lot && data.lot.meta && data.lot.meta._prevView;
+    const m = data.lot && data.lot.meta && data.lot.meta._lpPos;
     if (m && typeof m.x==='number' && typeof m.y==='number') setLotOffset(m.x||0, m.y||0);
-  } catch(e){}
+  } catch(e) {}
 
-  // 3) Swap in this order: background -> lottie
+  // D) Swap in this order: background -> lottie
   if (bgSrc) {
-    try { await setBackgroundFromSrc(refs, bgSrc, bgMeta); } catch(e){ console.warn('swap bg fail', e); }
+    try { await setBackgroundFromSrc(refs, bgSrc, bgMeta); setLastBgMeta(bgMeta||{}); } catch(e){ console.warn('swap bg fail', e); }
   }
   if (data.lot) {
-    try { await loadLottieFromData(refs, data.lot); } catch(e){ console.warn('swap lot fail', e); }
+    try { setLastLottie(data.lot); await loadLottieFromData(refs, data.lot); } catch(e){ console.warn('swap lot fail', e); }
   }
 
   try { layoutLottie(refs); } catch(e){}
+  try { if (refs?.phEl) refs.phEl.classList.add('hidden'); } catch(e){}
   return true;
 }
+
 
 
 function isViewingLast() {
