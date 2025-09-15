@@ -42,18 +42,6 @@ function ensureStyles() {
     -webkit-backdrop-filter: saturate(1.1);
             backdrop-filter: saturate(1.1);
   }
-  .lp-toast-bubble:before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 18%;
-    right: 18%;
-    height: 2px;
-    background: rgba(255,255,255,0.85);
-    opacity: .75;
-    border-radius: 2px;
-    transform: translateY(-1px);
-  }
   .lp-toast-icon {
     width: 18px;
     height: 18px;
