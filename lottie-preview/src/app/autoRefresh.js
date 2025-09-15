@@ -141,9 +141,14 @@ export function initAutoRefreshIfViewingLast(){
             const holder = ensureBufferRefs(window.__LP_REFS);
             if (!holder){ location.replace(location.href); return; }
             const { bufRefs, bgWrap, lotLayer } = holder;
-            await applyPayloadWithRefs(bufRefs, data);
-            swapToBuffer(window.__LP_REFS, bufRefs, bgWrap, lotLayer, prevAnim);
-            baseline = rev;
+            const ok = await applyPayloadWithRefs(bufRefs, data);
+            if (ok) {
+              swapToBuffer(window.__LP_REFS, bufRefs, bgWrap, lotLayer, prevAnim);
+              baseline = rev;
+            } else {
+              location.replace(location.href);
+              return;
+            }
             return;
           } else {
             // Payload not ready yet; try again quickly (no exponential backoff)
