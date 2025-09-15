@@ -363,7 +363,7 @@ html.standalone.fit-safe .lottie-layer{
 }
 .drop-overlay::before{
   content:""; position:absolute; inset:0;
-  background: rgb(40, 40, 40);
+  background: rgba(11, 15, 26, 1);
   border-radius: inherit;
 }
 .drop-overlay .box{
