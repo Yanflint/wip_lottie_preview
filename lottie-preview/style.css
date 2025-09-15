@@ -405,7 +405,7 @@ button::-moz-focus-inner{ border:0 !important; }
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity .5s ease;
+  transition: opacity 1s ease;
 }
 .refresh-overlay.show{ opacity: 1; }
 .refresh-overlay .label{
