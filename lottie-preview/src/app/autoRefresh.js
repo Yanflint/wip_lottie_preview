@@ -36,14 +36,14 @@ async function __preloadImage(src){
     const im = new Image();
     im.onload = () => res();
     im.onerror = () => res(); // don't block on errors
-    try { im.decoding = 'sync'; } catch(_) {}
+    try { im.decoding = 'sync'; } catch(e) {}
     im.src = src;
   });
   try {
     const imgEl = document.createElement('img');
     imgEl.src = src;
     if (imgEl.decode) await imgEl.decode();
-  } catch(_){}
+  } catch(e){}
 }
 
 // [ADDED] Atomic (no-black) apply of new payload: preload everything, then swap
@@ -58,16 +58,16 @@ async function __applyAtomicUpdate(data){
       if (typeof data.bg === 'string') bgSrc = data.bg;
       else { bgSrc = data.bg.value; bgMeta = { fileName: data.bg.name, assetScale: data.bg.assetScale }; }
     }
-  } catch(_){}
+  } catch(e){}
   if (bgSrc) { await __preloadImage(bgSrc); }
 
   // 2) Read optional offset from lot meta (to avoid jump)
   try {
     const m = data.lot && data.lot.meta && data.lot.meta._prevView;
     if (m && typeof m.x==='number' && typeof m.y==='number') setLotOffset(m.x||0, m.y||0);
-  } catch(_){}
+  } catch(e){}
 
-  // 3) Swap in this order: background -> lottie (lottie destroy/create is quick, background already decoded)
+  // 3) Swap in this order: background -> lottie
   if (bgSrc) {
     try { await setBackgroundFromSrc(refs, bgSrc, bgMeta); } catch(e){ console.warn('swap bg fail', e); }
   }
@@ -75,7 +75,7 @@ async function __applyAtomicUpdate(data){
     try { await loadLottieFromData(refs, data.lot); } catch(e){ console.warn('swap lot fail', e); }
   }
 
-  try { layoutLottie(refs); } catch(_){}
+  try { layoutLottie(refs); } catch(e){}
   return true;
 }
 
@@ -90,7 +90,7 @@ function isViewingLast() {
     const u = new URL(location.href);
     const qid = u.searchParams.get('id');
     if (qid && (qid === 'last' || qid === '__last__')) return true;
-  } catch {}
+  } catch(e){}
   return false;
 }
 function jittered(ms){const f=1+(Math.random()*2-1)*JITTER;return Math.max(1000,Math.round(ms*f));}
@@ -118,7 +118,7 @@ async function fetchStableLastPayload(maxMs=2000){
     try{
       const rr = await fetch('/api/share?id=last&rev=1', { cache: 'no-store' });
       if (rr.ok){ const j = await rr.json().catch(()=>({})); revNow = String(j.rev||''); }
-    }catch{}
+    }catch(e){}
 
     // 3) If ETag equals current rev and data looks complete — return
     const hasLot = !!(data && typeof data === 'object' && data.lot);
@@ -149,42 +149,28 @@ export function initAutoRefreshIfViewingLast(){
     try{
       const rev=await fetchRev();
       if(!baseline){ baseline=rev; }
-      
-else if(rev && rev!==baseline){
-    try {
-      const { data } = await fetchStableLastPayload(4000);
-      if (data && typeof data === 'object') {
-        const ok = await __applyAtomicUpdate(data);
-        if (ok) {
-          try{ baseline = rev; }catch{}
-          try{ showUpdateToast('Обновлено'); }catch{}
-          // schedule the next regular tick
-          currentDelay = BASE_INTERVAL;
-          schedule(currentDelay);
-          return;
-        }
+      else if(rev && rev!==baseline){
+  try {
+    const { data } = await fetchStableLastPayload(4000);
+    if (data && typeof data === 'object') {
+      const ok = await __applyAtomicUpdate(data);
+      if (ok) {
+        try { baseline = rev; } catch(e) {}
+        try { showUpdateToast('Обновлено'); } catch(e) {}
+        currentDelay = BASE_INTERVAL;
+        schedule(currentDelay);
+        return;
       }
-    } catch(e) {
-      console.warn('atomic update failed, fallback to reload', e);
     }
-    // Fallback to old behaviour if something goes wrong
-    try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
-    location.replace(location.href);
-    return;
+  } catch(e) {
+    console.warn('atomic update failed, fallback to reload', e);
+  }
+  // Fallback to old behaviour if something goes wrong
+  try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch(e){}
+  location.replace(location.href);
+  return;
 }
- else {
-            // Payload not ready yet; try again quickly (no exponential backoff)
-            currentDelay = Math.min(currentDelay, 1500);
-            schedule(currentDelay);
-            return;
-          }
-        } catch (e) {
-          // Network hiccup; retry a bit sooner than backoff
-          currentDelay = Math.min(MAX_BACKOFF, Math.max(1500, currentDelay));
-          schedule(currentDelay);
-          return;
-        }
-      }
+
 // [PATCH] Verify payload completeness before triggering hard reload on rev change.
 
       reset();
@@ -204,5 +190,5 @@ else if(rev && rev!==baseline){
   window.addEventListener('pageshow', onVisible);
   window.addEventListener('pointerdown', onPointer, {passive:true});
 
-  (async()=>{ try{ baseline=await fetchRev(); }catch{} if(document.visibilityState==='visible'){ schedule(BASE_INTERVAL);} })();
+  (async()=>{ try{ baseline=await fetchRev(); }catch(e){} if(document.visibilityState==='visible'){ schedule(BASE_INTERVAL);} })();
 }
