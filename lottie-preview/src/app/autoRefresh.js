@@ -7,28 +7,6 @@ const BASE_INTERVAL = 5000;
 const JITTER = 0.20;
 const MAX_BACKOFF = 30000;
 const TOAST_FLAG = 'lp_show_toast';
-function ensureUpdateToast(){
-  let t = document.getElementById('updateToast');
-  if (!t){
-    t = document.createElement('div');
-    t.id = 'updateToast';
-    t.className = 'update-toast';
-    t.innerHTML = '<span class="icon" aria-hidden="true">\n      <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">\n        <path d="M7.5 13.3L3.9 9.7c-.3-.3-.8-.3-1.1 0-.3.3-.3.8 0 1.1l4.2 4.2c.3.3.8.3 1.1 0l9-9c.3-.3.3-.8 0-1.1-.3-.3-.8-.3-1.1 0L7.5 13.3z"/>\n      </svg>\n    </span><span class="txt">Обновлено</span>';
-    document.body.appendChild(t);
-  }
-  return t;
-}
-function showUpdateToast(){
-  const t = ensureUpdateToast();
-  t.style.transitionDuration = '.25s';
-  t.classList.add('show');
-  clearTimeout(t._hideTO);
-  t._hideTO = setTimeout(()=>{
-    try { t.style.transitionDuration = '2s'; } catch {}
-    t.classList.remove('show');
-  }, 1000);
-}
-
 
 function isViewingLast() {
   try {
