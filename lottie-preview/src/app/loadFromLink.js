@@ -115,6 +115,3 @@ export async function initLoadFromLink({ refs, isStandalone }) {
 
   // 4) Ничего не нашли — остаётся плейсхолдер
 }
-
-
-export async function applyPayloadWithRefs(refs, data) { return await applyPayload(refs, data); }
