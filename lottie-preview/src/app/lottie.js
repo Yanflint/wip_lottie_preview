@@ -4,13 +4,6 @@ import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
 
-/** Заменяем текущую анимацию на новую (с уничтожением старой) */
-export function setAnim(newAnim) {
-  try { if (anim && anim !== newAnim) anim.destroy?.(); } catch {}
-  anim = newAnim || null;
-}
-
-
 /* ========= ENV DETECT (PWA + mobile) ========= */
 (function detectEnv(){
   try {
@@ -42,8 +35,8 @@ function parseAssetScale(nameOrUrl) {
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
 /** Центрируем и масштабируем лотти-стейдж синхронно с фоном */
-export function layoutLottie(refs, stageOverride = null) {
-  const stage = stageOverride || refs?.lotStage;
+export function layoutLottie(refs) {
+  const stage = refs?.lotStage;
   const wrap  = refs?.wrapper || refs?.previewBox || refs?.preview;
   if (!stage || !wrap) return;
 
@@ -122,51 +115,65 @@ if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
  * @param {string} src
  * @param {object} [meta] - опционально { fileName?: string }
  */
-
 export async function setBackgroundFromSrc(refs, src, meta = {}) {
-  if (!refs?.bgImg) return;
+  // [PATCH] make function awaitable until image is loaded
+  let __bgResolve = null; const __bgDone = new Promise((r)=>{ __bgResolve = r; });
 
-  // Предзагрузка вне экрана
-  const preImg = new Image();
-  const done = new Promise((resolve) => {
-    preImg.onload = resolve;
-    preImg.onerror = resolve; // продолжаем даже при ошибке
-  });
-  preImg.src = src;
-  try { await done; } catch {}
+  if (!refs?.bgImg) return;
 
   // Пытаемся вычислить название файла для парсинга @2x
   const guessName = (() => {
+    // при передаче meta.fileName используем его
     if (meta.fileName) return meta.fileName;
+    // попробуем достать из атрибутов, если кто-то положил туда
     const fromAttr = refs.bgImg.getAttribute('data-filename') || refs.bgImg.alt;
     if (fromAttr) return fromAttr;
+    // как крайний случай — попробуем вытащить имя из обычного URL
     try {
       const u = new URL(src);
-      return u.pathname.split('/').pop() || '';
-    } catch { return ''; }
+      const pathname = u.pathname || '';
+      const base = pathname.split('/').pop();
+      return base || src;
+    } catch (_) {
+      return src; // data:/blob: сюда свалится — шанса достать имя нет
+    }
   })();
 
-  // Пробуем вытащить @Nx множитель из имени
-  let assetScale = 1;
-  try {
-    const m = guessName.match(/@(\d+(?:\.\d+)?)x/i);
-    if (m) assetScale = Math.max(1, Math.min(4, Number(m[1]) || 1));
-  } catch {}
+  refs.bgImg.onload = () => {
+    try { __bgResolve && __bgResolve(); } catch {}
 
-  // Применяем src только после предзагрузки
-  refs.bgImg.setAttribute('data-filename', guessName);
-  refs.bgImg.alt = guessName || 'bg';
+    const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
+    const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
+
+    // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
+    const assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
+
+    // Приводим к «CSS-размеру», как это было бы на сайте
+    const cssW = iw / assetScale;
+    const cssH = ih / assetScale;
+
+    const wrap = refs.wrapper;
+    if (wrap) {
+      wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
+      wrap.style.setProperty('--preview-h', `${cssH}px`);
+      wrap.style.setProperty('--asset-scale', String(assetScale));
+      // Сохраняем логический (CSS) размер и метаданные фона
+      setLastBgSize(cssW, cssH);
+      setLastBgMeta({ fileName: guessName, assetScale });
+      wrap.classList.add('has-bg');
+    }
+
+    setPlaceholderVisible(refs, false);
+  };
+
+  refs.bgImg.onerror = () => {
+    try { __bgResolve && __bgResolve(); } catch {}
+
+    console.warn('Background image failed to load');
+  };
+
   refs.bgImg.src = src;
-
-  try {
-    const w = preImg.naturalWidth || refs.bgImg.naturalWidth || 0;
-    const h = preImg.naturalHeight || refs.bgImg.naturalHeight || 0;
-    setLastBgSize(w, h);
-    setLastBgMeta({ fileName: guessName, assetScale: meta.assetScale || assetScale });
-  } catch {}
-
-  // Скрыть плейсхолдер (если был)
-  try { setPlaceholderVisible(refs, false); } catch {}
+  try { await __bgDone; } catch {}
 }
 
 /** Жёсткий перезапуск проигрывания */
@@ -194,9 +201,7 @@ export async function loadLottieFromData(refs, data) {
     const lotJson = typeof data === 'string' ? JSON.parse(data) : data;
     if (!lotJson || typeof lotJson !== 'object') return null;
 
-    
-    try { if (refs?.lotStage) refs.lotStage.style.visibility = ''; } catch {}
-if (anim) {
+    if (anim) {
       try { anim.destroy?.(); } catch (_) {}
       anim = null;
     }

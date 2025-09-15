@@ -1,3 +1,8 @@
+// [ADDED] atomic-swap imports
+import { setBackgroundFromSrc, loadLottieFromData, layoutLottie } from './lottie.js';
+import { setLotOffset } from './state.js';
+import { showUpdateToast } from './updateToast.js';
+
 // src/app/autoRefresh.js
 // Live-пулинг для /s/last: 5с ±20% (только когда вкладка видима).
 // Мгновенная проверка при возврате в фокус/тач. Бэкофф до 30с при ошибках.
@@ -7,6 +12,73 @@ const BASE_INTERVAL = 5000;
 const JITTER = 0.20;
 const MAX_BACKOFF = 30000;
 const TOAST_FLAG = 'lp_show_toast';
+
+// [ADDED] Build minimal refs used by lottie helpers (no coupling to main.js)
+function __collectRefsForViewer(){
+  const $ = (id) => document.getElementById(id);
+  const wrapper = $('wrapper');
+  return {
+    wrapper,
+    preview: $('preview'),
+    previewBox: $('previewBox') || wrapper,
+    phEl: $('ph'),
+    bgImg: $('bgImg'),
+    lotStage: $('lotStage'),
+    lottieMount: $('lottie'),
+    toastEl: $('toast'),
+  };
+}
+
+// [ADDED] Preload image and resolve after decode (if supported)
+async function __preloadImage(src){
+  if (!src) return;
+  await new Promise((res)=>{
+    const im = new Image();
+    im.onload = () => res();
+    im.onerror = () => res(); // don't block on errors
+    try { im.decoding = 'sync'; } catch(_) {}
+    im.src = src;
+  });
+  try {
+    const imgEl = document.createElement('img');
+    imgEl.src = src;
+    if (imgEl.decode) await imgEl.decode();
+  } catch(_){}
+}
+
+// [ADDED] Atomic (no-black) apply of new payload: preload everything, then swap
+async function __applyAtomicUpdate(data){
+  if (!data || typeof data !== 'object') return false;
+  const refs = __collectRefsForViewer();
+
+  // 1) Parse and preload background (if any)
+  let bgSrc = null, bgMeta = {};
+  try {
+    if (data.bg) {
+      if (typeof data.bg === 'string') bgSrc = data.bg;
+      else { bgSrc = data.bg.value; bgMeta = { fileName: data.bg.name, assetScale: data.bg.assetScale }; }
+    }
+  } catch(_){}
+  if (bgSrc) { await __preloadImage(bgSrc); }
+
+  // 2) Read optional offset from lot meta (to avoid jump)
+  try {
+    const m = data.lot && data.lot.meta && data.lot.meta._prevView;
+    if (m && typeof m.x==='number' && typeof m.y==='number') setLotOffset(m.x||0, m.y||0);
+  } catch(_){}
+
+  // 3) Swap in this order: background -> lottie (lottie destroy/create is quick, background already decoded)
+  if (bgSrc) {
+    try { await setBackgroundFromSrc(refs, bgSrc, bgMeta); } catch(e){ console.warn('swap bg fail', e); }
+  }
+  if (data.lot) {
+    try { await loadLottieFromData(refs, data.lot); } catch(e){ console.warn('swap lot fail', e); }
+  }
+
+  try { layoutLottie(refs); } catch(_){}
+  return true;
+}
+
 
 function isViewingLast() {
   try {
@@ -77,16 +149,30 @@ export function initAutoRefreshIfViewingLast(){
     try{
       const rev=await fetchRev();
       if(!baseline){ baseline=rev; }
-      else if(rev && rev!==baseline){
-        // [PATCH]: pre-fetch full payload to ensure Lottie data is present (avoid showing stale lot pos)
-        try {
-          const { data } = await fetchStableLastPayload(2000);
-          const hasLot = !!(data && typeof data === 'object' && data.lot);
-          if (hasLot) {
-            try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
-            location.replace(location.href); // жёсткий рефреш, сохраняя ?fit
-            return;
-          } else {
+      
+else if(rev && rev!==baseline){
+    try {
+      const { data } = await fetchStableLastPayload(4000);
+      if (data && typeof data === 'object') {
+        const ok = await __applyAtomicUpdate(data);
+        if (ok) {
+          try{ baseline = rev; }catch{}
+          try{ showUpdateToast('Обновлено'); }catch{}
+          // schedule the next regular tick
+          currentDelay = BASE_INTERVAL;
+          schedule(currentDelay);
+          return;
+        }
+      }
+    } catch(e) {
+      console.warn('atomic update failed, fallback to reload', e);
+    }
+    // Fallback to old behaviour if something goes wrong
+    try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
+    location.replace(location.href);
+    return;
+}
+ else {
             // Payload not ready yet; try again quickly (no exponential backoff)
             currentDelay = Math.min(currentDelay, 1500);
             schedule(currentDelay);

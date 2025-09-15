@@ -392,8 +392,3 @@ button::-moz-focus-inner{ border:0 !important; }
 
 /* Нулевые отступы у чекбокса цикла */
 #loopChk{ margin-left:0; margin-right:0; }
-
-
-/* Плавный бесшовный своп сцен */
-.lot-stage { transition: opacity .06s linear; }
-.lot-stage--staging { opacity: 0; }
