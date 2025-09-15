@@ -78,7 +78,7 @@ export function showUpdateToast(msg = 'Обновлено') {
   document.body.appendChild(wrap);
 
   // Анимация: появление → пауза → исчезновение
-  const enter = 500, stay = 2000, exit = 1000;
+  const enter = 1000, stay = 2000, exit = 2000;
   wrap.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     wrap.style.animation = `lpToastOut ${exit}ms ease forwards`;
