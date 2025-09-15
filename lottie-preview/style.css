@@ -392,3 +392,7 @@ button::-moz-focus-inner{ border:0 !important; }
 
 /* Нулевые отступы у чекбокса цикла */
 #loopChk{ margin-left:0; margin-right:0; }
+
+
+/* buffer layers */
+.bg.buffer, .lottie-layer.buffer{ visibility: hidden; pointer-events: none; }
