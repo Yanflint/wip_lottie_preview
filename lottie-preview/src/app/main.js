@@ -12,14 +12,6 @@ if (isStandalone) document.documentElement.classList.add('standalone');
 // Viewer mode on /s/*
 const isViewer = /^\/s\//.test(location.pathname);
 if (isViewer) document.documentElement.classList.add('viewer');
-  /* disable DnD in viewer */
-  if (isViewer) {
-    try {
-      window.addEventListener('dragover', e => e.preventDefault(), { passive:false });
-      window.addEventListener('drop', e => e.preventDefault(), { passive:false });
-    } catch {}
-  }
-
 
 // [PATCH] Boot hard refresh once per session, to avoid stale payload
 try {
@@ -85,7 +77,7 @@ showToastIfFlag(); // покажет "Обновлено", если страни
 
   await initLoadFromLink({ refs, isStandalone });
 
-  if (!isViewer) initDnd({ refs });
+  initDnd({ refs });
   initControls({ refs });
   initShare({ refs, isStandalone });
 
