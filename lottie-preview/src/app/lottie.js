@@ -168,7 +168,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   // Скрыть плейсхолдер (если был)
   try { setPlaceholderVisible(refs, false); } catch {}
 }
-) {
+ {
   // [PATCH] make function awaitable until image is loaded
   let __bgResolve = null; const __bgDone = new Promise((r)=>{ __bgResolve = r; });
 
