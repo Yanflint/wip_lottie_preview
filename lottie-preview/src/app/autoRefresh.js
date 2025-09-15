@@ -166,12 +166,12 @@ export function initAutoRefreshIfViewingLast(){
             try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
             try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
             const prevAnim = getAnim && getAnim();
-            const { bufRefs, bgWrap, lotLayer } = ensureBufferRefs(window.__LP_REFS || refs);
+            const { bufRefs, bgWrap, lotLayer } = ensureBufferRefs(window.__LP_REFS);
             // Apply payload into hidden buffer
             await applyPayloadWithRefs(bufRefs, data);
             // Swap instantly without black frame
-            swapToBuffer(window.__LP_REFS || refs, bufRefs, bgWrap, lotLayer, prevAnim);
-            return;
+            swapToBuffer(window.__LP_REFS, bufRefs, bgWrap, lotLayer, prevAnim);
+            baseline = rev;
           } else {
             // Payload not ready yet; try again quickly (no exponential backoff)
             currentDelay = Math.min(currentDelay, 1500);
