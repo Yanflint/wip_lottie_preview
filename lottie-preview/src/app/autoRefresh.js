@@ -18,11 +18,15 @@ function ensureUpdateToast(){
   }
   return t;
 }
-function showUpdateToast(duration=1400){
+function showUpdateToast(){
   const t = ensureUpdateToast();
+  t.style.transitionDuration = '.25s';
   t.classList.add('show');
   clearTimeout(t._hideTO);
-  t._hideTO = setTimeout(()=>{ t.classList.remove('show'); }, duration);
+  t._hideTO = setTimeout(()=>{
+    try { t.style.transitionDuration = '2s'; } catch {}
+    t.classList.remove('show');
+  }, 1000);
 }
 
 
