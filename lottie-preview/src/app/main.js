@@ -69,7 +69,6 @@ function applyVersion(refs) {
 // 5) Init
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
-  try { window.__LP_REFS = refs; } catch {}
   applyVersion(refs);
 showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
 

@@ -4,6 +4,13 @@ import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
 
+/** Заменяем текущую анимацию на новую (с уничтожением старой) */
+export function setAnim(newAnim) {
+  try { if (anim && anim !== newAnim) anim.destroy?.(); } catch {}
+  anim = newAnim || null;
+}
+
+
 /* ========= ENV DETECT (PWA + mobile) ========= */
 (function detectEnv(){
   try {
@@ -35,8 +42,8 @@ function parseAssetScale(nameOrUrl) {
 
 /** Центрируем лотти-стейдж без масштаба (1:1) */
 /** Центрируем и масштабируем лотти-стейдж синхронно с фоном */
-export function layoutLottie(refs) {
-  const stage = refs?.lotStage;
+export function layoutLottie(refs, stageOverride = null) {
+  const stage = stageOverride || refs?.lotStage;
   const wrap  = refs?.wrapper || refs?.previewBox || refs?.preview;
   if (!stage || !wrap) return;
 
@@ -115,7 +122,53 @@ if (cssW > 0 && cssH > 0 && realW > 0 && realH > 0) {
  * @param {string} src
  * @param {object} [meta] - опционально { fileName?: string }
  */
+
 export async function setBackgroundFromSrc(refs, src, meta = {}) {
+  if (!refs?.bgImg) return;
+
+  // Предзагрузка вне экрана
+  const preImg = new Image();
+  const done = new Promise((resolve) => {
+    preImg.onload = resolve;
+    preImg.onerror = resolve; // продолжаем даже при ошибке
+  });
+  preImg.src = src;
+  try { await done; } catch {}
+
+  // Пытаемся вычислить название файла для парсинга @2x
+  const guessName = (() => {
+    if (meta.fileName) return meta.fileName;
+    const fromAttr = refs.bgImg.getAttribute('data-filename') || refs.bgImg.alt;
+    if (fromAttr) return fromAttr;
+    try {
+      const u = new URL(src);
+      return u.pathname.split('/').pop() || '';
+    } catch { return ''; }
+  })();
+
+  // Пробуем вытащить @Nx множитель из имени
+  let assetScale = 1;
+  try {
+    const m = guessName.match(/@(\d+(?:\.\d+)?)x/i);
+    if (m) assetScale = Math.max(1, Math.min(4, Number(m[1]) || 1));
+  } catch {}
+
+  // Применяем src только после предзагрузки
+  refs.bgImg.setAttribute('data-filename', guessName);
+  refs.bgImg.alt = guessName || 'bg';
+  refs.bgImg.src = src;
+
+  try {
+    const w = preImg.naturalWidth || refs.bgImg.naturalWidth || 0;
+    const h = preImg.naturalHeight || refs.bgImg.naturalHeight || 0;
+    setLastBgSize(w, h);
+    setLastBgMeta({ fileName: guessName, assetScale: meta.assetScale || assetScale });
+  } catch {}
+
+  // Скрыть плейсхолдер (если был)
+  try { setPlaceholderVisible(refs, false); } catch {}
+}
+) {
   // [PATCH] make function awaitable until image is loaded
   let __bgResolve = null; const __bgDone = new Promise((r)=>{ __bgResolve = r; });
 

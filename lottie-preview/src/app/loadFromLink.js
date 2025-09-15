@@ -45,38 +45,124 @@ function applyLoopFromPayload(refs, data) {
   }
 }
 
-async function applyPayload(refs, data) {
-  let _hid=false; try {
 
+async function applyPayload(refs, data) {
   if (!data || typeof data !== 'object') return false;
 
-  // ВАЖНО: сначала применяем флаг цикла
+  // 1) Применяем флаг цикла сразу (не влияет на визуальный своп)
   applyLoopFromPayload(refs, data);
 
-  // временно спрячем слой лотти до пересчёта, чтобы не было "вспышки" старого расположения
-  try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; _hid=true; } catch {}
-
-  // скрываем лотти до полного применения размеров и конвертации
-  try { if (refs?.lotStage) refs.lotStage.style.visibility = 'hidden'; } catch {}
+  // 2) Готовим предзагрузку бэкграунда (без замены src до готовности)
+  let bgReady = Promise.resolve();
+  let bgSrc = null, bgMeta = {};
   if (data.bg) {
-    const src = typeof data.bg === 'string' ? data.bg : data.bg.value;
-    const meta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
-    if (!meta.fileName && data.lot && data.lot.meta && data.lot.meta._lpBgMeta) { meta.fileName = data.lot.meta._lpBgMeta.fileName; meta.assetScale = data.lot.meta._lpBgMeta.assetScale; }
-    if (src) await setBackgroundFromSrc(refs, src, meta);
-  }
-  if (data.lot) {
-    try { const m = data.lot && data.lot.meta && data.lot.meta._lpPos; if (m && (typeof m.x==='number' || typeof m.y==='number')) setLotOffset(m.x||0, m.y||0); } catch {}
-    setLastLottie(data.lot);
-    await loadLottieFromData(refs, data.lot); // учтёт state.loopOn
+    bgSrc = (typeof data.bg === 'string') ? data.bg : (data.bg.value || data.bg.src || '');
+    bgMeta = (typeof data.bg === 'object') ? { fileName: data.bg.name, assetScale: data.bg.assetScale } : {};
+    if (bgSrc) {
+      bgReady = (async () => { try { await setBackgroundFromSrc(refs, bgSrc, bgMeta); } catch {} })();
+    }
   }
 
-  setPlaceholderVisible(refs, false);
-  layoutLottie(refs);
-  
-  } finally { try { if (_hid && refs?.lotStage) refs.lotStage.style.visibility = ''; } catch {} }
+  // 3) Готовим скрытую «сцену» для новой лотти и предзагружаем её
+  let newAnim = null, stagingStage = null, stagingMount = null;
+  let lotReady = Promise.resolve();
+  if (data.lot) {
+    try {
+      const lotJson = (typeof data.lot === 'string') ? JSON.parse(data.lot) : data.lot;
+      const w = Number(lotJson?.w || 0) || 512;
+      const h = Number(lotJson?.h || 0) || 512;
+
+      // создать staging-слой поверх старого
+      stagingStage = document.createElement('div');
+      stagingStage.className = 'lot-stage lot-stage--staging';
+      Object.assign(stagingStage.style, {
+        position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
+        opacity: '0', pointerEvents: 'none'
+      });
+      stagingMount = document.createElement('div');
+      stagingMount.className = 'lottie-mount';
+      stagingStage.appendChild(stagingMount);
+      try { refs.lotStage.parentElement.appendChild(stagingStage); } catch {}
+
+      stagingStage.style.width = w + 'px';
+      stagingStage.style.height = h + 'px';
+
+      const isStandalone =
+        (window.matchMedia &&
+          (window.matchMedia('(display-mode: standalone)').matches ||
+           window.matchMedia('(display-mode: fullscreen)').matches)) ||
+        (navigator.standalone === true);
+      const isViewer = document.documentElement.classList.contains('viewer');
+      const autoplay = isViewer && !isStandalone ? false : true;
+      const loop = !!state.loopOn;
+
+      newAnim = window.lottie.loadAnimation({
+        container: stagingMount,
+        renderer: 'svg',
+        loop,
+        autoplay,
+        animationData: lotJson
+      });
+
+      lotReady = new Promise((res) => {
+        try { newAnim.addEventListener('DOMLoaded', () => res()); }
+        catch { res(); }
+      });
+    } catch (e) {
+      console.error('applyPayload: lottie staging error', e);
+    }
+  }
+
+  // 4) Дожидаемся готовности ресурсов
+  try { await Promise.all([bgReady, lotReady]); } catch {}
+
+  // 5) Применяем смещение, если пришло
+  try {
+    const m = data?.lot?.meta?._offset || data?.lot?._offset || (data?.lot && data.lot.meta && data.lot.meta.offset);
+    if (m && typeof m==='object' && typeof m.x==='number' && typeof m.y==='number') setLotOffset(m.x||0, m.y||0);
+  } catch {}
+
+  // 6) Лейаут под мобильный/экран (на новой сцене)
+  try { layoutLottie(refs, stagingStage || refs.lotStage); } catch {}
+
+  // 7) Быстрый атомарный своп: старая сцена -> новая
+  if (stagingStage && newAnim) {
+    // показать новую, спрятать старую
+    stagingStage.style.opacity = '1';
+    if (refs?.lotStage) refs.lotStage.style.opacity = '0';
+
+    // заменить ссылки refs на новую сцену
+    try { refs.lottieMount = stagingMount; } catch {}
+    try { refs.lotStage    = stagingStage; } catch {}
+
+    // установить новую анимацию как текущую (с уничтожением старой)
+    try { setAnim(newAnim); } catch {}
+
+    // удалить старые ноды чуть позже
+    setTimeout(() => {
+      try {
+        const layer = document.querySelector('.lottie-layer');
+        if (layer) {
+          Array.from(layer.querySelectorAll('.lot-stage'))
+            .slice(0,-1) // все, кроме последней (активной)
+            .forEach(n => n.remove());
+        }
+      } catch {}
+    }, 40);
+  } else {
+    // fallback: если лотти не было — просто установим стандартным способом
+    if (data.lot) {
+      await loadLottieFromData(refs, data.lot);
+    }
+  }
+
+  // 8) Скрываем плейсхолдер и финальный лейаут
+  try { setPlaceholderVisible(refs, false); } catch {}
+  try { layoutLottie(refs); } catch {}
+
   return true;
-return true;
 }
+
 
 export async function initLoadFromLink({ refs, isStandalone }) {
   setPlaceholderVisible(refs, true);
@@ -115,6 +201,3 @@ export async function initLoadFromLink({ refs, isStandalone }) {
 
   // 4) Ничего не нашли — остаётся плейсхолдер
 }
-
-
-export async function applyPayloadWithRefs(refs, data) { return await applyPayload(refs, data); }

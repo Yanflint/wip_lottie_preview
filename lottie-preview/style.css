@@ -394,5 +394,7 @@ button::-moz-focus-inner{ border:0 !important; }
 #loopChk{ margin-left:0; margin-right:0; }
 
 
-/* buffer layers */
-.bg.buffer, .lottie-layer.buffer{ visibility: hidden; pointer-events: none; }
+/* Плавный бесшовный своп сцен */
+.lottie-layer { position: relative; }
+.lot-stage { position: absolute; left:50%; top:50%; transform: translate(-50%,-50%); transition: opacity .06s linear; }
+.lot-stage--staging { opacity: 0; }
