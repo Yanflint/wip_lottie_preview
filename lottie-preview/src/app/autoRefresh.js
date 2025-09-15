@@ -10,10 +10,12 @@ const JITTER = 0.20;
 const MAX_BACKOFF = 30000;
 const TOAST_FLAG = 'lp_show_toast';
 
-function ensureBufferRefs(refs){
+function ensureBufferRefs(baseRefs){
+  const refs = baseRefs || (window && window.__LP_REFS);
+  if (!refs) return null;
   const preview = refs.preview || document.getElementById('preview');
 
-  // buffer bg
+  // Buffer background
   let bgWrap = preview.querySelector('.bg.buffer');
   let bgImg = null;
   if (!bgWrap){
@@ -25,10 +27,10 @@ function ensureBufferRefs(refs){
     bgWrap.appendChild(bgImg);
     preview.appendChild(bgWrap);
   } else {
-    bgImg = bgWrap.querySelector('img') || (() => { const i=document.createElement('img'); bgWrap.appendChild(i); return i; })();
+    bgImg = bgWrap.querySelector('img') || (()=>{ const i=document.createElement('img'); bgWrap.appendChild(i); return i; })();
   }
 
-  // buffer lottie layer
+  // Buffer lottie layer
   let lotLayer = preview.querySelector('.lottie-layer.buffer');
   let lotStage = null, lottieMount = null;
   if (!lotLayer){
@@ -44,46 +46,49 @@ function ensureBufferRefs(refs){
     lotLayer.appendChild(lotStage);
     preview.appendChild(lotLayer);
   } else {
-    lotStage = lotLayer.querySelector('.lot-stage') || (()=>{ const s=document.createElement('div'); s.className='lot-stage'; lotLayer.appendChild(s); return s;})();
-    lottieMount = lotStage.querySelector('.lottie-mount') || (()=>{ const m=document.createElement('div'); m.className='lottie-mount'; lotStage.appendChild(m); return m;})();
+    lotStage = lotLayer.querySelector('.lot-stage') || (()=>{ const s=document.createElement('div'); s.className='lot-stage'; lotLayer.appendChild(s); return s; })();
+    lottieMount = lotStage.querySelector('.lottie-mount') || (()=>{ const m=document.createElement('div'); m.className='lottie-mount'; lotStage.appendChild(m); return m; })();
   }
+
+  // Keep buffer hidden/inert until swap
+  try { bgWrap.style.visibility = 'hidden'; bgWrap.style.pointerEvents = 'none'; } catch {}
+  try { lotLayer.style.visibility = 'hidden'; lotLayer.style.pointerEvents = 'none'; } catch {}
 
   const bufRefs = Object.assign({}, refs, {
     bgImg: bgImg,
     lotStage: lotStage,
     lottieMount: lottieMount,
-    // leave other refs (wrapper/preview/placeholder etc.) same as base
   });
-
-  // keep buffer hidden for now
-  try { bgWrap.style.visibility = 'hidden'; } catch {}
-  try { lotLayer.style.visibility = 'hidden'; } catch {}
-
   return { bufRefs, bgWrap, lotLayer };
 }
 
-function swapToBuffer(refs, bufRefs, bgWrap, lotLayer, prevAnim){
+function swapToBuffer(baseRefs, bufRefs, bgWrap, lotLayer, prevAnim){
+  const refs = baseRefs || (window && window.__LP_REFS);
+  if (!refs) return;
+
   // Hide old visible layers
-  try { refs.bgImg.closest('.bg').style.display = 'none'; } catch {}
-  try { refs.lotStage.closest('.lottie-layer').style.display = 'none'; } catch {}
+  try { const w = refs.bgImg && refs.bgImg.closest('.bg'); if (w) w.style.display = 'none'; } catch {}
+  try { const w = refs.lotStage && refs.lotStage.closest('.lottie-layer'); if (w) w.style.display = 'none'; } catch {}
 
   // Show buffer layers
   try { bgWrap.style.visibility = ''; bgWrap.style.removeProperty('display'); } catch {}
   try { lotLayer.style.visibility = ''; lotLayer.style.removeProperty('display'); } catch {}
 
-  // Rebind ids so future updates target the now-visible elements
+  // Rebind ids so future logic targets new visible nodes
   try { if (bufRefs.bgImg && bufRefs.bgImg.id !== 'bgImg') bufRefs.bgImg.id = 'bgImg'; } catch {}
   try { if (bufRefs.lotStage && bufRefs.lotStage.id !== 'lotStage') bufRefs.lotStage.id = 'lotStage'; } catch {}
   try { const m = bufRefs.lottieMount; if (m && m.id !== 'lottie') m.id = 'lottie'; } catch {}
 
-  // Update global refs used elsewhere
+  // Update global refs
   try {
-    window.__LP_REFS.bgImg = bufRefs.bgImg;
-    window.__LP_REFS.lotStage = bufRefs.lotStage;
-    window.__LP_REFS.lottieMount = bufRefs.lottieMount;
+    if (window && window.__LP_REFS) {
+      window.__LP_REFS.bgImg = bufRefs.bgImg;
+      window.__LP_REFS.lotStage = bufRefs.lotStage;
+      window.__LP_REFS.lottieMount = bufRefs.lottieMount;
+    }
   } catch {}
 
-  // Clean up old nodes and animation after the swap, to avoid leak
+  // Destroy old animation after swap
   try { prevAnim && prevAnim.destroy && prevAnim.destroy(); } catch {}
 }
 
@@ -164,14 +169,14 @@ export function initAutoRefreshIfViewingLast(){
           const hasLot = !!(data && typeof data === 'object' && data.lot);
           if (hasLot) {
             try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
-            try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
-            const prevAnim = getAnim && getAnim();
-            const { bufRefs, bgWrap, lotLayer } = ensureBufferRefs(window.__LP_REFS);
-            // Apply payload into hidden buffer
+            const prevAnim = (typeof getAnim==='function') ? getAnim() : null;
+            const holder = ensureBufferRefs(window.__LP_REFS);
+            if (!holder){ location.replace(location.href); /* fallback */ return; }
+            const { bufRefs, bgWrap, lotLayer } = holder;
             await applyPayloadWithRefs(bufRefs, data);
-            // Swap instantly without black frame
             swapToBuffer(window.__LP_REFS, bufRefs, bgWrap, lotLayer, prevAnim);
             baseline = rev;
+            return;
           } else {
             // Payload not ready yet; try again quickly (no exponential backoff)
             currentDelay = Math.min(currentDelay, 1500);

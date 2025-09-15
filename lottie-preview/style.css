@@ -394,8 +394,22 @@ button::-moz-focus-inner{ border:0 !important; }
 #loopChk{ margin-left:0; margin-right:0; }
 
 
-/* buffer layers: render offscreen/invisible until swap */
-.bg.buffer, .lottie-layer.buffer{
-  visibility: hidden;
-  pointer-events: none;
+/* ==== disable mouse/touch selection globally (kept minimal) ==== */
+:where(html, body, #wrapper, #preview, #stage, #controls, .controls, .btn, button, .chk, #dropOverlay, .placeholder, .ver){
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* iOS long-press menu */
+  -webkit-tap-highlight-color: transparent;
+}
+/* Don't allow dragging/selecting media */
+:where(img, canvas){
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* Keep selection enabled where it matters */
+:where(input, textarea){
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
