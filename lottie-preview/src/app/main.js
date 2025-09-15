@@ -12,14 +12,6 @@ if (isStandalone) document.documentElement.classList.add('standalone');
 // Viewer mode on /s/*
 const isViewer = /^\/s\//.test(location.pathname);
 if (isViewer) document.documentElement.classList.add('viewer');
-  /* disable DnD in viewer */
-  if (isViewer) {
-    try {
-      window.addEventListener('dragover', e => e.preventDefault(), { passive:false });
-      window.addEventListener('drop', e => e.preventDefault(), { passive:false });
-    } catch {}
-  }
-
 
 // [PATCH] Boot hard refresh once per session, to avoid stale payload
 try {
@@ -77,6 +69,7 @@ function applyVersion(refs) {
 // 5) Init
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
+  try { window.__LP_REFS = refs; } catch {}
   applyVersion(refs);
 showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
 
@@ -85,7 +78,7 @@ showToastIfFlag(); // покажет "Обновлено", если страни
 
   await initLoadFromLink({ refs, isStandalone });
 
-  if (!isViewer) initDnd({ refs });
+  initDnd({ refs });
   initControls({ refs });
   initShare({ refs, isStandalone });
 

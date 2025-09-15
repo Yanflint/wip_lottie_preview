@@ -1,4 +1,5 @@
 // src/app/autoRefresh.js
+import { applyPayloadWithRefs } from './loadFromLink.js';
 // Live-пулинг для /s/last: 5с ±20% (только когда вкладка видима).
 // Мгновенная проверка при возврате в фокус/тач. Бэкофф до 30с при ошибках.
 // Перед перезагрузкой ставим флаг в sessionStorage, чтобы показать тост "Обновлено".
@@ -7,6 +8,39 @@ const BASE_INTERVAL = 5000;
 const JITTER = 0.20;
 const MAX_BACKOFF = 30000;
 const TOAST_FLAG = 'lp_show_toast';
+
+function ensureRefreshOverlay(){
+  let ov = document.getElementById('refreshOverlay');
+  if (!ov){
+    ov = document.createElement('div');
+    ov.id = 'refreshOverlay';
+    ov.className = 'refresh-overlay';
+    const lbl = document.createElement('div');
+    lbl.className = 'label';
+    lbl.textContent = 'Обновление';
+    ov.appendChild(lbl);
+    document.body.appendChild(ov);
+  }
+  return ov;
+}
+function waitMs(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function fadeInOverlay(){
+  const ov = ensureRefreshOverlay();
+  // force reflow then add .show
+  ov.classList.remove('hiding');
+  // Use rAF to ensure CSS transition kicks in
+  await new Promise(r=>requestAnimationFrame(r));
+  ov.classList.add('show');
+  await waitMs(250); // match CSS .22s
+  return ov;
+}
+async function fadeOutOverlay(){
+  const ov = ensureRefreshOverlay();
+  ov.classList.add('hiding');
+  ov.classList.remove('show');
+  await waitMs(250);
+}
+
 
 function isViewingLast() {
   try {
@@ -84,7 +118,15 @@ export function initAutoRefreshIfViewingLast(){
           const hasLot = !!(data && typeof data === 'object' && data.lot);
           if (hasLot) {
             try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
-            location.replace(location.href); // жёсткий рефреш, сохраняя ?fit
+            try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
+            // Soft update under overlay
+            await fadeInOverlay();
+            try {
+              const refs = (window && window.__LP_REFS) || null;
+              if (refs) { await applyPayloadWithRefs(refs, data); baseline = rev; }
+              else { location.replace(location.href); return; }
+            } catch(e){ console.warn('soft update failed, fallback reload', e); location.replace(location.href); return; }
+            await fadeOutOverlay();
             return;
           } else {
             // Payload not ready yet; try again quickly (no exponential backoff)

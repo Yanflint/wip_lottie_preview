@@ -78,6 +78,9 @@ async function applyPayload(refs, data) {
 return true;
 }
 
+
+
+export async function applyPayloadWithRefs(refs, data) { return await applyPayload(refs, data); }
 export async function initLoadFromLink({ refs, isStandalone }) {
   setPlaceholderVisible(refs, true);
 
