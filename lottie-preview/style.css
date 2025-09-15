@@ -394,28 +394,8 @@ button::-moz-focus-inner{ border:0 !important; }
 #loopChk{ margin-left:0; margin-right:0; }
 
 
-/* ===== Viewer Refresh Overlay ===== */
-.refresh-overlay{
-  position: fixed;
-  inset: 0;
-  background: #000;
-  opacity: 0;
+/* buffer layers: render offscreen/invisible until swap */
+.bg.buffer, .lottie-layer.buffer{
+  visibility: hidden;
   pointer-events: none;
-  z-index: 100000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 1s ease;
 }
-.refresh-overlay.show{ opacity: 1; }
-.refresh-overlay .label{
-  font-weight: 600;
-  font-size: 16px;
-  letter-spacing: .2px;
-  color: #fff;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity .25s ease .08s, transform .25s ease .08s;
-}
-.refresh-overlay.show .label{ opacity: 1; transform: translateY(0); }
-.refresh-overlay.hiding .label{ opacity: 0; transform: translateY(6px); transition-delay: 0s; }

@@ -1,5 +1,6 @@
 // src/app/autoRefresh.js
 import { applyPayloadWithRefs } from './loadFromLink.js';
+import { getAnim } from './lottie.js'; } from './loadFromLink.js';
 // Live-пулинг для /s/last: 5с ±20% (только когда вкладка видима).
 // Мгновенная проверка при возврате в фокус/тач. Бэкофф до 30с при ошибках.
 // Перед перезагрузкой ставим флаг в sessionStorage, чтобы показать тост "Обновлено".
@@ -9,36 +10,81 @@ const JITTER = 0.20;
 const MAX_BACKOFF = 30000;
 const TOAST_FLAG = 'lp_show_toast';
 
-function ensureRefreshOverlay(){
-  let ov = document.getElementById('refreshOverlay');
-  if (!ov){
-    ov = document.createElement('div');
-    ov.id = 'refreshOverlay';
-    ov.className = 'refresh-overlay';
-    const lbl = document.createElement('div');
-    lbl.className = 'label';
-    lbl.textContent = 'Обновление';
-    ov.appendChild(lbl);
-    document.body.appendChild(ov);
+function ensureBufferRefs(refs){
+  const preview = refs.preview || document.getElementById('preview');
+
+  // buffer bg
+  let bgWrap = preview.querySelector('.bg.buffer');
+  let bgImg = null;
+  if (!bgWrap){
+    bgWrap = document.createElement('div');
+    bgWrap.className = 'bg buffer';
+    bgImg = document.createElement('img');
+    bgImg.id = 'bgImgBuf';
+    bgImg.alt = '';
+    bgWrap.appendChild(bgImg);
+    preview.appendChild(bgWrap);
+  } else {
+    bgImg = bgWrap.querySelector('img') || (() => { const i=document.createElement('img'); bgWrap.appendChild(i); return i; })();
   }
-  return ov;
+
+  // buffer lottie layer
+  let lotLayer = preview.querySelector('.lottie-layer.buffer');
+  let lotStage = null, lottieMount = null;
+  if (!lotLayer){
+    lotLayer = document.createElement('div');
+    lotLayer.className = 'lottie-layer buffer';
+    lotStage = document.createElement('div');
+    lotStage.className = 'lot-stage';
+    lotStage.id = 'lotStageBuf';
+    lottieMount = document.createElement('div');
+    lottieMount.className = 'lottie-mount';
+    lottieMount.id = 'lottieBuf';
+    lotStage.appendChild(lottieMount);
+    lotLayer.appendChild(lotStage);
+    preview.appendChild(lotLayer);
+  } else {
+    lotStage = lotLayer.querySelector('.lot-stage') || (()=>{ const s=document.createElement('div'); s.className='lot-stage'; lotLayer.appendChild(s); return s;})();
+    lottieMount = lotStage.querySelector('.lottie-mount') || (()=>{ const m=document.createElement('div'); m.className='lottie-mount'; lotStage.appendChild(m); return m;})();
+  }
+
+  const bufRefs = Object.assign({}, refs, {
+    bgImg: bgImg,
+    lotStage: lotStage,
+    lottieMount: lottieMount,
+    // leave other refs (wrapper/preview/placeholder etc.) same as base
+  });
+
+  // keep buffer hidden for now
+  try { bgWrap.style.visibility = 'hidden'; } catch {}
+  try { lotLayer.style.visibility = 'hidden'; } catch {}
+
+  return { bufRefs, bgWrap, lotLayer };
 }
-function waitMs(ms){ return new Promise(r=>setTimeout(r,ms)); }
-async function fadeInOverlay(){
-  const ov = ensureRefreshOverlay();
-  // force reflow then add .show
-  ov.classList.remove('hiding');
-  // Use rAF to ensure CSS transition kicks in
-  await new Promise(r=>requestAnimationFrame(r));
-  ov.classList.add('show');
-  await waitMs(250); // match CSS .22s
-  return ov;
-}
-async function fadeOutOverlay(){
-  const ov = ensureRefreshOverlay();
-  ov.classList.add('hiding');
-  ov.classList.remove('show');
-  await waitMs(250);
+
+function swapToBuffer(refs, bufRefs, bgWrap, lotLayer, prevAnim){
+  // Hide old visible layers
+  try { refs.bgImg.closest('.bg').style.display = 'none'; } catch {}
+  try { refs.lotStage.closest('.lottie-layer').style.display = 'none'; } catch {}
+
+  // Show buffer layers
+  try { bgWrap.style.visibility = ''; bgWrap.style.removeProperty('display'); } catch {}
+  try { lotLayer.style.visibility = ''; lotLayer.style.removeProperty('display'); } catch {}
+
+  // Rebind ids so future updates target the now-visible elements
+  try { if (bufRefs.bgImg && bufRefs.bgImg.id !== 'bgImg') bufRefs.bgImg.id = 'bgImg'; } catch {}
+  try { if (bufRefs.lotStage && bufRefs.lotStage.id !== 'lotStage') bufRefs.lotStage.id = 'lotStage'; } catch {}
+  try { const m = bufRefs.lottieMount; if (m && m.id !== 'lottie') m.id = 'lottie'; } catch {}
+
+  // Update global refs used elsewhere
+  try {
+    window.__LP_REFS.bgImg = bufRefs.bgImg;
+    window.__LP_REFS.lotStage = bufRefs.lotStage;
+    window.__LP_REFS.lottieMount = bufRefs.lottieMount;
+  } catch {}
+
+  // Clean up old nodes and animation after the swap, to avoid leak
+  try { prevAnim && prevAnim.destroy && prevAnim.destroy(); } catch {}
 }
 
 
@@ -119,14 +165,12 @@ export function initAutoRefreshIfViewingLast(){
           if (hasLot) {
             try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
             try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
-            // Soft update under overlay
-            await fadeInOverlay();
-            try {
-              const refs = (window && window.__LP_REFS) || null;
-              if (refs) { await applyPayloadWithRefs(refs, data); baseline = rev; }
-              else { location.replace(location.href); return; }
-            } catch(e){ console.warn('soft update failed, fallback reload', e); location.replace(location.href); return; }
-            await fadeOutOverlay();
+            const prevAnim = getAnim && getAnim();
+            const { bufRefs, bgWrap, lotLayer } = ensureBufferRefs(window.__LP_REFS || refs);
+            // Apply payload into hidden buffer
+            await applyPayloadWithRefs(bufRefs, data);
+            // Swap instantly without black frame
+            swapToBuffer(window.__LP_REFS || refs, bufRefs, bgWrap, lotLayer, prevAnim);
             return;
           } else {
             // Payload not ready yet; try again quickly (no exponential backoff)
