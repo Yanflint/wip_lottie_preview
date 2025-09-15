@@ -168,66 +168,6 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   // Скрыть плейсхолдер (если был)
   try { setPlaceholderVisible(refs, false); } catch {}
 }
- {
-  // [PATCH] make function awaitable until image is loaded
-  let __bgResolve = null; const __bgDone = new Promise((r)=>{ __bgResolve = r; });
-
-  if (!refs?.bgImg) return;
-
-  // Пытаемся вычислить название файла для парсинга @2x
-  const guessName = (() => {
-    // при передаче meta.fileName используем его
-    if (meta.fileName) return meta.fileName;
-    // попробуем достать из атрибутов, если кто-то положил туда
-    const fromAttr = refs.bgImg.getAttribute('data-filename') || refs.bgImg.alt;
-    if (fromAttr) return fromAttr;
-    // как крайний случай — попробуем вытащить имя из обычного URL
-    try {
-      const u = new URL(src);
-      const pathname = u.pathname || '';
-      const base = pathname.split('/').pop();
-      return base || src;
-    } catch (_) {
-      return src; // data:/blob: сюда свалится — шанса достать имя нет
-    }
-  })();
-
-  refs.bgImg.onload = () => {
-    try { __bgResolve && __bgResolve(); } catch {}
-
-    const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
-    const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
-
-    // Парсим коэффициент ретины из имени (mob@2x.png -> 2)
-    const assetScale = (typeof meta.assetScale === 'number' && meta.assetScale > 0) ? meta.assetScale : parseAssetScale(guessName);
-
-    // Приводим к «CSS-размеру», как это было бы на сайте
-    const cssW = iw / assetScale;
-    const cssH = ih / assetScale;
-
-    const wrap = refs.wrapper;
-    if (wrap) {
-      wrap.style.setProperty('--preview-ar', `${cssW} / ${cssH}`);
-      wrap.style.setProperty('--preview-h', `${cssH}px`);
-      wrap.style.setProperty('--asset-scale', String(assetScale));
-      // Сохраняем логический (CSS) размер и метаданные фона
-      setLastBgSize(cssW, cssH);
-      setLastBgMeta({ fileName: guessName, assetScale });
-      wrap.classList.add('has-bg');
-    }
-
-    setPlaceholderVisible(refs, false);
-  };
-
-  refs.bgImg.onerror = () => {
-    try { __bgResolve && __bgResolve(); } catch {}
-
-    console.warn('Background image failed to load');
-  };
-
-  refs.bgImg.src = src;
-  try { await __bgDone; } catch {}
-}
 
 /** Жёсткий перезапуск проигрывания */
 export function restart() {
