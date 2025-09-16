@@ -14,13 +14,22 @@ export async function withLoading(btn, fn) {
   }
 }
 
-import { showSuccessToast, showErrorToast } from './updateToast.js';
-
-export function showToastNear(rootEl, anchorEl, text) {
-  const msg = String(text || '');
-  const isErr = /загрузи|ошиб|fail|error/i.test(msg);
-  if (isErr) showErrorToast(msg, anchorEl);
-  else       showSuccessToast(msg, anchorEl);
+export function showToastNear(toastEl, el, msg) {
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  const r = el?.getBoundingClientRect?.();
+  if (r) {
+    // Базовый отступ над кнопкой
+    let top = r.top - 24; // подняли выше, чтобы не наслаивался на кнопку
+    // Ошибочные баблики — ещё выше
+    try { if (typeof msg === 'string' && msg.startsWith('Загрузите')) top -= 8; } catch {}
+    if (top < 8) top = 8;
+    toastEl.style.left = (r.left + r.width / 2) + 'px';
+    toastEl.style.top  = top + 'px';
+  }
+  toastEl.classList.add('show');
+  clearTimeout(showToastNear._t);
+  showToastNear._t = setTimeout(() => toastEl.classList.remove('show'), 1600);
 }
 
 export function setDropActive(on) {
