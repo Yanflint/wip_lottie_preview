@@ -33,7 +33,7 @@ import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { afterTwoFrames } from './utils.js';
-import { showToastIfFlag, setToastConfig, setToastPresets, setToastPresetFor } from './updateToast.js';
+import { showToastIfFlag } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
 import { initLottiePan }  from './pan.js';
 
@@ -79,8 +79,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
   await initLoadFromLink({ refs, isStandalone });
-
-  /* PRESETS EXAMPLE: два профиля и назначение типов */
+  try {
+    setToastPresetFor('update',  'long');
+    setToastPresetFor('success', 'short');
+    setToastPresetFor('error',   'short');
+  } catch {}
   // setToastPresets({
   //   short: { enter: 140, stay: 1000, exit: 220 },
   //   long:  { enter: 220, stay: 2200, exit: 300 },
