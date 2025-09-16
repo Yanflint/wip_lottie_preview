@@ -40,3 +40,18 @@ export function initLottiePan({ refs }) {
   window.addEventListener('mouseup', endDrag);
   window.addEventListener('blur', endDrag);
 }
+
+  // hotkey: center-reset R/K (layout-agnostic), editor only
+  /* hotkey: center-reset R/K */
+  window.addEventListener('keydown', (e) => {
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+    // physical key (KeyR) OR character 'r' OR russian 'к/К'
+    const code = e.code;
+    const key  = e.key;
+    const isR  = (code === 'KeyR') || (key && (key.toLowerCase() === 'r' || key === 'к' || key === 'К'));
+    if (!isR) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    try { setLotOffset(0, 0); layoutLottie(refs); } catch(_) {}
+    e.preventDefault();
+  }, { passive: false });
