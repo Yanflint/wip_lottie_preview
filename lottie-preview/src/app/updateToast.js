@@ -11,7 +11,8 @@ function resolveToastConfig(kind, options = {}){
 }
 // src/app/updateToast.js
 // Единый стиль баблика (как у «Обновлено»):
-function __clampMs(v, def=0, min=0, max=60000){ const n=Number(v); if(!Number.isFinite(n)) return def; return Math.min(Math.max(n,min),max);} тёмный фон, белый текст.
+function __clampMs(v, def=0, min=0, max=60000){ const n=Number(v); if(!Number.isFinite(n)) return def; return Math.min(Math.max(n,min),max);}
+// тёмный фон, белый текст.
 // Иконка меняется (зелёная галочка / красный крест). Без хвоста.
 // Обновление — снизу по центру; успех/ошибка — над переданной кнопкой (anchorEl).
 
