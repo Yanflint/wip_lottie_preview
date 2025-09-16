@@ -21,7 +21,7 @@ let toastLock = false;
 // === SINGLE SOURCE OF TRUTH (edit only here) ===
 export const TOAST_PRESETS = Object.freeze({
   short: { enter: 140, stay: 1000, exit: 220 },
-  long:  { enter: 2200, stay: 2200, exit: 3000 },
+  long:  { enter: 220, stay: 2200, exit: 300 },
 });
 export const TOAST_MAPPING = Object.freeze({
   update: 'long',
@@ -29,6 +29,9 @@ export const TOAST_MAPPING = Object.freeze({
   error:  'short',
 });
 
+// runtime copies derived from constants
+const toastPresets   = { ...TOAST_PRESETS };
+const toastPresetMap = { ...TOAST_MAPPING };
 
 function ensureStyles() {
 
