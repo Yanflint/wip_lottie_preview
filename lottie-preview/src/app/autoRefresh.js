@@ -173,8 +173,7 @@ export function initAutoRefreshIfViewingLast(){
       const ok = await __applyAtomicUpdate(data);
       if (ok) {
         try { baseline = rev; } catch(e) {}
-        try { showUpdateToast('Обновлено'); } catch(e) {}
-        currentDelay = BASE_INTERVAL;
+        try { await afterTwoFrames(); showUpdateToast('Обновлено'); } catch(e) {} currentDelay = BASE_INTERVAL;
         schedule(currentDelay);
         return;
       }
