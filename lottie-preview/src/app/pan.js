@@ -48,22 +48,18 @@ export function initLottiePan({ refs }) {
   window.addEventListener('mouseup', endDrag);
   window.addEventListener('blur', endDrag);
 
-// Hotkey: R / русская «К» — сброс оффсета в (0,0).
-window.addEventListener('keydown', (e) => {
-  // не мешаем вводу текста
-  const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
-
-  const code = e.code;     // физическая клавиша, не зависит от раскладки
-  const key  = e.key;      // символ в текущей раскладке
-  const isR  = (code === 'KeyR') || (key && (key.toLowerCase() === 'r' || key === 'к' || key === 'К'));
-  if (!isR) return;
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-
-  try { setLotOffset(0, 0); layoutLottie(refs); } catch(_) {}
-  e.preventDefault();
-}, { passive: false });
-
+  // Hotkey: R / русская «К» — сброс оффсета в (0,0)
+  window.addEventListener('keydown', (e) => {
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+    const code = e.code;
+    const key  = e.key;
+    const isR  = (code === 'KeyR') || (key && (key.toLowerCase() === 'r' || key === 'к' || key === 'К'));
+    if (!isR) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    try { setLotOffset(0,0); layoutLottie(refs); } catch(_) {}
+    e.preventDefault();
+  }, { passive: false });
 
   __ensureKeyHint();
 }
