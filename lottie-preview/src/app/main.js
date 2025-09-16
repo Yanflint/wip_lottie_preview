@@ -77,7 +77,9 @@ showToastIfFlag(); // покажет "Обновлено", если страни
 
   await initLoadFromLink({ refs, isStandalone });
 
-  if (!isViewer) initDnd({ refs });
+  
+  if (!isViewer) initLottiePan({ refs });
+initDnd({ refs });
   initControls({ refs });
   initShare({ refs, isStandalone });
 
