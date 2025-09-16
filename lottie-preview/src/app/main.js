@@ -32,6 +32,7 @@ import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
+import { afterTwoFrames } from './utils.js';
 import { showToastIfFlag } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
 import { initLottiePan }  from './pan.js';
@@ -72,12 +73,17 @@ function applyVersion(refs) {
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
   applyVersion(refs);
-showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
+// showToastIfFlag moved later to wait content paint
 
   // Авто-рефреш для /s/last (Viewer)
   initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
   await initLoadFromLink({ refs, isStandalone });
+
+  /* DELAYED TOAST: показываем «Обновлено» только после обновления и отрисовки контента */
+  try { await afterTwoFrames(); await afterTwoFrames(); } catch {}
+  showToastIfFlag(); // теперь покажется после применения фона/лотти
+
 
   
   if (!isViewer) initLottiePan({ refs });
