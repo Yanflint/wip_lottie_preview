@@ -22,6 +22,51 @@ export function setToastConfig(opts={}){
   if (typeof opts.easingOut === 'string') toastConfig.easingOut = opts.easingOut;
 }
 export function getToastConfig(){ return { ...toastConfig }; }
+// === Presets system ===
+const toastPresets = {
+  short: { enter: 140, stay: 1000, exit: 220 },
+  long:  { enter: 1500, stay: 2500, exit: 2000 },
+};
+const toastPresetMap = {
+  update: 'long',
+  success: 'long',
+  error:  'short',
+};
+
+export function setToastPresets(presets = {}) {
+  if (!presets || typeof presets !== 'object') return;
+  for (const [name, cfg] of Object.entries(presets)) {
+    if (!cfg || typeof cfg !== 'object') continue;
+    const p = { ...toastPresets[name] };
+    if (Number.isFinite(cfg.enter)) p.enter = +cfg.enter;
+    if (Number.isFinite(cfg.stay))  p.stay  = +cfg.stay;
+    if (Number.isFinite(cfg.exit))  p.exit  = +cfg.exit;
+    toastPresets[name] = p;
+  }
+}
+export function getToastPresets() { return JSON.parse(JSON.stringify(toastPresets)); }
+
+export function setToastPresetFor(kind, presetName) {
+  if (!toastPresets[presetName]) return;
+  if (kind !== 'update' && kind !== 'success' && kind !== 'error') return;
+  toastPresetMap[kind] = presetName;
+}
+export function getToastPresetFor(kind){ return toastPresetMap[kind] || null; }
+
+function resolveToastConfig(kind, options = {}){
+  // base from global config
+  let cfg = { ...toastConfig };
+  // overlay mapped preset if exists
+  try { const p = toastPresets[ toastPresetMap[kind] ]; if (p) cfg = { ...cfg, ...p }; } catch {}
+  // final call-time overrides
+  if (Number.isFinite(options.enter)) cfg.enter = +options.enter;
+  if (Number.isFinite(options.stay))  cfg.stay  = +options.stay;
+  if (Number.isFinite(options.exit))  cfg.exit  = +options.exit;
+  if (typeof options.easingIn  === 'string') cfg.easingIn  = options.easingIn;
+  if (typeof options.easingOut === 'string') cfg.easingOut = options.easingOut;
+  return cfg;
+}
+
 
 function ensureStyles() {
   if (document.getElementById('lp-toast-style')) return;
@@ -113,7 +158,8 @@ function showCentered(msg, options = {}) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-  const cfg = { ...toastConfig, ...(options || {}) };
+    const kind = (options && options.kind) || 'update';
+  const cfg = resolveToastConfig(kind, options);
   // Prepare initial state but don't start animation yet
   bubble.style.opacity = '0';
   bubble.style.transform = 'translateY(8px) scale(0.98)';
@@ -136,7 +182,8 @@ function showAnchored(msg, type, anchorEl, options = {}) {
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-  const cfg = { ...toastConfig, ...(options || {}) };
+    const kind = (options && options.kind) || 'update';
+  const cfg = resolveToastConfig(kind, options);
   bubble.style.opacity = '0';
   bubble.style.transform = 'translateY(8px) scale(0.98)';
   requestAnimationFrame(() => {
@@ -170,7 +217,7 @@ export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновле
 
 export function showSuccessToast(msg='Готово', anchorEl=null, options = {}) {
   ensureStyles();
-  if (!anchorEl) return showUpdateToast(msg, options);
+  if (!anchorEl) return showCentered(msg, { ...(options||{}), kind: 'success' });
   showAnchored(msg, 'success', anchorEl, options);
 }
 export function showErrorToast(msg='Ошибка', anchorEl=null, options = {}) {
