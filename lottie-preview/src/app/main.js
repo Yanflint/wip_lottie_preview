@@ -30,10 +30,9 @@ import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
-import { initAutoRefreshIfViewingLast, afterTwoFrames } from './autoRefresh.js';
+import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { showToastIfFlag } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
-import { initLottiePan } from './pan.js';
 
 // 3) DOM-refs
 function collectRefs() {
@@ -71,15 +70,14 @@ function applyVersion(refs) {
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
   applyVersion(refs);
+showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
 
   // Авто-рефреш для /s/last (Viewer)
   initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
-  
-  await afterTwoFrames();
-  showToastIfFlag();
-if (!isViewer) initLottiePan({ refs });
-if (!isViewer) initDnd({ refs });
+  await initLoadFromLink({ refs, isStandalone });
+
+  initDnd({ refs });
   initControls({ refs });
   initShare({ refs, isStandalone });
 

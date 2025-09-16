@@ -1,3 +1,7 @@
+export function afterTwoFrames(){
+  return new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+}
+
 // [ADDED] atomic-swap imports
 import { setBackgroundFromSrc, loadLottieFromData, layoutLottie, setLoop } from './lottie.js';
 import { setLotOffset, setLastLottie, setLastBgMeta, state } from './state.js';
@@ -173,7 +177,8 @@ export function initAutoRefreshIfViewingLast(){
       const ok = await __applyAtomicUpdate(data);
       if (ok) {
         try { baseline = rev; } catch(e) {}
-        try { await afterTwoFrames(); showUpdateToast('Обновлено'); } catch(e) {} currentDelay = BASE_INTERVAL;
+        try { showUpdateToast('Обновлено'); } catch(e) {}
+        currentDelay = BASE_INTERVAL;
         schedule(currentDelay);
         return;
       }
