@@ -11,7 +11,13 @@ if (isStandalone) document.documentElement.classList.add('standalone');
 
 // Viewer mode on /s/*
 const isViewer = /^\/s\//.test(location.pathname);
-if (isViewer) document.documentElement.classList.add('viewer');
+if (isViewer) {
+  document.documentElement.classList.add('viewer');
+  /* DnD guard for viewer */
+  ['dragenter','dragover','dragleave','drop'].forEach(ev =>
+    window.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false })
+  );
+}
 
 // [PATCH] Boot hard refresh once per session, to avoid stale payload
 try {
@@ -72,13 +78,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   applyVersion(refs);
 showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
 
-  // Авто-рефреш для /s/last (Viewer)
-  initAutoRefreshIfViewingLast(); // ← НОВОЕ
-
-  await initLoadFromLink({ refs, isStandalone });
-
-  initDnd({ refs });
-  initControls({ refs });
+  // Авто-рефреш для \1// DnD disabled in viewer
+initControls({ refs });
   initShare({ refs, isStandalone });
 
   /* DISABLE TAB FOCUS */

@@ -5,6 +5,23 @@
 
 let toastLock = false;
 
+function __lpParseTimeMs(v, fallbackMs){
+  if(!v) return fallbackMs;
+  const s = String(v).trim();
+  if(!s) return fallbackMs;
+  if (s.endsWith('ms')) { const n = parseFloat(s); return isNaN(n)?fallbackMs:n; }
+  if (s.endsWith('s'))  { const n = parseFloat(s); return isNaN(n)?fallbackMs:Math.round(n*1000); }
+  const n = parseFloat(s); return isNaN(n)?fallbackMs:n;
+}
+function __lpDurations(){
+  const cs = getComputedStyle(document.documentElement);
+  const enter = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-enter'), 160);
+  const stay  = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-stay'), 1600);
+  const exit  = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-exit'), 260);
+  return { enter, stay, exit };
+}
+
+
 function ensureStyles() {
   if (document.getElementById('lp-toast-style')) return;
   const st = document.createElement('style');
@@ -95,7 +112,7 @@ function showCentered(msg) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-  const enter = 160, stay = 1600, exit = 260;
+  const { enter, stay, exit } = __lpDurations();
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -109,7 +126,7 @@ function showAnchored(msg, type, anchorEl) {
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-  const enter = 160, stay = 1600, exit = 260;
+  const { enter, stay, exit } = __lpDurations();
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;

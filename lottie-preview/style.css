@@ -1,3 +1,9 @@
+:root{
+  --lp-toast-enter: 160ms;
+  --lp-toast-stay: 1600ms;
+  --lp-toast-exit: 260ms;
+}
+
 /* GLOBAL ARIAL 12 */
 html, body, button, input, select, textarea, label {
   font-family: Arial, sans-serif;
@@ -392,3 +398,13 @@ button::-moz-focus-inner{ border:0 !important; }
 
 /* Нулевые отступы у чекбокса цикла */
 #loopChk{ margin-left:0; margin-right:0; }
+
+
+/* Disable selection in viewer on preview only */
+html.viewer #preview, html.viewer #preview *,
+html.viewer #bgImg, html.viewer #lottie, html.viewer #lotStage {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
