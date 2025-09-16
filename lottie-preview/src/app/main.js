@@ -25,6 +25,7 @@ try {
 // 2) Импорты модулей
 import { initDnd }           from './dnd.js';
 import { state }           from './state.js';
+import { setLotOffset } from './state.js';
 import { getAnim, restart } from './lottie.js';
 import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
@@ -94,6 +95,19 @@ if (!isViewer) initDnd({ refs });
   try { layoutLottie(refs); } catch {}
   window.addEventListener('resize', relayout, { passive: true });
   window.addEventListener('orientationchange', relayout, { passive: true });
+
+  // Reset (сброс) по клавише R (работает независимо от раскладки)
+  window.addEventListener('keydown', (e) => {
+    const isRCode = e.code === 'KeyR';
+    const isRKey  = (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К');
+    if (isRCode || isRKey) {
+      e.preventDefault();
+      // Сбрасываем смещение лотти и пересчитываем раскладку
+      try { setLotOffset(0, 0); } catch {}
+      try { layoutLottie(refs); } catch {}
+    }
+  }, { passive: false });
+
 
   // Тап = перезапуск (если было добавлено ранее)
   const restartByTap = (e) => {

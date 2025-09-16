@@ -164,7 +164,10 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     }
 
     setPlaceholderVisible(refs, false);
-  };
+  
+    // Force relayout of Lottie to match new background
+    try { layoutLottie(refs); } catch {}
+};
 
   refs.bgImg.onerror = () => {
     try { __bgResolve && __bgResolve(); } catch {}
@@ -174,6 +177,8 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
 
   refs.bgImg.src = src;
   try { await __bgDone; } catch {}
+
+  return __bgDone;
 }
 
 /** Жёсткий перезапуск проигрывания */
