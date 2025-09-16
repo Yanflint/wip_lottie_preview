@@ -109,7 +109,7 @@ function showAnchored(msg, type, anchorEl) {
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-  const enter = 160, stay = 1600, exit = 260;
+  const enter = 1500, stay = 2500, exit = 2000;
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
