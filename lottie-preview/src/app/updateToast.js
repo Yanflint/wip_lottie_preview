@@ -5,6 +5,24 @@
 
 let toastLock = false;
 
+// === Global config for all bubbles ===
+const toastConfig = {
+  enter: 160,   // ms: fade/slide in
+  stay: 1600,   // ms: visible
+  exit: 260,    // ms: fade out
+  easingIn: 'cubic-bezier(.21,.75,.2,1)',
+  easingOut: 'ease',
+};
+export function setToastConfig(opts={}){
+  if (!opts || typeof opts !== 'object') return;
+  if (Number.isFinite(opts.enter)) toastConfig.enter = +opts.enter;
+  if (Number.isFinite(opts.stay))  toastConfig.stay  = +opts.stay;
+  if (Number.isFinite(opts.exit))  toastConfig.exit  = +opts.exit;
+  if (typeof opts.easingIn  === 'string') toastConfig.easingIn  = opts.easingIn;
+  if (typeof opts.easingOut === 'string') toastConfig.easingOut = opts.easingOut;
+}
+export function getToastConfig(){ return { ...toastConfig }; }
+
 function ensureStyles() {
   if (document.getElementById('lp-toast-style')) return;
   const st = document.createElement('style');
@@ -85,7 +103,7 @@ function placeAbove(anchorEl, bubble) {
   bubble.style.top  = top  + 'px';
 }
 
-function showCentered(msg) {
+function showCentered(msg, options = {}) {
   const wrap = document.createElement('div');
   wrap.className = 'lp-toast-wrap';
   wrap.setAttribute('role', 'status');
@@ -95,34 +113,49 @@ function showCentered(msg) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-  const enter = 160, stay = 1600, exit = 260;
-  bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
-  setTimeout(() => {
-    bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
-    setTimeout(() => { try { wrap.remove(); } catch(e) {} }, exit + 40);
-  }, enter + stay);
+  const cfg = { ...toastConfig, ...(options || {}) };
+  // Prepare initial state but don't start animation yet
+  bubble.style.opacity = '0';
+  bubble.style.transform = 'translateY(8px) scale(0.98)';
+  // Start strictly after next paint to avoid early timeline progress
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      bubble.style.animation = `lpToastIn ${cfg.enter}ms ${cfg.easingIn} forwards`;
+      const totalStay = cfg.stay;
+      setTimeout(() => {
+        bubble.style.animation = `lpToastOut ${cfg.exit}ms ${cfg.easingOut} forwards`;
+        setTimeout(() => { try { wrap.remove(); } catch(e) {} }, cfg.exit + 40);
+      }, cfg.enter + totalStay);
+    });
+  });
 }
 
-function showAnchored(msg, type, anchorEl) {
+function showAnchored(msg, type, anchorEl, options = {}) {
   const bubble = document.createElement('div');
   bubble.className = 'lp-toast-bubble';
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-  const enter = 160, stay = 1600, exit = 260;
-  bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
-  setTimeout(() => {
-    bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
-    setTimeout(() => { try { bubble.remove(); } catch(e) {} }, exit + 40);
-  }, enter + stay);
+  const cfg = { ...toastConfig, ...(options || {}) };
+  bubble.style.opacity = '0';
+  bubble.style.transform = 'translateY(8px) scale(0.98)';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      bubble.style.animation = `lpToastIn ${cfg.enter}ms ${cfg.easingIn} forwards`;
+      setTimeout(() => {
+        bubble.style.animation = `lpToastOut ${cfg.exit}ms ${cfg.easingOut} forwards`;
+        setTimeout(() => { try { bubble.remove(); } catch(e) {} }, cfg.exit + 40);
+      }, cfg.enter + cfg.stay);
+    });
+  });
 }
 
 // === Публичные API ===
 
-export function showUpdateToast(msg = 'Обновлено') {
+export function showUpdateToast(msg = 'Обновлено', options = {}) {
   if (toastLock) return; toastLock = true;
   ensureStyles();
-  showCentered(msg);
+  showCentered(msg, options);
   setTimeout(() => { toastLock = false; }, 160 + 1600 + 260 + 60);
 }
 
@@ -135,13 +168,13 @@ export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновле
   } catch(e) {}
 }
 
-export function showSuccessToast(msg='Готово', anchorEl=null) {
+export function showSuccessToast(msg='Готово', anchorEl=null, options = {}) {
   ensureStyles();
-  if (!anchorEl) return showUpdateToast(msg);
-  showAnchored(msg, 'success', anchorEl);
+  if (!anchorEl) return showUpdateToast(msg, options);
+  showAnchored(msg, 'success', anchorEl, options);
 }
-export function showErrorToast(msg='Ошибка', anchorEl=null) {
+export function showErrorToast(msg='Ошибка', anchorEl=null, options = {}) {
   ensureStyles();
-  if (!anchorEl) return showAnchored(msg, 'error', document.body);
-  showAnchored(msg, 'error', anchorEl);
+  if (!anchorEl) return showAnchored(msg, 'error', document.body, options);
+  showAnchored(msg, 'error', anchorEl, options);
 }

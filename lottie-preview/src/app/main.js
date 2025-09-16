@@ -33,7 +33,7 @@ import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { afterTwoFrames } from './utils.js';
-import { showToastIfFlag } from './updateToast.js';
+import { showToastIfFlag, setToastConfig } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
 import { initLottiePan }  from './pan.js';
 
@@ -79,6 +79,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
   await initLoadFromLink({ refs, isStandalone });
+
+  // Пример глобальной настройки бабликов (можно менять в одном месте):
+  // setToastConfig({ enter: 160, stay: 1600, exit: 260 });
+
 
   /* DELAYED TOAST: показываем «Обновлено» только после обновления и отрисовки контента */
   try { await afterTwoFrames(); await afterTwoFrames(); } catch {}
