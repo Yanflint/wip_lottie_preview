@@ -2,6 +2,23 @@ import { setBackgroundFromSrc, loadLottieFromData } from './lottie.js';
 import { setPlaceholderVisible, setDropActive } from './utils.js';
 import { setLastLottie } from './state.js';
 
+
+// Ensure Lottie relayouts after background image has loaded (handles new dimensions after DnD)
+function __ensureRelayoutAfterBgLoad(refs, layoutLottie) {
+  try {
+    const img = refs && (refs.bgImg || document.getElementById('bgImg'));
+    if (!img) return;
+    // If image already complete and has new natural size, relayout immediately
+    if (img.complete && img.naturalWidth > 0) {
+      layoutLottie(refs);
+      return;
+    }
+    const once = () => { try { layoutLottie(refs); } catch(_) {} img.removeEventListener('load', once); };
+    img.addEventListener('load', once, { once: true });
+  } catch(_) {}
+}
+
+
 async function processFilesSequential(refs, files) {
   let imgFile = null, jsonFile = null;
   for (const f of files) {
