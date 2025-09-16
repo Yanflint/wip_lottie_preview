@@ -392,3 +392,9 @@ button::-moz-focus-inner{ border:0 !important; }
 
 /* Нулевые отступы у чекбокса цикла */
 #loopChk{ margin-left:0; margin-right:0; }
+
+
+/* cursor hints for panning in editor */
+html:not(.viewer) #lotStage { cursor: grab; }
+html:not(.viewer) .lp-grabbing, 
+html:not(.viewer) .lp-grabbing * { cursor: grabbing !important; }
