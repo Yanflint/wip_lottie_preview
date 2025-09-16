@@ -104,11 +104,20 @@ if (!isViewer) initDnd({ refs });
 
   // Reset (сброс) по клавише R (работает независимо от раскладки)
   window.addEventListener('keydown', (e) => {
+    // Не мешаем браузеру: пропускаем сочетания с Ctrl/Meta/Alt/Shift
+    const hasMods = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+    if (hasMods) return;
+
+    // Не трогаем ввод в полях
+    const t = e.target;
+    const isEditable = !!(t && (t.closest?.('input, textarea') || t.isContentEditable || t.getAttribute?.('role') === 'textbox'));
+    if (isEditable) return;
+
+    // Только «чистая» R, с русской раскладкой тоже
     const isRCode = e.code === 'KeyR';
     const isRKey  = (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К');
     if (isRCode || isRKey) {
       e.preventDefault();
-      // Сбрасываем смещение лотти и пересчитываем раскладку
       try { setLotOffset(0, 0); } catch {}
       try { layoutLottie(refs); } catch {}
     }
