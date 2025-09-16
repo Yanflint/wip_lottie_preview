@@ -12,12 +12,6 @@ if (isStandalone) document.documentElement.classList.add('standalone');
 // Viewer mode on /s/*
 const isViewer = /^\/s\//.test(location.pathname);
 if (isViewer) document.documentElement.classList.add('viewer');
-if (isViewer) {
-  /* DnD guard for viewer */
-  ['dragenter','dragover','dragleave','drop'].forEach(ev =>
-    window.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false })
-  );
-}
 
 // [PATCH] Boot hard refresh once per session, to avoid stale payload
 try {

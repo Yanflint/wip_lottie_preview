@@ -1,4 +1,8 @@
 // src/app/updateToast.js
+// Единый стиль баблика (как у «Обновлено»): тёмный фон, белый текст.
+// Иконка меняется (зелёная галочка / красный крест). Без хвоста.
+// Обновление — снизу по центру; успех/ошибка — над переданной кнопкой (anchorEl).
+
 let toastLock = false;
 
 function ensureStyles() {
@@ -59,33 +63,20 @@ function iconSVG(type) {
     </svg>`;
 }
 
-function __lpParseTimeMs(v, fallbackMs){
-  if(!v) return fallbackMs;
-  const s = String(v).trim();
-  if(!s) return fallbackMs;
-  if (s.endsWith('ms')) { const n = parseFloat(s); return isNaN(n)?fallbackMs:n; }
-  if (s.endsWith('s'))  { const n = parseFloat(s); return isNaN(n)?fallbackMs:Math.round(n*1000); }
-  const n = parseFloat(s); return isNaN(n)?fallbackMs:n;
-}
-function __lpDurations(){
-  const cs = getComputedStyle(document.documentElement);
-  const enter = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-enter'), 160);
-  const stay  = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-stay'), 1600);
-  const exit  = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-exit'), 260);
-  return { enter, stay, exit };
-}
-
 function placeAbove(anchorEl, bubble) {
   const r = anchorEl.getBoundingClientRect();
   const vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   const gap = 10;
+  // Временное измерение для ширины/высоты
   bubble.style.visibility = 'hidden';
   document.body.appendChild(bubble);
   const bw = bubble.offsetWidth;
   const bh = bubble.offsetHeight;
   bubble.style.visibility = '';
+  // Центрируем по кнопке и не даём выйти за экран
   let left = Math.round(r.left + r.width/2 - bw/2);
   left = Math.max(8, Math.min(left, vw - bw - 8));
+  // Строго над кнопкой (с зазором)
   let top = Math.round(r.top - gap - bh);
   const minTop = 8;
   if (top < minTop) top = minTop;
@@ -104,7 +95,7 @@ function showCentered(msg) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-  const { enter, stay, exit } = __lpDurations();
+  const enter = 160, stay = 1600, exit = 260;
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -118,7 +109,7 @@ function showAnchored(msg, type, anchorEl) {
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-  const { enter, stay, exit } = __lpDurations();
+  const enter = 160, stay = 1600, exit = 260;
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -126,12 +117,13 @@ function showAnchored(msg, type, anchorEl) {
   }, enter + stay);
 }
 
+// === Публичные API ===
+
 export function showUpdateToast(msg = 'Обновлено') {
   if (toastLock) return; toastLock = true;
   ensureStyles();
   showCentered(msg);
-  const { enter, stay, exit } = __lpDurations();
-  setTimeout(() => { toastLock = false; }, enter + stay + exit + 60);
+  setTimeout(() => { toastLock = false; }, 160 + 1600 + 260 + 60);
 }
 
 export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновлено') {
