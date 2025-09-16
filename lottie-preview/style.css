@@ -1,3 +1,6 @@
+:root{ --lp-toast-enter:160ms; --lp-toast-stay:1600ms; --lp-toast-exit:260ms; }
+:root{ /* «Обновлено» только */ --lp-toast-update-enter: var(--lp-toast-enter); --lp-toast-update-stay: var(--lp-toast-stay); --lp-toast-update-exit: var(--lp-toast-exit); }
+
 /* GLOBAL ARIAL 12 */
 html, body, button, input, select, textarea, label {
   font-family: Arial, sans-serif;
@@ -392,34 +395,3 @@ button::-moz-focus-inner{ border:0 !important; }
 
 /* Нулевые отступы у чекбокса цикла */
 #loopChk{ margin-left:0; margin-right:0; }
-
-
-/* Key hint: bottom-left small bubble */
-.lp-keyhint {
-  position: fixed;
-  left: 10px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
-  padding: 6px 10px;
-  font-size: 12px;
-  line-height: 1;
-  color: #fff;
-  background: rgba(24,24,24,0.85);
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
-  z-index: 999998;
-  pointer-events: none;
-}
-/* cursor hints for panning in editor */
-html:not(.viewer) #lotStage { cursor: grab; }
-html:not(.viewer) .lp-grabbing, html:not(.viewer) .lp-grabbing * { cursor: grabbing !important; }
-
-
-/* Disable selection in viewer for preview only */
-html.viewer #preview, html.viewer #preview *,
-html.viewer #bgImg, html.viewer #lottie, html.viewer #lotStage {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}

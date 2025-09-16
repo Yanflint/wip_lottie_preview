@@ -5,6 +5,30 @@
 
 let toastLock = false;
 
+function __lpParseTimeMs(v, fallbackMs){
+  if(!v) return fallbackMs;
+  const s = String(v).trim();
+  if(!s) return fallbackMs;
+  if (s.endsWith('ms')) { const n = parseFloat(s); return isNaN(n)?fallbackMs:n; }
+  if (s.endsWith('s'))  { const n = parseFloat(s); return isNaN(n)?fallbackMs:Math.round(n*1000); }
+  const n = parseFloat(s); return isNaN(n)?fallbackMs:n;
+}
+function __lpDurations(kind='generic'){
+  // generic = для success/error; update = только для «Обновлено»
+  const cs = getComputedStyle(document.documentElement);
+  if (kind === 'update') {
+    const enter = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-update-enter') || cs.getPropertyValue('--lp-toast-enter'), 160);
+    const stay  = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-update-stay')  || cs.getPropertyValue('--lp-toast-stay'),  1600);
+    const exit  = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-update-exit')  || cs.getPropertyValue('--lp-toast-exit'),  260);
+    return { enter, stay, exit };
+  }
+  const enter = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-enter'), 160);
+  const stay  = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-stay'),  1600);
+  const exit  = __lpParseTimeMs(cs.getPropertyValue('--lp-toast-exit'),  260);
+  return { enter, stay, exit };
+}
+
+
 function ensureStyles() {
   if (document.getElementById('lp-toast-style')) return;
   const st = document.createElement('style');
@@ -95,7 +119,7 @@ function showCentered(msg) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-  const enter = 160, stay = 1600, exit = 260;
+  const { enter, stay, exit } = __lpDurations('update');
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -103,13 +127,7 @@ function showCentered(msg) {
   }, enter + stay);
 }
 
-function showAnchored(msg, type, anchorEl) {
-  const bubble = document.createElement('div');
-  bubble.className = 'lp-toast-bubble';
-  bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
-  placeAbove(anchorEl, bubble);
-  document.body.appendChild(bubble);
-  const enter = 1500, stay = 2500, exit = 2000;
+\1const { enter, stay, exit } = __lpDurations('generic');
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -123,7 +141,7 @@ export function showUpdateToast(msg = 'Обновлено') {
   if (toastLock) return; toastLock = true;
   ensureStyles();
   showCentered(msg);
-  setTimeout(() => { toastLock = false; }, 160 + 1600 + 260 + 60);
+  const __d = __lpDurations('update'); setTimeout(() => { toastLock = false; }, __d.enter + __d.stay + __d.exit + 60);
 }
 
 export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновлено') {
