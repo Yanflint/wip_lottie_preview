@@ -1,8 +1,3 @@
-// [ADDED] atomic-swap imports
-import { setBackgroundFromSrc, loadLottieFromData, layoutLottie, setLoop } from './lottie.js';
-import { setLotOffset, setLastLottie, setLastBgMeta, state } from './state.js';
-import { showUpdateToast } from './updateToast.js';
-
 // src/app/autoRefresh.js
 // Live-пулинг для /s/last: 5с ±20% (только когда вкладка видима).
 // Мгновенная проверка при возврате в фокус/тач. Бэкофф до 30с при ошибках.
@@ -12,90 +7,6 @@ const BASE_INTERVAL = 5000;
 const JITTER = 0.20;
 const MAX_BACKOFF = 30000;
 const TOAST_FLAG = 'lp_show_toast';
-
-// [ADDED] Build minimal refs used by lottie helpers (no coupling to main.js)
-function __collectRefsForViewer(){
-  const $ = (id) => document.getElementById(id);
-  const wrapper = $('wrapper');
-  return {
-    wrapper,
-    preview: $('preview'),
-    previewBox: $('previewBox') || wrapper,
-    phEl: $('ph'),
-    bgImg: $('bgImg'),
-    lotStage: $('lotStage'),
-    lottieMount: $('lottie'),
-    toastEl: $('toast'),
-  };
-}
-
-// [ADDED] Preload image and resolve after decode (if supported)
-async function __preloadImage(src){
-  if (!src) return;
-  await new Promise((res)=>{
-    const im = new Image();
-    im.onload = () => res();
-    im.onerror = () => res(); // don't block on errors
-    try { im.decoding = 'sync'; } catch(e) {}
-    im.src = src;
-  });
-  try {
-    const imgEl = document.createElement('img');
-    imgEl.src = src;
-    if (imgEl.decode) await imgEl.decode();
-  } catch(e){}
-}
-
-// [ADDED] Atomic (no-black) apply of new payload: preload everything, then swap
-async function __applyAtomicUpdate(data){
-  if (!data || typeof data !== 'object') return false;
-  const refs = __collectRefsForViewer();
-
-  // A) Apply loop option early (mirrors applyLoopFromPayload)
-  try {
-    if (data && data.opts && typeof data.opts.loop === 'boolean') {
-      state.loopOn = !!data.opts.loop;
-      if (refs?.loopChk) refs.loopChk.checked = state.loopOn;
-      try { setLoop(state.loopOn); } catch(e) {}
-    }
-  } catch(e) {}
-
-  // B) Parse and preload background (if any)
-  let bgSrc = null, bgMeta = {};
-  try {
-    if (data.bg) {
-      if (typeof data.bg === 'string') bgSrc = data.bg;
-      else { bgSrc = data.bg.value; bgMeta = { fileName: data.bg.name, assetScale: data.bg.assetScale }; }
-    }
-    // If meta is missing, try from lot meta (_lpBgMeta)
-    if ((!bgMeta.fileName || !bgMeta.assetScale) && data.lot && data.lot.meta && data.lot.meta._lpBgMeta) {
-      const bm = data.lot.meta._lpBgMeta;
-      if (!bgMeta.fileName && bm.fileName) bgMeta.fileName = bm.fileName;
-      if (!bgMeta.assetScale && bm.assetScale) bgMeta.assetScale = bm.assetScale;
-    }
-  } catch(e) {}
-  if (bgSrc) { try { await __preloadImage(bgSrc); } catch(e) {} }
-
-  // C) Read offset from lot meta (_lpPos) to avoid jump
-  try {
-    const m = data.lot && data.lot.meta && data.lot.meta._lpPos;
-    if (m && typeof m.x==='number' && typeof m.y==='number') setLotOffset(m.x||0, m.y||0);
-  } catch(e) {}
-
-  // D) Swap in this order: background -> lottie
-  if (bgSrc) {
-    try { await setBackgroundFromSrc(refs, bgSrc, bgMeta); setLastBgMeta(bgMeta||{}); } catch(e){ console.warn('swap bg fail', e); }
-  }
-  if (data.lot) {
-    try { setLastLottie(data.lot); await loadLottieFromData(refs, data.lot); } catch(e){ console.warn('swap lot fail', e); }
-  }
-
-  try { layoutLottie(refs); } catch(e){}
-  try { if (refs?.phEl) refs.phEl.classList.add('hidden'); } catch(e){}
-  return true;
-}
-
-
 
 function isViewingLast() {
   try {
@@ -107,7 +18,7 @@ function isViewingLast() {
     const u = new URL(location.href);
     const qid = u.searchParams.get('id');
     if (qid && (qid === 'last' || qid === '__last__')) return true;
-  } catch(e){}
+  } catch {}
   return false;
 }
 function jittered(ms){const f=1+(Math.random()*2-1)*JITTER;return Math.max(1000,Math.round(ms*f));}
@@ -135,7 +46,7 @@ async function fetchStableLastPayload(maxMs=2000){
     try{
       const rr = await fetch('/api/share?id=last&rev=1', { cache: 'no-store' });
       if (rr.ok){ const j = await rr.json().catch(()=>({})); revNow = String(j.rev||''); }
-    }catch(e){}
+    }catch{}
 
     // 3) If ETag equals current rev and data looks complete — return
     const hasLot = !!(data && typeof data === 'object' && data.lot);
@@ -167,27 +78,27 @@ export function initAutoRefreshIfViewingLast(){
       const rev=await fetchRev();
       if(!baseline){ baseline=rev; }
       else if(rev && rev!==baseline){
-  try {
-    const { data } = await fetchStableLastPayload(4000);
-    if (data && typeof data === 'object') {
-      const ok = await __applyAtomicUpdate(data);
-      if (ok) {
-        try { baseline = rev; } catch(e) {}
-        try { showUpdateToast('Обновлено'); } catch(e) {}
-        currentDelay = BASE_INTERVAL;
-        schedule(currentDelay);
-        return;
+        // [PATCH]: pre-fetch full payload to ensure Lottie data is present (avoid showing stale lot pos)
+        try {
+          const { data } = await fetchStableLastPayload(2000);
+          const hasLot = !!(data && typeof data === 'object' && data.lot);
+          if (hasLot) {
+            try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch{}
+            location.replace(location.href); // жёсткий рефреш, сохраняя ?fit
+            return;
+          } else {
+            // Payload not ready yet; try again quickly (no exponential backoff)
+            currentDelay = Math.min(currentDelay, 1500);
+            schedule(currentDelay);
+            return;
+          }
+        } catch (e) {
+          // Network hiccup; retry a bit sooner than backoff
+          currentDelay = Math.min(MAX_BACKOFF, Math.max(1500, currentDelay));
+          schedule(currentDelay);
+          return;
+        }
       }
-    }
-  } catch(e) {
-    console.warn('atomic update failed, fallback to reload', e);
-  }
-  // Fallback to old behaviour if something goes wrong
-  try{ sessionStorage.setItem(TOAST_FLAG,'1'); }catch(e){}
-  location.replace(location.href);
-  return;
-}
-
 // [PATCH] Verify payload completeness before triggering hard reload on rev change.
 
       reset();
@@ -207,5 +118,5 @@ export function initAutoRefreshIfViewingLast(){
   window.addEventListener('pageshow', onVisible);
   window.addEventListener('pointerdown', onPointer, {passive:true});
 
-  (async()=>{ try{ baseline=await fetchRev(); }catch(e){} if(document.visibilityState==='visible'){ schedule(BASE_INTERVAL);} })();
+  (async()=>{ try{ baseline=await fetchRev(); }catch{} if(document.visibilityState==='visible'){ schedule(BASE_INTERVAL);} })();
 }
