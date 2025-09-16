@@ -140,7 +140,11 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
   })();
 
   refs.bgImg.onload = () => {
+    // ensure relayout after bg load
+    try { layoutLottie(refs); 
     try { __bgResolve && __bgResolve(); } catch {}
+  } catch {}
+try { __bgResolve && __bgResolve(); } catch {}
 
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
@@ -164,10 +168,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     }
 
     setPlaceholderVisible(refs, false);
-  
-    // Force relayout of Lottie to match new background
-    try { layoutLottie(refs); } catch {}
-};
+  };
 
   refs.bgImg.onerror = () => {
     try { __bgResolve && __bgResolve(); } catch {}
@@ -177,7 +178,6 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
 
   refs.bgImg.src = src;
   try { await __bgDone; } catch {}
-
   return __bgDone;
 }
 

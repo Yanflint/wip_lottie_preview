@@ -73,34 +73,16 @@ function applyVersion(refs) {
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
   applyVersion(refs);
-// showToastIfFlag moved later to wait content paint
+// (moved) showToastIfFlag delayed after content paint
 
   // Авто-рефреш для /s/last (Viewer)
   initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
   await initLoadFromLink({ refs, isStandalone });
-  try {
-    setToastPresetFor('update',  'long');
-    setToastPresetFor('success', 'short');
-    setToastPresetFor('error',   'short');
-  } catch {}
-  // setToastPresets({
-  //   short: { enter: 140, stay: 1000, exit: 220 },
-  //   long:  { enter: 220, stay: 2200, exit: 300 },
-  // });
-  // setToastPresetFor('update',  'short');
-  // setToastPresetFor('success', 'short');
-  // setToastPresetFor('error',   'long');
 
-
-  // Пример глобальной настройки бабликов (можно менять в одном месте):
-  // setToastConfig({ enter: 160, stay: 1600, exit: 260 });
-
-
-  /* DELAYED TOAST: показываем «Обновлено» только после обновления и отрисовки контента */
+  /* DELAYED TOAST */
   try { await afterTwoFrames(); await afterTwoFrames(); } catch {}
-  showToastIfFlag(); // теперь покажется после применения фона/лотти
-
+  showToastIfFlag();
 
   
   if (!isViewer) initLottiePan({ refs });
@@ -119,19 +101,14 @@ if (!isViewer) initDnd({ refs });
   window.addEventListener('resize', relayout, { passive: true });
   window.addEventListener('orientationchange', relayout, { passive: true });
 
-  // Reset (сброс) по клавише R (работает независимо от раскладки)
+  // Hotkey: Reset (R) in editor only; do not block Ctrl/Cmd+R; ignore inputs
   window.addEventListener('keydown', (e) => {
-    if (isViewer) return;
-    // Не мешаем браузеру: пропускаем сочетания с Ctrl/Meta/Alt/Shift
+    if (isViewer) return; // disable in viewer mode
     const hasMods = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
-    if (hasMods) return;
-
-    // Не трогаем ввод в полях
+    if (hasMods) return; // allow Ctrl/Cmd+R refresh
     const t = e.target;
     const isEditable = !!(t && (t.closest?.('input, textarea') || t.isContentEditable || t.getAttribute?.('role') === 'textbox'));
     if (isEditable) return;
-
-    // Только «чистая» R, с русской раскладкой тоже
     const isRCode = e.code === 'KeyR';
     const isRKey  = (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К');
     if (isRCode || isRKey) {
@@ -140,7 +117,6 @@ if (!isViewer) initDnd({ refs });
       try { layoutLottie(refs); } catch {}
     }
   }, { passive: false });
-
 
   // Тап = перезапуск (если было добавлено ранее)
   const restartByTap = (e) => {
@@ -162,21 +138,7 @@ if (!isViewer) initDnd({ refs });
   }
 
 
-window.addEventListener('keydown', (e) => {
-  const keys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
-  if (!keys.includes(e.key)) return;
-  const tag = (document.activeElement?.tagName || '').toLowerCase();
-  if (['input','textarea','select'].includes(tag)) return;
-  const step = e.shiftKey ? 10 : 1;
-  let dx = 0, dy = 0;
-  if (e.key === 'ArrowLeft')  dx = -step;
-  if (e.key === 'ArrowRight') dx = +step;
-  if (e.key === 'ArrowUp')    dy = -step;
-  if (e.key === 'ArrowDown')  dy = +step;
-  bumpLotOffset(dx, dy);
-  layoutLottie(refs);
-  e.preventDefault();
-}, { passive: false });
+
 
 window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} });
 

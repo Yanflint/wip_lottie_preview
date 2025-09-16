@@ -1,68 +1,7 @@
-// src/app/updateToast.js
-// Единый стиль баблика (как у «Обновлено»): тёмный фон, белый текст.
-// Иконка меняется (зелёная галочка / красный крест). Без хвоста.
-// Обновление — снизу по центру; успех/ошибка — над переданной кнопкой (anchorEl).
-
-let toastLock = false;
-
-// === Global config for all bubbles ===
-const toastConfig = {
-  enter: 160,   // ms: fade/slide in
-  stay: 1600,   // ms: visible
-  exit: 260,    // ms: fade out
-  easingIn: 'cubic-bezier(.21,.75,.2,1)',
-  easingOut: 'ease',
-};
-export function setToastConfig(opts={}){
-  if (!opts || typeof opts !== 'object') return;
-  if (Number.isFinite(opts.enter)) toastConfig.enter = +opts.enter;
-  if (Number.isFinite(opts.stay))  toastConfig.stay  = +opts.stay;
-  if (Number.isFinite(opts.exit))  toastConfig.exit  = +opts.exit;
-  if (typeof opts.easingIn  === 'string') toastConfig.easingIn  = opts.easingIn;
-  if (typeof opts.easingOut === 'string') toastConfig.easingOut = opts.easingOut;
-}
-export function getToastConfig(){ return { ...toastConfig }; }
-// === Presets system ===
-// === SINGLE SOURCE OF TRUTH (edit only here) ===
-export const TOAST_PRESETS = Object.freeze({
-  short: { enter: 140, stay: 1000, exit: 220 },
-  long:  { enter: 220, stay: 2200, exit: 300 },
-});
-export const TOAST_MAPPING = Object.freeze({
-  update: 'long',   // «Обновлено» — длинный
-  success: 'short', // успех — короткий
-  error:  'short',  // ошибка — короткий
-});
-
-const toastPresets = { ...TOAST_PRESETS };
-const toastPresetMap = { ...TOAST_MAPPING };;
-
-export function setToastPresets(presets = {}) {
-  if (!presets || typeof presets !== 'object') return;
-  for (const [name, cfg] of Object.entries(presets)) {
-    if (!cfg || typeof cfg !== 'object') continue;
-    const p = { ...toastPresets[name] };
-    if (Number.isFinite(cfg.enter)) p.enter = +cfg.enter;
-    if (Number.isFinite(cfg.stay))  p.stay  = +cfg.stay;
-    if (Number.isFinite(cfg.exit))  p.exit  = +cfg.exit;
-    toastPresets[name] = p;
-  }
-}
-export function getToastPresets() { return JSON.parse(JSON.stringify(toastPresets)); }
-
-export function setToastPresetFor(kind, presetName) {
-  if (!toastPresets[presetName]) return;
-  if (kind !== 'update' && kind !== 'success' && kind !== 'error') return;
-  toastPresetMap[kind] = presetName;
-}
-export function getToastPresetFor(kind){ return toastPresetMap[kind] || null; }
 
 function resolveToastConfig(kind, options = {}){
-  // base from global config
   let cfg = { ...toastConfig };
-  // overlay mapped preset if exists
   try { const p = toastPresets[ toastPresetMap[kind] ]; if (p) cfg = { ...cfg, ...p }; } catch {}
-  // final call-time overrides
   if (Number.isFinite(options.enter)) cfg.enter = +options.enter;
   if (Number.isFinite(options.stay))  cfg.stay  = +options.stay;
   if (Number.isFinite(options.exit))  cfg.exit  = +options.exit;
@@ -70,9 +9,28 @@ function resolveToastConfig(kind, options = {}){
   if (typeof options.easingOut === 'string') cfg.easingOut = options.easingOut;
   return cfg;
 }
+// src/app/updateToast.js
+// Единый стиль баблика (как у «Обновлено»):
+function __clampMs(v, def=0, min=0, max=60000){ const n=Number(v); if(!Number.isFinite(n)) return def; return Math.min(Math.max(n,min),max);} тёмный фон, белый текст.
+// Иконка меняется (зелёная галочка / красный крест). Без хвоста.
+// Обновление — снизу по центру; успех/ошибка — над переданной кнопкой (anchorEl).
+
+let toastLock = false;
+
+// === SINGLE SOURCE OF TRUTH (edit only here) ===
+export const TOAST_PRESETS = Object.freeze({
+  short: { enter: 140, stay: 1000, exit: 220 },
+  long:  { enter: 220, stay: 2200, exit: 300 },
+});
+export const TOAST_MAPPING = Object.freeze({
+  update: 'long',
+  success: 'short',
+  error:  'short',
+});
 
 
 function ensureStyles() {
+
   if (document.getElementById('lp-toast-style')) return;
   const st = document.createElement('style');
   st.id = 'lp-toast-style';
@@ -152,7 +110,7 @@ function placeAbove(anchorEl, bubble) {
   bubble.style.top  = top  + 'px';
 }
 
-function showCentered(msg, options = {}) {
+function showCentered(msg) {
   const wrap = document.createElement('div');
   wrap.className = 'lp-toast-wrap';
   wrap.setAttribute('role', 'status');
@@ -162,52 +120,35 @@ function showCentered(msg, options = {}) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-    const kind = (options && options.kind) || (type === 'error' ? 'error' : 'success');
-  const cfg = resolveToastConfig(kind, options);
-  // Prepare initial state but don't start animation yet
-  bubble.style.opacity = '0';
-  bubble.style.transform = 'translateY(8px) scale(0.98)';
-  // Start strictly after next paint to avoid early timeline progress
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      bubble.style.animation = `lpToastIn ${cfg.enter}ms ${cfg.easingIn} forwards`;
-      const totalStay = cfg.stay;
-      setTimeout(() => {
-        bubble.style.animation = `lpToastOut ${cfg.exit}ms ${cfg.easingOut} forwards`;
-        setTimeout(() => { try { wrap.remove(); } catch(e) {} }, cfg.exit + 40);
-      }, cfg.enter + totalStay);
-    });
-  });
+  const enter = 160, stay = 1600, exit = 260;
+  bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
+  setTimeout(() => {
+    bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
+    setTimeout(() => { try { wrap.remove(); } catch(e) {} }, exit + 40);
+  }, enter + stay);
 }
 
-function showAnchored(msg, type, anchorEl, options = {}) {
+function showAnchored(msg, type, anchorEl) {
   const bubble = document.createElement('div');
   bubble.className = 'lp-toast-bubble';
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-    const kind = (options && options.kind) || (type === 'error' ? 'error' : 'success');
-  const cfg = resolveToastConfig(kind, options);
-  bubble.style.opacity = '0';
-  bubble.style.transform = 'translateY(8px) scale(0.98)';
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      bubble.style.animation = `lpToastIn ${cfg.enter}ms ${cfg.easingIn} forwards`;
-      setTimeout(() => {
-        bubble.style.animation = `lpToastOut ${cfg.exit}ms ${cfg.easingOut} forwards`;
-        setTimeout(() => { try { bubble.remove(); } catch(e) {} }, cfg.exit + 40);
-      }, cfg.enter + cfg.stay);
-    });
-  });
+  const enter = 160, stay = 1600, exit = 260;
+  bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
+  setTimeout(() => {
+    bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
+    setTimeout(() => { try { bubble.remove(); } catch(e) {} }, exit + 40);
+  }, enter + stay);
 }
 
 // === Публичные API ===
 
-export function showUpdateToast(msg = 'Обновлено', options = {}) {
+export function showUpdateToast(msg = 'Обновлено') {
   if (toastLock) return; toastLock = true;
   ensureStyles();
-  showCentered(msg, options);
-  setTimeout(() => { toastLock = false; }, 160 + 1600 + 260 + 60);
+  showCentered(msg);
+  try { const cfg=resolveToastConfig('update', options); const enter=__clampMs(cfg.enter,160), stay=__clampMs(cfg.stay,1600), exit=__clampMs(cfg.exit,260); setTimeout(()=>{toastLock=false;}, enter+stay+exit+200); } catch { setTimeout(()=>{toastLock=false;}, 2200); }
 }
 
 export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновлено') {
@@ -219,13 +160,13 @@ export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновле
   } catch(e) {}
 }
 
-export function showSuccessToast(msg='Готово', anchorEl=null, options = {}) {
+export function showSuccessToast(msg='Готово', anchorEl=null) {
   ensureStyles();
-  if (!anchorEl) return showCentered(msg, { ...(options||{}), kind: 'success' });
-  showAnchored(msg, 'success', anchorEl, options);
+  if (!anchorEl) return showUpdateToast(msg);
+  showAnchored(msg, 'success', anchorEl);
 }
-export function showErrorToast(msg='Ошибка', anchorEl=null, options = {}) {
+export function showErrorToast(msg='Ошибка', anchorEl=null) {
   ensureStyles();
-  if (!anchorEl) return showAnchored(msg, 'error', document.body, options);
-  showAnchored(msg, 'error', anchorEl, options);
+  if (!anchorEl) return showAnchored(msg, 'error', document.body);
+  showAnchored(msg, 'error', anchorEl);
 }
