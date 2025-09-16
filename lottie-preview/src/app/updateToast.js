@@ -67,7 +67,7 @@ function placeAbove(anchorEl, bubble) {
   const r = anchorEl.getBoundingClientRect();
   const vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   const gap = 10;
-  // Временное измерение
+  // Временное измерение для ширины/высоты
   bubble.style.visibility = 'hidden';
   document.body.appendChild(bubble);
   const bw = bubble.offsetWidth;
@@ -78,7 +78,6 @@ function placeAbove(anchorEl, bubble) {
   left = Math.max(8, Math.min(left, vw - bw - 8));
   // Строго над кнопкой (с зазором)
   let top = Math.round(r.top - gap - bh);
-  // Если совсем нет места — прижмём к верхней границе
   const minTop = 8;
   if (top < minTop) top = minTop;
   bubble.style.position = 'fixed';

@@ -1,3 +1,4 @@
+import { showSuccessToast, showErrorToast } from './updateToast.js';
 export async function withLoading(btn, fn) {
   if (!btn) return fn();
   const prevHTML = btn.innerHTML;
@@ -13,8 +14,6 @@ export async function withLoading(btn, fn) {
     btn.innerHTML = prevHTML;
   }
 }
-
-import { showSuccessToast, showErrorToast } from './updateToast.js';
 
 export function showToastNear(rootEl, anchorEl, text) {
   const msg = String(text || '');
