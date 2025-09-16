@@ -1,7 +1,6 @@
 // src/app/updateToast.js
-// Всплывающий «баблик» с зелёной галочкой. Совместим по API:
-//   showUpdateToast(msg?: string)
-//   showToastIfFlag(flagKey?: string, msg?: string)
+// Универсальные «баблики»-тосты: update (default), success, error.
+// Поддерживает якорь (anchorEl) и «хвостик», указывающий на кнопку.
 
 let toastLock = false;
 
@@ -26,6 +25,12 @@ function ensureStyles() {
     z-index: 999999;
     pointer-events: none;
   }
+  .lp-toast-wrap.anchor {
+    left: 0;
+    right: 0;
+    bottom: auto;
+    transform: none;
+  }
   .lp-toast-bubble {
     position: relative;
     display: inline-flex;
@@ -42,54 +47,137 @@ function ensureStyles() {
     -webkit-backdrop-filter: saturate(1.1);
             backdrop-filter: saturate(1.1);
   }
-  .lp-toast-icon {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 18px;
-    display: inline-block;
+  .lp-toast-bubble.success { background: rgba(24,24,24,0.95); }
+  .lp-toast-bubble.error   { background: rgba(150, 20, 20, 0.95); }
+
+  .lp-toast-icon { width: 18px; height: 18px; flex: 0 0 18px; display: inline-block; }
+
+  /* Хвостик */
+  .lp-toast-tail {
+    position: absolute;
+    width: 10px; height: 10px;
+    background: currentColor;
+    opacity: 1;
+    transform: rotate(45deg);
   }
+  /* Цвет хвостика берём из фона через filter для соответствия */
+  .lp-toast-bubble,
+  .lp-toast-tail { color: rgba(24,24,24,0.95); }
+  .lp-toast-bubble.error,
+  .lp-toast-bubble.error + .lp-toast-tail { color: rgba(150,20,20,0.95); }
   `;
   document.head.appendChild(st);
 }
 
-export function showUpdateToast(msg = 'Обновлено') {
-  if (toastLock) return;
-  toastLock = true;
-  ensureStyles();
-
-  const wrap = document.createElement('div');
-  wrap.className = 'lp-toast-wrap';
-  wrap.setAttribute('role', 'status');
-  wrap.setAttribute('aria-live', 'polite');
-
-  // Зеленая галочка (inline SVG, чтобы не зависеть от ассетов)
-  const icon = `
+function svgIcon(type) {
+  if (type === 'error') {
+    return `
+      <svg class="lp-toast-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" fill="#EF4444" />
+        <path d="M8 8l8 8M16 8l-8 8" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" />
+      </svg>`;
+  }
+  // success/default
+  return `
     <svg class="lp-toast-icon" viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="10" fill="#22C55E" />
       <path d="M7 12.5l3 3 7-7" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>
-  `;
-
-  const bubble = document.createElement('div');
-  bubble.className = 'lp-toast-bubble';
-  bubble.innerHTML = `${icon}<span>${msg}</span>`;
-  wrap.appendChild(bubble);
-
-  document.body.appendChild(wrap);
-
-  // Анимация: появление → пауза → исчезновение
-  const enter = 1500, stay = 2000, exit = 2000;
-  wrap.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
-  setTimeout(() => {
-    wrap.style.animation = `lpToastOut ${exit}ms ease forwards`;
-    setTimeout(() => {
-      try { wrap.remove(); } catch {}
-      toastLock = false;
-    }, exit + 40);
-  }, enter + stay);
+    </svg>`;
 }
 
-// Показать тост по флажку в sessionStorage (после авто-рефреша)
+function placeAnchored(wrap, bubble, tail, anchorEl) {
+  const r = anchorEl.getBoundingClientRect();
+  const vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+  const gap = 10; // зазор между кнопкой и бабликом
+  // первичное измерение
+  bubble.style.visibility = 'hidden';
+  bubble.style.left = '0px';
+  bubble.style.top = '0px';
+  document.body.appendChild(wrap);
+  const bw = bubble.offsetWidth;
+  const bh = bubble.offsetHeight;
+  bubble.style.visibility = '';
+
+  const anchorCx = r.left + r.width/2;
+  let left = Math.round(anchorCx - bw/2);
+  left = Math.max(8, Math.min(left, vw - bw - 8));
+
+  // Проверяем, хватает ли места сверху; если нет — показываем снизу
+  const enoughTop = r.top >= (bh + gap + 8);
+  const top = Math.round((enoughTop ? (r.top - bh - gap) : (r.bottom + gap)));
+
+  bubble.style.position = 'fixed';
+  bubble.style.left = left + 'px';
+  bubble.style.top  = top + 'px';
+
+  // Хвост: позиция по центру якоря (с поправкой на сдвиг баблика)
+  const tailX = Math.round(anchorCx - left - 5); // 5 = half of tail width(10)
+  tail.style.position = 'fixed';
+  tail.style.left = (left + tailX - 5) + 'px';
+  tail.style.width = '10px'; tail.style.height='10px';
+  if (enoughTop) {
+    // хвост смотрит вверх: ставим снизу баблика
+    tail.style.top = (top + bh - 5) + 'px';
+  } else {
+    // хвост смотрит вниз: ставим сверху баблика и инвертируем на 225deg
+    tail.style.top = (top - 5) + 'px';
+    tail.style.transform = 'rotate(225deg)';
+  }
+}
+
+function showBubble(msg, { type='success', anchorEl=null } = {}) {
+  ensureStyles();
+
+  const wrap = document.createElement('div');
+  wrap.className = anchorEl ? 'lp-toast-wrap anchor' : 'lp-toast-wrap';
+  wrap.setAttribute('role', 'status');
+  wrap.setAttribute('aria-live', 'polite');
+
+  const bubble = document.createElement('div');
+  bubble.className = 'lp-toast-bubble ' + (type === 'error' ? 'error' : 'success');
+  bubble.innerHTML = svgIcon(type) + `<span>${msg}</span>`;
+
+  const tail = document.createElement('div');
+  tail.className = 'lp-toast-tail';
+
+  if (anchorEl) {
+    // Якорный режим
+    wrap.appendChild(bubble);
+    wrap.appendChild(tail);
+    placeAnchored(wrap, bubble, tail, anchorEl);
+  } else {
+    // Центровка внизу (без хвостика)
+    wrap.appendChild(bubble);
+    document.body.appendChild(wrap);
+  }
+
+  const enter = 160, stay = 1600, exit = 260;
+  if (!anchorEl) {
+    wrap.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
+    setTimeout(() => {
+      wrap.style.animation = `lpToastOut ${exit}ms ease forwards`;
+      setTimeout(() => { try { wrap.remove(); } catch(e) {} }, exit + 40);
+    }, enter + stay);
+  } else {
+    // В якорном режиме анимации задаём на сам bubble (чтобы не дергать tail)
+    bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
+    setTimeout(() => {
+      bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
+      setTimeout(() => { try { wrap.remove(); } catch(e) {} }, exit + 40);
+    }, enter + stay);
+  }
+}
+
+// === Публичные API ===
+
+// Старый API «обновлено» (центральный баблик)
+export function showUpdateToast(msg = 'Обновлено') {
+  if (toastLock) return; toastLock = true;
+  showBubble(msg, { type: 'success', anchorEl: null });
+  setTimeout(() => { toastLock = false; }, 160 + 1600 + 260 + 60);
+}
+
+// Хелпер для авто-рефреша по флажку
 export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновлено') {
   try {
     if (sessionStorage.getItem(flagKey) === '1') {
@@ -98,3 +186,7 @@ export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновле
     }
   } catch(e) {}
 }
+
+// Новые API
+export function showSuccessToast(msg='Готово', anchorEl=null) { showBubble(msg, { type:'success', anchorEl }); }
+export function showErrorToast(msg='Ошибка', anchorEl=null)   { showBubble(msg, { type:'error',   anchorEl }); }
