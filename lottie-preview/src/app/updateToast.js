@@ -25,8 +25,8 @@ export function getToastConfig(){ return { ...toastConfig }; }
 // === Presets system ===
 // === SINGLE SOURCE OF TRUTH (edit only here) ===
 export const TOAST_PRESETS = Object.freeze({
-  short: { enter: 140, stay: 1000, exit: 2200 },
-  long:  { enter: 2000, stay: 2500, exit: 2000 },
+  short: { enter: 140, stay: 1000, exit: 220 },
+  long:  { enter: 220, stay: 2200, exit: 300 },
 });
 export const TOAST_MAPPING = Object.freeze({
   update: 'long',   // «Обновлено» — длинный
@@ -34,10 +34,7 @@ export const TOAST_MAPPING = Object.freeze({
   error:  'short',  // ошибка — короткий
 });
 
-const toastPresets = {
-  short: { enter: 140, stay: 1000, exit: 220 },
-  long:  { enter: 220, stay: 2200, exit: 300 },
-};
+const toastPresets = { ...TOAST_PRESETS };
 const toastPresetMap = { ...TOAST_MAPPING };;
 
 export function setToastPresets(presets = {}) {
