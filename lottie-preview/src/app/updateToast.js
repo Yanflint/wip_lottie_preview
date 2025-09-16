@@ -25,7 +25,7 @@ export function getToastConfig(){ return { ...toastConfig }; }
 // === Presets system ===
 // === SINGLE SOURCE OF TRUTH (edit only here) ===
 export const TOAST_PRESETS = Object.freeze({
-  short: { enter: 140, stay: 1000, exit: 220 },
+  short: { enter: 140, stay: 1000, exit: 2200 },
   long:  { enter: 2000, stay: 2500, exit: 2000 },
 });
 export const TOAST_MAPPING = Object.freeze({
