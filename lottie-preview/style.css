@@ -409,5 +409,17 @@ button::-moz-focus-inner{ border:0 !important; }
   z-index: 999998;
   pointer-events: none;
 }
+/* cursor hints for panning in editor */
 html:not(.viewer) #lotStage { cursor: grab; }
 html:not(.viewer) .lp-grabbing, html:not(.viewer) .lp-grabbing * { cursor: grabbing !important; }
+
+
+/* Disable selection in viewer for preview only */
+html.viewer #preview, html.viewer #preview *,
+html.viewer #bgImg, html.viewer #lottie, html.viewer #lotStage {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
