@@ -11,8 +11,8 @@ if (isStandalone) document.documentElement.classList.add('standalone');
 
 // Viewer mode on /s/*
 const isViewer = /^\/s\//.test(location.pathname);
+if (isViewer) document.documentElement.classList.add('viewer');
 if (isViewer) {
-  document.documentElement.classList.add('viewer');
   /* DnD guard for viewer */
   ['dragenter','dragover','dragleave','drop'].forEach(ev =>
     window.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false })
@@ -78,8 +78,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   applyVersion(refs);
 showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
 
-  // Авто-рефреш для \1// DnD disabled in viewer
-initControls({ refs });
+  // Авто-рефреш для /s/last (Viewer)
+  initAutoRefreshIfViewingLast(); // ← НОВОЕ
+
+  await initLoadFromLink({ refs, isStandalone });
+
+  if (!isViewer) initDnd({ refs });
+  initControls({ refs });
   initShare({ refs, isStandalone });
 
   /* DISABLE TAB FOCUS */

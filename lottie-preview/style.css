@@ -1,9 +1,4 @@
-:root{
-  --lp-toast-enter: 160ms;
-  --lp-toast-stay: 1600ms;
-  --lp-toast-exit: 260ms;
-}
-
+:root{ --lp-toast-enter:160ms; --lp-toast-stay:1600ms; --lp-toast-exit:260ms; }
 /* GLOBAL ARIAL 12 */
 html, body, button, input, select, textarea, label {
   font-family: Arial, sans-serif;
@@ -400,7 +395,7 @@ button::-moz-focus-inner{ border:0 !important; }
 #loopChk{ margin-left:0; margin-right:0; }
 
 
-/* Disable selection in viewer on preview only */
+/* No selection in viewer on preview */
 html.viewer #preview, html.viewer #preview *,
 html.viewer #bgImg, html.viewer #lottie, html.viewer #lotStage {
   -webkit-user-select: none;
