@@ -30,7 +30,7 @@ import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
-import { initAutoRefreshIfViewingLast, afterTwoFrames } from './autoRefresh.js'; // ← НОВОЕ
+import { initAutoRefreshIfViewingLast, afterTwoFrames } from './autoRefresh.js';
 import { showToastIfFlag } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
 import { initLottiePan } from './pan.js';
@@ -75,7 +75,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Авто-рефреш для /s/last (Viewer)
   initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
-  \1
+  
   await afterTwoFrames();
   showToastIfFlag();
 if (!isViewer) initLottiePan({ refs });
