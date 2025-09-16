@@ -20,7 +20,7 @@ let toastLock = false;
 
 // === SINGLE SOURCE OF TRUTH (edit only here) ===
 export const TOAST_PRESETS = Object.freeze({
-  short: { enter: 140, stay: 1000, exit: 2200 },
+  short: { enter: 140, stay: 1000, exit: 22000 },
   long:  { enter: 2200, stay: 2200, exit: 3000 },
 });
 export const TOAST_MAPPING = Object.freeze({
