@@ -1,7 +1,14 @@
-// src/app/pan.js
-// Перемещение Lottie мышкой (только в редакторе).
 import { setLotOffset, getLotOffset } from './state.js';
 import { layoutLottie } from './lottie.js';
+
+function __ensureKeyHint(){
+  if (document.getElementById('lp-keyhint-r')) return;
+  const el = document.createElement('div');
+  el.id = 'lp-keyhint-r';
+  el.className = 'lp-keyhint';
+  el.textContent = 'R - сброс позиции';
+  document.body.appendChild(el);
+}
 
 export function initLottiePan({ refs }) {
   const stage = refs?.lotStage || document.getElementById('lotStage');
@@ -39,4 +46,16 @@ export function initLottiePan({ refs }) {
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', endDrag);
   window.addEventListener('blur', endDrag);
+
+  // Hotkey: R resets offset to (0,0)
+  window.addEventListener('keydown', (e) => {
+    const k = e.key || e.code;
+    const isR = (k && k.toLowerCase && k.toLowerCase() === 'r') || (k === 'KeyR');
+    if (!isR) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    try { setLotOffset(0,0); layoutLottie(refs); } catch(_) {}
+    e.preventDefault();
+  }, { passive: false });
+
+  __ensureKeyHint();
 }

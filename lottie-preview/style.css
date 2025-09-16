@@ -394,7 +394,20 @@ button::-moz-focus-inner{ border:0 !important; }
 #loopChk{ margin-left:0; margin-right:0; }
 
 
-/* cursor hints for panning in editor */
+/* Key hint: bottom-left small bubble */
+.lp-keyhint {
+  position: fixed;
+  left: 10px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(24,24,24,0.85);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  z-index: 999998;
+  pointer-events: none;
+}
 html:not(.viewer) #lotStage { cursor: grab; }
-html:not(.viewer) .lp-grabbing, 
-html:not(.viewer) .lp-grabbing * { cursor: grabbing !important; }
+html:not(.viewer) .lp-grabbing, html:not(.viewer) .lp-grabbing * { cursor: grabbing !important; }
