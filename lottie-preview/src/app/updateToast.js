@@ -26,7 +26,7 @@ export function getToastConfig(){ return { ...toastConfig }; }
 // === SINGLE SOURCE OF TRUTH (edit only here) ===
 export const TOAST_PRESETS = Object.freeze({
   short: { enter: 140, stay: 1000, exit: 220 },
-  long:  { enter: 2000, stay: 3000, exit: 2000 },
+  long:  { enter: 220, stay: 2200, exit: 300 },
 });
 export const TOAST_MAPPING = Object.freeze({
   update: 'long',   // «Обновлено» — длинный
@@ -162,7 +162,7 @@ function showCentered(msg, options = {}) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-    const kind = (options && options.kind) || 'update';
+    const kind = (options && options.kind) || (type === 'error' ? 'error' : 'success');
   const cfg = resolveToastConfig(kind, options);
   // Prepare initial state but don't start animation yet
   bubble.style.opacity = '0';
@@ -186,7 +186,7 @@ function showAnchored(msg, type, anchorEl, options = {}) {
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-    const kind = (options && options.kind) || 'update';
+    const kind = (options && options.kind) || (type === 'error' ? 'error' : 'success');
   const cfg = resolveToastConfig(kind, options);
   bubble.style.opacity = '0';
   bubble.style.transform = 'translateY(8px) scale(0.98)';
