@@ -26,7 +26,7 @@ export function getToastConfig(){ return { ...toastConfig }; }
 // === SINGLE SOURCE OF TRUTH (edit only here) ===
 export const TOAST_PRESETS = Object.freeze({
   short: { enter: 140, stay: 1000, exit: 220 },
-  long:  { enter: 3000, stay: 1500, exit: 2000 },
+  long:  { enter: 3000, stay: 2200, exit: 3000 },
 });
 export const TOAST_MAPPING = Object.freeze({
   update: 'long',   // «Обновлено» — длинный
