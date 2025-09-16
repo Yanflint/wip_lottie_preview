@@ -33,6 +33,7 @@ import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
 import { showToastIfFlag } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
+import { initLottiePan }  from './pan.js';
 
 // 3) DOM-refs
 function collectRefs() {
@@ -79,7 +80,7 @@ showToastIfFlag(); // покажет "Обновлено", если страни
 
   
   if (!isViewer) initLottiePan({ refs });
-initDnd({ refs });
+if (!isViewer) initDnd({ refs });
   initControls({ refs });
   initShare({ refs, isStandalone });
 
