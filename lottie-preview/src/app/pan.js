@@ -1,3 +1,4 @@
+// src/app/pan.js
 import { setLotOffset, getLotOffset } from './state.js';
 import { layoutLottie } from './lottie.js';
 
