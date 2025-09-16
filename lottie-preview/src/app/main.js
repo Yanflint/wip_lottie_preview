@@ -104,6 +104,7 @@ if (!isViewer) initDnd({ refs });
 
   // Reset (сброс) по клавише R (работает независимо от раскладки)
   window.addEventListener('keydown', (e) => {
+    if (isViewer) return;
     // Не мешаем браузеру: пропускаем сочетания с Ctrl/Meta/Alt/Shift
     const hasMods = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
     if (hasMods) return;
