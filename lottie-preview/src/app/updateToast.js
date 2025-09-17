@@ -3,12 +3,12 @@
 // === SINGLE SOURCE OF TRUTH — edit only here ===
 export const TOAST_PRESETS = Object.freeze({
   short: { enter: 140,  stay: 1000, exit: 220 },
-  base:  { enter: 160,  stay: 1600, exit: 260 },
+  base:  { enter: 500,  stay: 1500, exit: 500 },
   long:  { enter: 1500, stay: 200, exit: 1500 } // tweak as needed
 });
 export const TOAST_MAPPING = Object.freeze({
   update:  'long',
-  success: 'short',
+  success: 'base',
   error:   'short'
 });
 
