@@ -1,9 +1,9 @@
-Optional rlottie (WASM) support
--------------------------------
-This build keeps lottie-web as the default engine so nothing breaks.
+Official rlottie (WASM) is REQUIRED
+-----------------------------------
+This build uses Samsung's official rlottie as the ONLY animation engine.
 
-How to enable rlottie at runtime:
-1) Put your rlottie WASM bundle on the page (for example, via a script tag that exposes `window.RLottiePlayer`
-   or `window.RLottie` or `window.createRlottieModule`). See Samsung rlottie repo docs.
-2) Open the app with `?engine=rlottie` in the URL, or set `localStorage.setItem('lp_engine','rlottie')` in DevTools.
-3) If the rlottie runtime is detected, the app will use it via src/app/rlottieAdapter.js; otherwise it will fall back to lottie-web.
+How to install rlottie runtime into this app:
+1) Download an official rlottie WebAssembly build (JS + WASM) from the Samsung rlottie repository.
+2) Place the JS loader as /rlottie/rlottie.min.js and the corresponding .wasm file in the same folder.
+3) The runtime must expose one of the following globals on window: `RLottiePlayer`, `RLottie`, or `createRlottieModule`.
+4) No lottie-web fallback is included anymore. If rlottie is missing, the app will throw at startup.

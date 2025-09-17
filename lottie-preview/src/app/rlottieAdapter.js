@@ -12,16 +12,9 @@ export function createPlayer(opts) {
   if (!container) throw new Error('rlottieAdapter: container required');
 
   if (!(window.RLottiePlayer || window.RLottie || window.createRlottieModule)) {
-    const anim = window.lottie?.loadAnimation?.({
-      container,
-      renderer: 'svg',
-      loop,
-      autoplay,
-      animationData
-    });
-    if (!anim) throw new Error('Neither rlottie nor lottie-web available');
-    return anim;
-  }
+  throw new Error('rlottieAdapter: rlottie runtime not found. Include official rlottie WASM build.');
+}
+
 
   const ev = makeEventTarget();
   const canvas = document.createElement('canvas');
