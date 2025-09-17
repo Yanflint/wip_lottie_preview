@@ -113,7 +113,7 @@ if (!isViewer) initDnd({ refs });
     const isRKey  = (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К');
     if (isRCode || isRKey) {
       e.preventDefault();
-      try { (await import('./state.js')).setLotOffset(0, 0); } catch {}
+      try { setLotOffset(0, 0); } catch {}
       try { relayout(); } catch {}
     }
   }, { passive: false });
