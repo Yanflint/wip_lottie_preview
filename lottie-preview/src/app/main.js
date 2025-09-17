@@ -25,14 +25,12 @@ try {
 // 2) Импорты модулей
 import { initDnd }           from './dnd.js';
 import { state }           from './state.js';
-import { setLotOffset } from './state.js';
 import { getAnim, restart } from './lottie.js';
 import { initControls }      from './controls.js';
 import { initShare }         from './shareClient.js';
 import { initLoadFromLink }  from './loadFromLink.js';
 import { layoutLottie }      from './lottie.js';
 import { initAutoRefreshIfViewingLast } from './autoRefresh.js'; // ← НОВОЕ
-import { afterTwoFrames } from './utils.js';
 import { showToastIfFlag } from './updateToast.js';
 import { bumpLotOffset } from './state.js';
 import { initLottiePan }  from './pan.js';
@@ -73,16 +71,12 @@ function applyVersion(refs) {
 window.addEventListener('DOMContentLoaded', async () => {
   const refs = collectRefs();
   applyVersion(refs);
-// (moved) showToastIfFlag delayed after content paint
+showToastIfFlag(); // покажет "Обновлено", если страница была перезагружена авто-рефрешом
 
   // Авто-рефреш для /s/last (Viewer)
   initAutoRefreshIfViewingLast(); // ← НОВОЕ
 
   await initLoadFromLink({ refs, isStandalone });
-
-  /* DELAYED TOAST */
-  try { await afterTwoFrames(); await afterTwoFrames(); } catch {}
-  showToastIfFlag();
 
   
   if (!isViewer) initLottiePan({ refs });
@@ -100,23 +94,6 @@ if (!isViewer) initDnd({ refs });
   try { layoutLottie(refs); } catch {}
   window.addEventListener('resize', relayout, { passive: true });
   window.addEventListener('orientationchange', relayout, { passive: true });
-
-  // Hotkey: Reset (R) in editor only; do not block Ctrl/Cmd+R; ignore inputs
-  window.addEventListener('keydown', (e) => {
-    if (isViewer) return; // disable in viewer mode
-    const hasMods = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
-    if (hasMods) return; // allow Ctrl/Cmd+R refresh
-    const t = e.target;
-    const isEditable = !!(t && (t.closest?.('input, textarea') || t.isContentEditable || t.getAttribute?.('role') === 'textbox'));
-    if (isEditable) return;
-    const isRCode = e.code === 'KeyR';
-    const isRKey  = (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К');
-    if (isRCode || isRKey) {
-      e.preventDefault();
-      try { setLotOffset(0, 0); } catch {}
-      try { layoutLottie(refs); } catch {}
-    }
-  }, { passive: false });
 
   // Тап = перезапуск (если было добавлено ранее)
   const restartByTap = (e) => {
@@ -138,7 +115,21 @@ if (!isViewer) initDnd({ refs });
   }
 
 
-
+window.addEventListener('keydown', (e) => {
+  const keys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+  if (!keys.includes(e.key)) return;
+  const tag = (document.activeElement?.tagName || '').toLowerCase();
+  if (['input','textarea','select'].includes(tag)) return;
+  const step = e.shiftKey ? 10 : 1;
+  let dx = 0, dy = 0;
+  if (e.key === 'ArrowLeft')  dx = -step;
+  if (e.key === 'ArrowRight') dx = +step;
+  if (e.key === 'ArrowUp')    dy = -step;
+  if (e.key === 'ArrowDown')  dy = +step;
+  bumpLotOffset(dx, dy);
+  layoutLottie(refs);
+  e.preventDefault();
+}, { passive: false });
 
 window.addEventListener('resize', () => { try { layoutLottie(refs); } catch {} });
 

@@ -1,40 +1,41 @@
-
-function resolveToastConfig(kind, options = {}){
-  let cfg = { ...toastConfig };
-  try { const p = toastPresets[ toastPresetMap[kind] ]; if (p) cfg = { ...cfg, ...p }; } catch {}
-  if (Number.isFinite(options.enter)) cfg.enter = +options.enter;
-  if (Number.isFinite(options.stay))  cfg.stay  = +options.stay;
-  if (Number.isFinite(options.exit))  cfg.exit  = +options.exit;
-  if (typeof options.easingIn  === 'string') cfg.easingIn  = options.easingIn;
-  if (typeof options.easingOut === 'string') cfg.easingOut = options.easingOut;
-  return cfg;
-}
 // src/app/updateToast.js
-// Единый стиль баблика (как у «Обновлено»):
-function __clampMs(v, def=0, min=0, max=60000){ const n=Number(v); if(!Number.isFinite(n)) return def; return Math.min(Math.max(n,min),max);}
-// тёмный фон, белый текст.
+
+// === SINGLE SOURCE OF TRUTH — edit only here ===
+export const TOAST_PRESETS = Object.freeze({
+  short: { enter: 140,  stay: 1000, exit: 220 },
+  base:  { enter: 160,  stay: 1600, exit: 260 },
+  long:  { enter: 2200, stay: 2200, exit: 3000 }
+});
+export const TOAST_MAPPING = Object.freeze({
+  update:  'long',
+  success: 'short',
+  error:   'short'
+});
+
+function __safeMs(v, fb, min=0, max=60000){
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fb;
+  return Math.min(Math.max(n, min), max);
+}
+// Единый стиль баблика (как у «Обновлено»): тёмный фон, белый текст.
 // Иконка меняется (зелёная галочка / красный крест). Без хвоста.
 // Обновление — снизу по центру; успех/ошибка — над переданной кнопкой (anchorEl).
 
 let toastLock = false;
 
-// === SINGLE SOURCE OF TRUTH (edit only here) ===
-export const TOAST_PRESETS = Object.freeze({
-  short: { enter: 140, stay: 1000, exit: 22000 },
-  long:  { enter: 2200, stay: 2200, exit: 3000 },
-});
-export const TOAST_MAPPING = Object.freeze({
-  update: 'long',
-  success: 'short',
-  error:  'short',
-});
-
-// runtime copies derived from constants
 const toastPresets   = { ...TOAST_PRESETS };
 const toastPresetMap = { ...TOAST_MAPPING };
 
-function ensureStyles() {
 
+const EASING_IN  = 'cubic-bezier(.21,.75,.2,1)';
+const EASING_OUT = 'ease';
+function resolveToastConfig(kind) {
+  const key = toastPresetMap[kind] || 'base';
+  const preset = toastPresets[key] || toastPresets.base || toastPresets.short;
+  return { ...preset, easingIn: EASING_IN, easingOut: EASING_OUT };
+}
+
+function ensureStyles() {
   if (document.getElementById('lp-toast-style')) return;
   const st = document.createElement('style');
   st.id = 'lp-toast-style';
@@ -124,7 +125,15 @@ function showCentered(msg) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-  const enter = 160, stay = 1600, exit = 260;
+  
+  const kind  = 'update';
+  const cfg   = resolveToastConfig(kind);
+  const base  = toastPresets.base || toastPresets.short;
+  const enter = __safeMs(cfg.enter, base.enter);
+  const stay  = __safeMs(cfg.stay,  base.stay);
+  const exit  = __safeMs(cfg.exit,  base.exit);
+
+const enter = 160, stay = 1600, exit = 260;
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -138,7 +147,15 @@ function showAnchored(msg, type, anchorEl) {
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-  const enter = 160, stay = 1600, exit = 260;
+  
+  const kind  = (type === 'error' ? 'error' : 'success');
+  const cfg   = resolveToastConfig(kind);
+  const base  = toastPresets.base || toastPresets.short;
+  const enter = __safeMs(cfg.enter, base.enter);
+  const stay  = __safeMs(cfg.stay,  base.stay);
+  const exit  = __safeMs(cfg.exit,  base.exit);
+
+const enter = 160, stay = 1600, exit = 260;
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -152,7 +169,7 @@ export function showUpdateToast(msg = 'Обновлено') {
   if (toastLock) return; toastLock = true;
   ensureStyles();
   showCentered(msg);
-  try { const cfg=resolveToastConfig('update', options); const enter=__clampMs(cfg.enter,160), stay=__clampMs(cfg.stay,1600), exit=__clampMs(cfg.exit,260); setTimeout(()=>{toastLock=false;}, enter+stay+exit+200); } catch { setTimeout(()=>{toastLock=false;}, 2200); }
+  setTimeout(() => { toastLock = false; }, 160 + 1600 + 260 + 60);
 }
 
 export function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновлено') {
