@@ -1,7 +1,5 @@
 // src/app/lottie.js
 import { state, setLastBgSize, setLastBgMeta } from './state.js';
-import { pickEngine } from './engine.js';
-import { createPlayer as createRlottiePlayer } from './rlottieAdapter.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
@@ -224,17 +222,7 @@ const isViewer = document.documentElement.classList.contains('viewer');
 const autoplay = isViewer && !isStandalone ? false : true;
 
 
-    const engine = pickEngine();
-    if (engine === 'rlottie') {
-      anim = createRlottiePlayer({
-        container: refs.lottieMount,
-        loop,
-        autoplay,
-        animationData: lotJson
-      });
-    }
-    } else {
-      anim = window.lottie.loadAnimation({
+    anim = window.lottie.loadAnimation({
       container: refs.lottieMount,
       renderer: 'svg',
       loop,
