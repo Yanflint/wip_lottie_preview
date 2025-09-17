@@ -149,8 +149,7 @@ export async function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обно
 
 export function showSuccessToast(msg='Готово', anchorEl=null) {
   ensureStyles();
-  if (!anchorEl) return await waitForContentPaint();
-      showUpdateToast(msg);
+  if (!anchorEl) return showCentered(msg, { kind: 'success' });
   showAnchored(msg, 'success', anchorEl);
 }
 export function showErrorToast(msg='Ошибка', anchorEl=null) {
