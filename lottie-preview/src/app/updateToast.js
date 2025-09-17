@@ -132,8 +132,6 @@ function showCentered(msg) {
   const enter = __safeMs(cfg.enter, base.enter);
   const stay  = __safeMs(cfg.stay,  base.stay);
   const exit  = __safeMs(cfg.exit,  base.exit);
-
-const enter = 160, stay = 1600, exit = 260;
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -154,8 +152,6 @@ function showAnchored(msg, type, anchorEl) {
   const enter = __safeMs(cfg.enter, base.enter);
   const stay  = __safeMs(cfg.stay,  base.stay);
   const exit  = __safeMs(cfg.exit,  base.exit);
-
-const enter = 160, stay = 1600, exit = 260;
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
