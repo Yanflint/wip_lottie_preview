@@ -1,7 +1,5 @@
 // src/app/lottie.js
 import { state, setLastBgSize, setLastBgMeta } from './state.js';
-import { pickEngine } from './engine.js';
-import { createPlayer as createRlottiePlayer } from './rlottieAdapter.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;
@@ -218,86 +216,25 @@ export async function loadLottieFromData(refs, data) {
 
     const loop = !!state.loopOn;
     
-const autoplay = !!state.loopOn;
+// Autoplay: off in web viewer mode (path /s/*), on elsewhere (incl. PWA standalone)
+const isStandalone = !!(window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches)) || (navigator.standalone === true);
+const isViewer = document.documentElement.classList.contains('viewer');
+const autoplay = isViewer && !isStandalone ? false : true;
 
 
-    const engine = pickEngine();
-    if (engine === 'rlottie') {
-      anim = createRlottiePlayer({
-        container: refs.lottieMount,
-        loop,
-        autoplay,
-        animationData: lotJson
-      });
-    } else {
-      anim = window.lottie.loadAnimation({
+    anim = window.lottie.loadAnimation({
       container: refs.lottieMount,
       renderer: 'svg',
       loop,
       autoplay,
       animationData: lotJson
     });
-    }
 
     anim.addEventListener('DOMLoaded', () => {
-      try { if (!state.loopOn && anim && anim.stop) { anim.stop(); anim.goToAndStop?.(0, true); } } catch {}
       setPlaceholderVisible(refs, false);
       if (refs.wrapper) refs.wrapper.classList.add('has-lottie');
       layoutLottie(refs);
     });
-    // Click/Tap to play once when loop is off — guard against double fire (touch + click)
-    try {
-      
-      const mount = refs.lottieMount || refs.preview || refs.wrapper;
-      const root  = refs.preview || refs.wrapper || document.body;
-      if (mount && !mount.__lp_clickBound) {
-        mount.__lp_clickBound = true;
-        let lastUserPlayAt = 0;
-        const SUPPRESS_MS = 500;
-
-        // capture-phase suppressor to block the synthetic click that follows touch/pointer
-        if (root && !root.__lp_clickSuppressor) {
-          root.__lp_clickSuppressor = true;
-          root.addEventListener('click', (ev) => {
-            const now = Date.now();
-            if (now - lastUserPlayAt < SUPPRESS_MS) {
-              try { ev.stopImmediatePropagation(); ev.stopPropagation(); ev.preventDefault(); } catch {}
-            }
-          }, true); // capture
-        }
-
-        const userPlay = (ev) => {
-          const now = Date.now();
-          lastUserPlayAt = now;
-          try { ev.stopPropagation(); } catch {}
-          try { ev.preventDefault && ev.preventDefault(); } catch {}
-          if (!state.loopOn) {
-            try { restart(); } catch {}
-          }
-        };
-        if (window.PointerEvent) {
-          mount.addEventListener('pointerdown', userPlay);
-        } else {
-          mount.addEventListener('touchstart', userPlay, { passive: false });
-          mount.addEventListener('click', (ev) => {
-            // If click comes without prior touch, handle it
-            const now = Date.now();
-            if (now - lastUserPlayAt > SUPPRESS_MS) userPlay(ev);
-          });
-        }
-      }
-    } catch {}
-        }
-        };
-        if (window.PointerEvent) {
-          mount.addEventListener('pointerdown', userPlay, { passive: true });
-        } else {
-          mount.addEventListener('touchstart', userPlay, { passive: true });
-          mount.addEventListener('click', userPlay, { passive: true });
-        }
-      }
-    } catch {}
-
 
     anim.addEventListener('complete', () => {});
 

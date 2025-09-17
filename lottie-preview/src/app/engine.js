@@ -1,4 +1,3 @@
-// src/app/engine.js
 export function wantRlottie() {
   try {
     const sp = new URLSearchParams(location.search);
@@ -11,7 +10,6 @@ export function wantRlottie() {
   return false;
 }
 export function hasRlottieRuntime() {
-  // Heuristics: some builds expose RLottie / RLottiePlayer / createRlottieModule
   return !!(window.RLottiePlayer || window.RLottie || window.createRlottieModule);
 }
 export function pickEngine() {
