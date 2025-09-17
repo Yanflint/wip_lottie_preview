@@ -14,7 +14,15 @@ async function loadTT() {
   if (window.__tt_mod) return window.__tt_mod;
   const mod = await import(/* @vite-ignore */ TT_MODULE_URL);
   if (mod?.updateConfig) {
-    try { await mod.updateConfig({ workerUrl: TT_WORKER_URL }); } catch {}
+    try {
+      await mod.updateConfig({
+        workerUrl: async () => {
+          const resp = await fetch(TT_WORKER_URL, { mode: 'cors', credentials: 'omit' });
+          const blob = await resp.blob();
+          return URL.createObjectURL(blob);
+        }
+      });
+    } catch {}
   }
   window.__tt_mod = mod;
   return mod;

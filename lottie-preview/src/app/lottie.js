@@ -1,5 +1,6 @@
 // src/app/lottie.js
 import { state, setLastBgSize, setLastBgMeta } from './state.js';
+import { openOfficialViewer } from './rlottieOfficial.js';
 import { pickEngine } from './engine.js';
 import { createPlayer as createRlottiePlayer } from './rlottieAdapter.js';
 import { createTTPlayer } from './rlottieTT.js';
