@@ -245,9 +245,8 @@ const autoplay = !!state.loopOn;
       if (refs.wrapper) refs.wrapper.classList.add('has-lottie');
       layoutLottie(refs);
     });
-    // Click/Tap to play once when loop is off — guard against double fire (touch + click)
+        // Click/Tap to play once when loop is off — guard against double fire (touch + click)
     try {
-      
       const mount = refs.lottieMount || refs.preview || refs.wrapper;
       const root  = refs.preview || refs.wrapper || document.body;
       if (mount && !mount.__lp_clickBound) {
@@ -255,7 +254,7 @@ const autoplay = !!state.loopOn;
         let lastUserPlayAt = 0;
         const SUPPRESS_MS = 500;
 
-        // capture-phase suppressor to block the synthetic click that follows touch/pointer
+        // capture-phase suppressor to block synthetic click after touch/pointer
         if (root && !root.__lp_clickSuppressor) {
           root.__lp_clickSuppressor = true;
           root.addEventListener('click', (ev) => {
@@ -263,7 +262,7 @@ const autoplay = !!state.loopOn;
             if (now - lastUserPlayAt < SUPPRESS_MS) {
               try { ev.stopImmediatePropagation(); ev.stopPropagation(); ev.preventDefault(); } catch {}
             }
-          }, true); // capture
+          }, true);
         }
 
         const userPlay = (ev) => {
@@ -275,29 +274,18 @@ const autoplay = !!state.loopOn;
             try { restart(); } catch {}
           }
         };
+
         if (window.PointerEvent) {
           mount.addEventListener('pointerdown', userPlay);
         } else {
           mount.addEventListener('touchstart', userPlay, { passive: false });
           mount.addEventListener('click', (ev) => {
-            // If click comes without prior touch, handle it
             const now = Date.now();
             if (now - lastUserPlayAt > SUPPRESS_MS) userPlay(ev);
           });
         }
       }
     } catch {}
-        }
-        };
-        if (window.PointerEvent) {
-          mount.addEventListener('pointerdown', userPlay, { passive: true });
-        } else {
-          mount.addEventListener('touchstart', userPlay, { passive: true });
-          mount.addEventListener('click', userPlay, { passive: true });
-        }
-      }
-    } catch {}
-
 
     anim.addEventListener('complete', () => {});
 
