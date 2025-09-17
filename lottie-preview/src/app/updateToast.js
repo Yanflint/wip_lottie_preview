@@ -4,7 +4,7 @@
 export const TOAST_PRESETS = Object.freeze({
   short: { enter: 140,  stay: 1000, exit: 220 },
   base:  { enter: 160,  stay: 1600, exit: 260 },
-  long:  { enter: 2200, stay: 2200, exit: 3000 } // tweak as needed
+  long:  { enter: 1000, stay: 2000, exit: 1500 } // tweak as needed
 });
 export const TOAST_MAPPING = Object.freeze({
   update:  'long',
