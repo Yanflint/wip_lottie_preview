@@ -225,7 +225,7 @@ const autoplay = !!state.loopOn;
     const engine = pickEngine();
     try { document.documentElement.setAttribute('data-engine', engine); console.log('[engine]', engine); } catch {}
     if (engine === 'rlottie') {
-      anim = createRlottiePlayer({
+      anim = await createTTPlayer({
         container: refs.lottieMount,
         loop,
         autoplay,
