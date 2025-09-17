@@ -27,14 +27,41 @@
 
 <script>
 (function(){
-  // Candidate paths to try, in order
-  var candidates = [
-    "./rlottie/rlottie.min.js",
-    "/rlottie/rlottie.min.js",
-    "../rlottie/rlottie.min.js"
-  ];
+  function unique(arr){ return Array.from(new Set(arr)); }
+  function dirname(path){ var i = path.lastIndexOf("/"); return i >= 0 ? path.slice(0, i+1) : "/"; }
 
-  // Tell Emscripten where to fetch .wasm from (relative to whichever JS we manage to load)
+  // Optional override via ?rlottie_base=/path/ or localStorage 'rlottie_base'
+  var sp = new URLSearchParams(location.search);
+  var override = sp.get('rlottie_base');
+  if (override) { try { localStorage.setItem('rlottie_base', override); } catch(e){} }
+  try { override = override || localStorage.getItem('rlottie_base') || ""; } catch(e){}
+
+  var dir = dirname(location.pathname.replace(/[#?].*$/, ""));
+  var parts = dir.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+
+  var bases = [];
+  if (override) {
+    if (!/\/$/.test(override)) override += "/";
+    bases.push(override);
+  }
+
+  // From current directory up to root
+  bases.push(dir);
+  for (var i = parts.length - 1; i >= 0; i--) {
+    bases.push("/" + parts.slice(0, i).join("/") + "/");
+  }
+  bases.push("/"); // root
+  // Common guesses
+  bases.push("./");
+  bases.push("../");
+  bases.push("../../");
+  bases.push("../../../");
+  bases.push("/lottie-preview/");
+
+  bases = unique(bases);
+
+  var candidates = bases.map(function(b){ return (b.endsWith("/") ? b : b + "/") + "rlottie/rlottie.min.js"; });
+
   function setLocateFile(prefix){
     window.__rlottieLocateFile = function(path){
       if (/\.wasm$/i.test(path)) {
@@ -58,19 +85,18 @@
     });
   }
 
+  function dirPrefix(url){ var m = url.match(/^(.*\/)[^\/]*$/); return m ? m[1] : "./"; }
+
   function tryLoad(i){
     if (i >= candidates.length) {
-      console.error("[rlottie] Could not load rlottie runtime from any known path:", candidates);
+      console.error("[rlottie] Could not load rlottie runtime. Tried:", candidates);
+      console.warn("[rlottie] Tip: pass ?rlottie_base=/your/base/ to override search base");
       return;
     }
     var url = candidates[i];
-    var prefix = url.replace(/[^\/]+$/, ""); // keep directory
-    setLocateFile(prefix);
-    loadScript(url).then(function(){
-      console.log("[rlottie] Loaded:", url);
-    }).catch(function(){
-      tryLoad(i+1);
-    });
+    setLocateFile(dirPrefix(url));
+    loadScript(url).then(function(){ console.log("[rlottie] Loaded:", url); })
+                    .catch(function(){ tryLoad(i+1); });
   }
 
   tryLoad(0);
