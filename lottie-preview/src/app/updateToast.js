@@ -17,7 +17,7 @@ const toastPresets   = { ...TOAST_PRESETS };
 const toastPresetMap = { ...TOAST_MAPPING };
 
 const EASING_IN  = 'cubic-bezier(.52,0,.23,1)';
-const EASING_OUT = 'cubic-bezier(1,-0.01,.51,.99)';
+const EASING_OUT = 'cubic-bezier(1,0,.51,.99)';
 
 function resolveToastConfig(kind) {
   const key = toastPresetMap[kind] || 'base';
