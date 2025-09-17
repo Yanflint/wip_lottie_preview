@@ -224,6 +224,7 @@ const isViewer = document.documentElement.classList.contains('viewer');
 const autoplay = isViewer && !isStandalone ? false : true;
 
 
+    
     const engine = pickEngine();
     if (engine === 'rlottie') {
       anim = createRlottiePlayer({
@@ -232,15 +233,15 @@ const autoplay = isViewer && !isStandalone ? false : true;
         autoplay,
         animationData: lotJson
       });
-    }
     } else {
       anim = window.lottie.loadAnimation({
-      container: refs.lottieMount,
-      renderer: 'svg',
-      loop,
-      autoplay,
-      animationData: lotJson
-    });
+        container: refs.lottieMount,
+        renderer: 'svg',
+        loop,
+        autoplay,
+        animationData: lotJson
+      });
+    }
 
     anim.addEventListener('DOMLoaded', () => {
       setPlaceholderVisible(refs, false);
