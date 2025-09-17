@@ -59,7 +59,21 @@ export async function createTTPlayer({ container, loop=false, autoplay=false, an
   if (autoplay) player.play();
 
   // Mimic lottie-web-ish API subset used in our app
-  const api = {
+  
+  // Keep canvas resolution in sync with CSS size for crisp + correct mask coverage
+  try {
+    const ro = new ResizeObserver(() => {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width  * dpr));
+      const h = Math.max(1, Math.round(rect.height * dpr));
+      if (canvas.width !== w)  canvas.width  = w;
+      if (canvas.height !== h) canvas.height = h;
+      try { player.resize && player.resize(); } catch {}
+    });
+    ro.observe(canvas);
+  } catch {}
+const api = {
     play(){ try { player.play(); } catch {} },
     pause(){ try { player.pause(); } catch {} },
     stop(){ try { player.pause(); player.frame = 0; } catch {} },

@@ -223,6 +223,7 @@ const autoplay = !!state.loopOn;
 
 
     const engine = pickEngine();
+    try { document.documentElement.setAttribute('data-engine', engine); console.log('[engine]', engine); } catch {}
     if (engine === 'rlottie') {
       anim = createRlottiePlayer({
         container: refs.lottieMount,
@@ -233,7 +234,7 @@ const autoplay = !!state.loopOn;
     } else {
       anim = window.lottie.loadAnimation({
       container: refs.lottieMount,
-      renderer: 'svg',
+      renderer: 'canvas',
       loop,
       autoplay,
       animationData: lotJson
