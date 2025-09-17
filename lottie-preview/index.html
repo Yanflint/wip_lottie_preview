@@ -38,6 +38,7 @@
     html.viewer body, html.viewer html { background: #000; }
   </style>
   <!-- Official rlottie runtime (WASM). Place the official bundle here) -->
+<<<<<<< Updated upstream
   <script>
   // Help rlottie WASM find its .wasm file even when hosted in subpaths
   window.__rlottieLocateFile = function(path){
@@ -51,6 +52,8 @@
   window.Module = Object.assign({}, window.Module || {}, { locateFile: window.__rlottieLocateFile });
 </script>
 <script src="./rlottie/rlottie.min.js" defer></script>
+=======
+>>>>>>> Stashed changes
 </head>
 
 
@@ -102,6 +105,58 @@
   <div id="ver" class="ver"></div>
 
   <!-- детектор standalone для CSS (только класс, без визуальных изменений) -->
+
+<script>
+(function(){
+  // Candidate paths to try, in order
+  var candidates = [
+    "./rlottie/rlottie.min.js",
+    "/rlottie/rlottie.min.js",
+    "../rlottie/rlottie.min.js"
+  ];
+
+  // Tell Emscripten where to fetch .wasm from (relative to whichever JS we manage to load)
+  function setLocateFile(prefix){
+    window.__rlottieLocateFile = function(path){
+      if (/\.wasm$/i.test(path)) {
+        var name = path.split("/").pop() || "rlottie.wasm";
+        try { return new URL(prefix + name, document.baseURI).toString(); } catch(e) {}
+        return prefix + name;
+      }
+      return path;
+    };
+    window.Module = Object.assign({}, window.Module || {}, { locateFile: window.__rlottieLocateFile });
+  }
+
+  function loadScript(url){
+    return new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = url;
+      s.defer = true;
+      s.onload = function(){ resolve(url); };
+      s.onerror = function(){ reject(url); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function tryLoad(i){
+    if (i >= candidates.length) {
+      console.error("[rlottie] Could not load rlottie runtime from any known path:", candidates);
+      return;
+    }
+    var url = candidates[i];
+    var prefix = url.replace(/[^\/]+$/, ""); // keep directory
+    setLocateFile(prefix);
+    loadScript(url).then(function(){
+      console.log("[rlottie] Loaded:", url);
+    }).catch(function(){
+      tryLoad(i+1);
+    });
+  }
+
+  tryLoad(0);
+})();
+</script>
 <script type="module">
   const isStandalone =
     (window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||

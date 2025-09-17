@@ -24,17 +24,71 @@
     .center{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
     .hint{opacity:.6}
   </style>
+<<<<<<< Updated upstream
   <script>
     window.__rlottieLocateFile = function(path){
       if (/(?:^|\/)rlottie\.wasm$/i.test(path) || /\.wasm$/i.test(path)) {
         try { return new URL("../rlottie/" + path.split("/").pop(), document.baseURI).toString(); } catch(e) {}
         return "../rlottie/" + (path.split("/").pop() || "rlottie.wasm");
+=======
+
+<script>
+(function(){
+  // Candidate paths to try, in order
+  var candidates = [
+    "./rlottie/rlottie.min.js",
+    "/rlottie/rlottie.min.js",
+    "../rlottie/rlottie.min.js"
+  ];
+
+  // Tell Emscripten where to fetch .wasm from (relative to whichever JS we manage to load)
+  function setLocateFile(prefix){
+    window.__rlottieLocateFile = function(path){
+      if (/\.wasm$/i.test(path)) {
+        var name = path.split("/").pop() || "rlottie.wasm";
+        try { return new URL(prefix + name, document.baseURI).toString(); } catch(e) {}
+        return prefix + name;
+>>>>>>> Stashed changes
       }
       return path;
     };
     window.Module = Object.assign({}, window.Module || {}, { locateFile: window.__rlottieLocateFile });
+<<<<<<< Updated upstream
   </script>
   <script src="../rlottie/rlottie.min.js" defer></script>
+=======
+  }
+
+  function loadScript(url){
+    return new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = url;
+      s.defer = true;
+      s.onload = function(){ resolve(url); };
+      s.onerror = function(){ reject(url); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function tryLoad(i){
+    if (i >= candidates.length) {
+      console.error("[rlottie] Could not load rlottie runtime from any known path:", candidates);
+      return;
+    }
+    var url = candidates[i];
+    var prefix = url.replace(/[^\/]+$/, ""); // keep directory
+    setLocateFile(prefix);
+    loadScript(url).then(function(){
+      console.log("[rlottie] Loaded:", url);
+    }).catch(function(){
+      tryLoad(i+1);
+    });
+  }
+
+  tryLoad(0);
+})();
+</script>
+>>>>>>> Stashed changes
 </head>
 <body>
   <div class="center"><div class="hint">Открываю последний шот…</div></div>
