@@ -1,4 +1,36 @@
 // src/app/updateToast.js
+
+// === SINGLE SOURCE OF TRUTH — edit only here ===
+export const TOAST_PRESETS = Object.freeze({
+  short: { enter: 140,  stay: 1000, exit: 220 },
+  base:  { enter: 160,  stay: 1600, exit: 260 },
+  long:  { enter: 2200, stay: 2200, exit: 3000 } // tweak as needed
+});
+export const TOAST_MAPPING = Object.freeze({
+  update:  'long',
+  success: 'short',
+  error:   'short'
+});
+
+// Runtime copies derived strictly from constants above
+const toastPresets   = { ...TOAST_PRESETS };
+const toastPresetMap = { ...TOAST_MAPPING };
+
+const EASING_IN  = 'cubic-bezier(.21,.75,.2,1)';
+const EASING_OUT = 'ease';
+
+function resolveToastConfig(kind) {
+  const key = toastPresetMap[kind] || 'base';
+  const preset = toastPresets[key] || toastPresets.base || toastPresets.short;
+  return { ...preset, easingIn: EASING_IN, easingOut: EASING_OUT };
+}
+
+// Safe clamp
+function __safeMs(v, fb, min=0, max=60000){
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fb;
+  return Math.min(Math.max(n, min), max);
+}
 // Единый стиль баблика (как у «Обновлено»): тёмный фон, белый текст.
 // Иконка меняется (зелёная галочка / красный крест). Без хвоста.
 // Обновление — снизу по центру; успех/ошибка — над переданной кнопкой (anchorEl).
@@ -6,6 +38,7 @@
 let toastLock = false;
 
 function ensureStyles() {
+
   if (document.getElementById('lp-toast-style')) return;
   const st = document.createElement('style');
   st.id = 'lp-toast-style';
@@ -106,7 +139,32 @@ function showCentered(msg) {
   bubble.innerHTML = iconSVG('success') + `<span>${msg}</span>`;
   wrap.appendChild(bubble);
   document.body.appendChild(wrap);
-  const enter = 160, stay = 1600, exit = 260;
+  
+  const kind  = 'update';
+  const cfg   = resolveToastConfig(kind);
+  const base  = toastPresets.base || toastPresets.short;
+  const enter = __safeMs(cfg.enter, base.enter);
+  const stay  = __safeMs(cfg.stay,  base.stay);
+  const exit  = __safeMs(cfg.exit,  base.exit);
+
+  let removed = false;
+  const safeRemove = () => { if (!removed) { removed = true; try { wrap.remove(); } catch {} } };
+
+  // Start strictly after next paint(s)
+  bubble.style.opacity = '0';
+  bubble.style.transform = 'translateY(8px) scale(0.98)';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      bubble.style.animation = `lpToastIn ${enter}ms ${cfg.easingIn} forwards`;
+      setTimeout(() => {
+        bubble.style.animation = `lpToastOut ${exit}ms ${cfg.easingOut} forwards`;
+        setTimeout(safeRemove, exit + 80);
+      }, enter + stay);
+    });
+  });
+
+  // Safety TTL no matter what
+  setTimeout(safeRemove, enter + stay + exit + 1000);
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -120,7 +178,30 @@ function showAnchored(msg, type, anchorEl) {
   bubble.innerHTML = iconSVG(type) + `<span>${msg}</span>`;
   placeAbove(anchorEl, bubble);
   document.body.appendChild(bubble);
-  const enter = 160, stay = 1600, exit = 260;
+  
+  const kind  = (type === 'error' ? 'error' : 'success');
+  const cfg   = resolveToastConfig(kind);
+  const base  = toastPresets.base || toastPresets.short;
+  const enter = __safeMs(cfg.enter, base.enter);
+  const stay  = __safeMs(cfg.stay,  base.stay);
+  const exit  = __safeMs(cfg.exit,  base.exit);
+
+  let removed = false;
+  const safeRemove = () => { if (!removed) { removed = true; try { bubble.remove(); } catch {} } };
+
+  bubble.style.opacity = '0';
+  bubble.style.transform = 'translateY(8px) scale(0.98)';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      bubble.style.animation = `lpToastIn ${enter}ms ${cfg.easingIn} forwards`;
+      setTimeout(() => {
+        bubble.style.animation = `lpToastOut ${exit}ms ${cfg.easingOut} forwards`;
+        setTimeout(safeRemove, exit + 80);
+      }, enter + stay);
+    });
+  });
+
+  setTimeout(safeRemove, enter + stay + exit + 1000);
   bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
     bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
@@ -131,10 +212,18 @@ function showAnchored(msg, type, anchorEl) {
 // === Публичные API ===
 
 export function showUpdateToast(msg = 'Обновлено') {
-  if (toastLock) return; toastLock = true;
+  if (toastLock) return;
+  toastLock = true;
   ensureStyles();
-  showCentered(msg);
-  setTimeout(() => { toastLock = false; }, 160 + 1600 + 260 + 60);
+  showCentered(msg); // uses kind='update' inside
+
+  try {
+    const { enter, stay, exit } = resolveToastConfig('update');
+    const ttl = __safeMs(enter,160) + __safeMs(stay,1600) + __safeMs(exit,260) + 120;
+    setTimeout(() => { toastLock = false; }, ttl);
+  } catch {
+    setTimeout(() => { toastLock = false; }, 2200); // safe fallback
+  }
 }
 
 export async function showToastIfFlag(flagKey = 'lp_show_toast', msg = 'Обновлено') {
