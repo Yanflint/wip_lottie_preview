@@ -218,10 +218,7 @@ export async function loadLottieFromData(refs, data) {
 
     const loop = !!state.loopOn;
     
-// Autoplay: off in web viewer mode (path /s/*), on elsewhere (incl. PWA standalone)
-const isStandalone = !!(window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches)) || (navigator.standalone === true);
-const isViewer = document.documentElement.classList.contains('viewer');
-const autoplay = isViewer && !isStandalone ? false : true;
+const autoplay = !!state.loopOn;
 
 
     
@@ -248,6 +245,21 @@ const autoplay = isViewer && !isStandalone ? false : true;
       if (refs.wrapper) refs.wrapper.classList.add('has-lottie');
       layoutLottie(refs);
     });
+    // Click/Tap to play once when loop is off
+    try {
+      const mount = refs.lottieMount || refs.preview || refs.wrapper;
+      if (mount && !mount.__lp_clickBound) {
+        mount.__lp_clickBound = true;
+        const onUserPlay = () => {
+          if (!state.loopOn) {
+            try { restart(); } catch {}
+          }
+        };
+        mount.addEventListener('click', onUserPlay);
+        mount.addEventListener('touchstart', onUserPlay, { passive: true });
+      }
+    } catch {}
+
 
     anim.addEventListener('complete', () => {});
 
