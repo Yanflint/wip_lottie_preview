@@ -38,22 +38,6 @@
     html.viewer body, html.viewer html { background: #000; }
   </style>
   <!-- Official rlottie runtime (WASM). Place the official bundle here) -->
-<<<<<<< Updated upstream
-  <script>
-  // Help rlottie WASM find its .wasm file even when hosted in subpaths
-  window.__rlottieLocateFile = function(path){
-    if (/(?:^|\/)rlottie\.wasm$/i.test(path) || /\.wasm$/i.test(path)) {
-      try { return new URL("./rlottie/" + path.split("/").pop(), document.baseURI).toString(); } catch(e) {}
-      return "./rlottie/" + (path.split("/").pop() || "rlottie.wasm");
-    }
-    return path;
-  };
-  // Common Emscripten global used by some rlottie builds
-  window.Module = Object.assign({}, window.Module || {}, { locateFile: window.__rlottieLocateFile });
-</script>
-<script src="./rlottie/rlottie.min.js" defer></script>
-=======
->>>>>>> Stashed changes
 </head>
 
 

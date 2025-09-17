@@ -24,13 +24,6 @@
     .center{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
     .hint{opacity:.6}
   </style>
-<<<<<<< Updated upstream
-  <script>
-    window.__rlottieLocateFile = function(path){
-      if (/(?:^|\/)rlottie\.wasm$/i.test(path) || /\.wasm$/i.test(path)) {
-        try { return new URL("../rlottie/" + path.split("/").pop(), document.baseURI).toString(); } catch(e) {}
-        return "../rlottie/" + (path.split("/").pop() || "rlottie.wasm");
-=======
 
 <script>
 (function(){
@@ -48,15 +41,10 @@
         var name = path.split("/").pop() || "rlottie.wasm";
         try { return new URL(prefix + name, document.baseURI).toString(); } catch(e) {}
         return prefix + name;
->>>>>>> Stashed changes
       }
       return path;
     };
     window.Module = Object.assign({}, window.Module || {}, { locateFile: window.__rlottieLocateFile });
-<<<<<<< Updated upstream
-  </script>
-  <script src="../rlottie/rlottie.min.js" defer></script>
-=======
   }
 
   function loadScript(url){
@@ -88,7 +76,6 @@
   tryLoad(0);
 })();
 </script>
->>>>>>> Stashed changes
 </head>
 <body>
   <div class="center"><div class="hint">Открываю последний шот…</div></div>
