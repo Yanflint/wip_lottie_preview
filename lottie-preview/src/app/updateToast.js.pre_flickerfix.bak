@@ -165,7 +165,9 @@ function showCentered(msg) {
 
   // Safety TTL no matter what
   setTimeout(safeRemove, enter + stay + exit + 1000);
+  bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
+    bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
     setTimeout(() => { try { wrap.remove(); } catch(e) {} }, exit + 40);
   }, enter + stay);
 }
@@ -200,7 +202,9 @@ function showAnchored(msg, type, anchorEl) {
   });
 
   setTimeout(safeRemove, enter + stay + exit + 1000);
+  bubble.style.animation = `lpToastIn ${enter}ms cubic-bezier(.21,.75,.2,1) forwards`;
   setTimeout(() => {
+    bubble.style.animation = `lpToastOut ${exit}ms ease forwards`;
     setTimeout(() => { try { bubble.remove(); } catch(e) {} }, exit + 40);
   }, enter + stay);
 }

@@ -95,6 +95,29 @@ if (!isViewer) initDnd({ refs });
   window.addEventListener('resize', relayout, { passive: true });
   window.addEventListener('orientationchange', relayout, { passive: true });
 
+  // Hotkey: Reset (R) in editor only; allow Ctrl/Cmd+R refresh; ignore inputs; ru/en layout safe
+  window.addEventListener('keydown', (e) => {
+    try {
+      const isViewer = location.pathname.includes('/s/');
+      if (isViewer) return;
+    } catch {}
+
+    const hasMods = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+    if (hasMods) return;
+
+    const t = e.target;
+    const isEditable = !!(t && (t.closest?.('input, textarea') || t.isContentEditable || t.getAttribute?.('role') === 'textbox'));
+    if (isEditable) return;
+
+    const isRCode = e.code === 'KeyR';
+    const isRKey  = (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К');
+    if (isRCode || isRKey) {
+      e.preventDefault();
+      try { setLotOffset(0, 0); } catch {}
+      try { relayout(); } catch {}
+    }
+  }, { passive: false });
+
   // Тап = перезапуск (если было добавлено ранее)
   const restartByTap = (e) => {
     if (isViewer) return;

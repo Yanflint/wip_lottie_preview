@@ -13,6 +13,7 @@ async function processFilesSequential(refs, files) {
     const url = URL.createObjectURL(imgFile);
     await setBackgroundFromSrc(refs, url, { fileName: imgFile?.name });
     setPlaceholderVisible(refs, false);
+    try { const { afterTwoFrames } = await import('./utils.js'); await afterTwoFrames(); await afterTwoFrames(); document.dispatchEvent(new CustomEvent('lp:content-painted')); } catch {}
   }
   if (jsonFile) {
     const text = await jsonFile.text();
@@ -21,6 +22,7 @@ async function processFilesSequential(refs, files) {
       setLastLottie(json);
       await loadLottieFromData(refs, json);
       setPlaceholderVisible(refs, false);
+    try { const { afterTwoFrames } = await import('./utils.js'); await afterTwoFrames(); await afterTwoFrames(); document.dispatchEvent(new CustomEvent('lp:content-painted')); } catch {}
     } catch (e) { console.error('Invalid JSON', e); }
   }
 }
@@ -59,6 +61,7 @@ export function initDnd({ refs }) {
       }
     }
     if (files.length) await processFilesSequential(refs, files);
-    if (textCandidate) { try { const json = JSON.parse(textCandidate); setLastLottie(json); await loadLottieFromData(refs, json); setPlaceholderVisible(refs, false); } catch {} }
+    if (textCandidate) { try { const json = JSON.parse(textCandidate); setLastLottie(json); await loadLottieFromData(refs, json); setPlaceholderVisible(refs, false);
+    try { const { afterTwoFrames } = await import('./utils.js'); await afterTwoFrames(); await afterTwoFrames(); document.dispatchEvent(new CustomEvent('lp:content-painted')); } catch {} } catch {} }
   });
 }

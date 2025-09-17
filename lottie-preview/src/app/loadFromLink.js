@@ -72,6 +72,7 @@ async function applyPayload(refs, data) {
 
   setPlaceholderVisible(refs, false);
   layoutLottie(refs);
+  try { const { afterTwoFrames } = await import('./utils.js'); await afterTwoFrames(); await afterTwoFrames(); document.dispatchEvent(new CustomEvent('lp:content-painted')); } catch {}
   
   } finally { try { if (_hid && refs?.lotStage) refs.lotStage.style.visibility = ''; } catch {} }
   return true;
