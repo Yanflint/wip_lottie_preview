@@ -4,7 +4,7 @@
 export const TOAST_PRESETS = Object.freeze({
   short: { enter: 140,  stay: 1000, exit: 220 },
   base:  { enter: 160,  stay: 1600, exit: 260 },
-  long:  { enter: 1000, stay: 2000, exit: 1500 } // tweak as needed
+  long:  { enter: 1500, stay: 200, exit: 1500 } // tweak as needed
 });
 export const TOAST_MAPPING = Object.freeze({
   update:  'long',
@@ -16,8 +16,8 @@ export const TOAST_MAPPING = Object.freeze({
 const toastPresets   = { ...TOAST_PRESETS };
 const toastPresetMap = { ...TOAST_MAPPING };
 
-const EASING_IN  = 'cubic-bezier(0.42, 0, 0.58, 1)';
-const EASING_OUT = 'cubic-bezier(0.42, 0, 0.58, 1)';
+const EASING_IN  = 'cubic-bezier(.52,0,.23,1)';
+const EASING_OUT = 'cubic-bezier(1,-0.01,.51,.99)';
 
 function resolveToastConfig(kind) {
   const key = toastPresetMap[kind] || 'base';

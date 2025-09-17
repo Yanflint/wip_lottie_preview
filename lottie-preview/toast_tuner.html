@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Toast Tuner — пресеты enter/stay/exit + easing</title>
+  <style>
+    :root {
+      --fg: #fff;
+      --panel: #181818;
+      --border: #2a2a2a;
+      --muted: #9aa0a6;
+      --accent: #6EE7B7;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: #0b0b0b; color: var(--fg); font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
+    .app { display: grid; grid-template-rows: 1fr auto; min-height: 100%; }
+
+    /* ----- PREVIEW ----- */
+    .stage {
+      position: relative; overflow: hidden; border-bottom: 1px solid var(--border);
+      background: radial-gradient(1000px 500px at 50% 0%, #0e0e16 0%, #0b0b0f 60%, #0a0a0a 100%);
+    }
+    .stage-inner { position: absolute; inset: 0; display: grid; place-items: center; }
+    .playbar {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,.4);
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; backdrop-filter: blur(6px);
+      box-shadow: 0 4px 18px rgba(0,0,0,.4);
+    }
+    button {
+      appearance: none; border: 1px solid var(--border); background: var(--panel); color: var(--fg);
+      padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600;
+    }
+    button:hover { border-color: #3a3a3a; }
+    button:active { transform: translateY(1px); }
+
+    /* ----- TOAST (как в проекте) ----- */
+    .toast-wrap {
+      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+      z-index: 1000; pointer-events: none;
+    }
+    .toast {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      background: rgba(17,17,17,.96);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+      pointer-events: auto;
+      will-change: transform, opacity;
+    }
+    .toast .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+    .toast .msg { font-weight: 600; letter-spacing: .2px; }
+
+    /* ----- KEYFRAMES (раздельно opacity и движение) ----- */
+    @keyframes inOpacity { 0% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes inMove    { 0% { transform: translateY(8px) scale(.98); }
+                           100% { transform: translateY(0) scale(1); } }
+    @keyframes outAll    { 0% { opacity: 1; transform: translateY(0) scale(1); }
+                           100% { opacity: 0; transform: translateY(6px) scale(.98); } }
+
+    /* ----- CONTROLS ----- */
+    .controls {
+      padding: 16px; display: grid; gap: 12px;
+      grid-template-columns: repeat(12, 1fr); background: #0d0d0d;
+    }
+    .card { grid-column: span 12; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+    .card h3 { margin: 0; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: #bbb; }
+    .card .body { padding: 12px; display: grid; gap: 10px; }
+    .grid-2 { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .row { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: center; }
+    label { color: #c8c8c8; }
+    input[type="text"], input[type="number"] {
+      width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border);
+      background: #131313; color: var(--fg); font: inherit;
+    }
+    .hint { color: var(--muted); font-size: 12px; }
+    code.snippet {
+      display: block; white-space: pre; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #111; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="stage">
+      <div class="stage-inner"></div>
+      <div class="playbar">
+        <button id="btnPlay">▶ Плей</button>
+        <div class="hint">Показывает бабл «Обновлено» с текущими параметрами</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="card">
+        <h3>Параметры анимации</h3>
+        <div class="body grid-2">
+          <div class="row">
+            <label for="msg">Текст</label>
+            <input id="msg" type="text" value="Обновлено" />
+          </div>
+          <div class="row">
+            <label for="lead">Lead (мс)</label>
+            <input id="lead" type="number" min="0" max="500" step="1" value="60" />
+          </div>
+          <div class="row">
+            <label for="enter">enter (мс)</label>
+            <input id="enter" type="number" min="0" max="60000" step="10" value="140" />
+          </div>
+          <div class="row">
+            <label for="stay">stay (мс)</label>
+            <input id="stay" type="number" min="0" max="60000" step="10" value="1000" />
+          </div>
+          <div class="row">
+            <label for="exit">exit (мс)</label>
+            <input id="exit" type="number" min="0" max="60000" step="10" value="220" />
+          </div>
+          <div class="row">
+            <label for="easeIn">EASING_IN</label>
+            <input id="easeIn" type="text" value="cubic-bezier(0.42, 0, 0.58, 1)" />
+          </div>
+          <div class="row">
+            <label for="easeOut">EASING_OUT</label>
+            <input id="easeOut" type="text" value="cubic-bezier(0.42, 0, 0.58, 1)" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Копипаста в проект</h3>
+        <div class="body">
+          <div class="hint">Значения из полей выше автоматически подставляются в сниппеты ниже.</div>
+          <code class="snippet" id="snippetPresets"></code>
+          <code class="snippet" id="snippetCSS"></code>
+          <code class="snippet" id="snippetJS"></code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const inputs = {
+      msg: $('#msg'),
+      lead: $('#lead'),
+      enter: $('#enter'),
+      stay: $('#stay'),
+      exit: $('#exit'),
+      easeIn: $('#easeIn'),
+      easeOut: $('#easeOut'),
+    };
+    $('#btnPlay').addEventListener('click', play);
+    Object.values(inputs).forEach(inp => inp.addEventListener('input', updateSnippets));
+    updateSnippets();
+
+    function clamp(n, min=0, max=60000){
+      n = Number(n);
+      if (!Number.isFinite(n)) return min;
+      return Math.min(Math.max(n, min), max);
+    }
+    function removeToast(){ document.querySelectorAll('.toast-wrap').forEach(n => n.remove()); }
+
+    function play(){
+      removeToast();
+
+      const enter = clamp(inputs.enter.value, 0, 60000);
+      const stay  = clamp(inputs.stay.value, 0, 60000);
+      const exit  = clamp(inputs.exit.value, 0, 60000);
+      const lead  = clamp(inputs.lead.value, 0, 500);
+      const easeIn  = String(inputs.easeIn.value || 'ease');
+      const easeOut = String(inputs.easeOut.value || 'ease');
+      const msg = String(inputs.msg.value || 'Обновлено');
+
+      const wrap = document.createElement('div');
+      wrap.className = 'toast-wrap';
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = '<span class="dot"></span><span class="msg"></span>';
+      toast.querySelector('.msg').textContent = msg;
+      wrap.appendChild(toast);
+      document.body.appendChild(wrap);
+
+      // начальные значения
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(8px) scale(.98)';
+      toast.style.animation = 'none';
+
+      const start = () => {
+        // 2 дорожки: opacity (с lead) и движение
+        toast.style.animation =
+          `inOpacity ${enter}ms ${easeIn} ${lead}ms forwards, ` +
+          `inMove ${enter}ms ${easeIn} 0ms forwards`;
+
+        // запланировать выход
+        const t1 = setTimeout(() => {
+          toast.style.animation = `outAll ${exit}ms ${easeOut} forwards`;
+          setTimeout(() => { wrap.remove(); }, exit + 80);
+        }, enter + stay);
+
+        // safety TTL на случай сбоев
+        setTimeout(() => { try { wrap.remove(); } catch {} }, enter + stay + exit + 1500);
+      };
+
+      // старт после двух кадров, чтобы не «съедался» первый кадр входа
+      requestAnimationFrame(() => requestAnimationFrame(start));
+    }
+
+    function updateSnippets(){
+      const enter = clamp(inputs.enter.value);
+      const stay  = clamp(inputs.stay.value);
+      const exit  = clamp(inputs.exit.value);
+      const lead  = clamp(inputs.lead.value, 0, 500);
+      const easeIn  = String(inputs.easeIn.value || 'ease');
+      const easeOut = String(inputs.easeOut.value || 'ease');
+
+      $('#snippetPresets').textContent =
+`// В проекте (updateToast.js):
+export const TOAST_PRESETS = Object.freeze({
+  short: { enter: 140,  stay: 1000, exit: 220 },
+  base:  { enter: 160,  stay: 1600, exit: 260 },
+  long:  { enter: ${enter}, stay: ${stay}, exit: ${exit} }
+});`;
+
+      $('#snippetCSS').textContent =
+`/* Ключевые кадры */
+@keyframes inOpacity { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes inMove    { 0% { transform: translateY(8px) scale(.98); }
+                       100% { transform: translateY(0) scale(1); } }
+@keyframes outAll    { 0% { opacity: 1; transform: translateY(0) scale(1); }
+                       100% { opacity: 0; transform: translateY(6px) scale(.98); } }`;
+
+      $('#snippetJS').textContent =
+`// Запуск входа (в проект)
+const EASING_IN  = '${easeIn}';
+const EASING_OUT = '${easeOut}';
+toast.style.animation =
+  'inOpacity ${enter}ms ' + EASING_IN + ' ${lead}ms forwards, ' +
+  'inMove ${enter}ms ' + EASING_IN + ' 0ms forwards';
+// выход через enter+stay
+setTimeout(() => {
+  toast.style.animation = 'outAll ${exit}ms ' + EASING_OUT + ' forwards';
+}, ${enter} + ${stay});`;
+    }
+  </script>
+</body>
+</html>
