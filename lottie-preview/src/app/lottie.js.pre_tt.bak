@@ -2,7 +2,6 @@
 import { state, setLastBgSize, setLastBgMeta } from './state.js';
 import { pickEngine } from './engine.js';
 import { createPlayer as createRlottiePlayer } from './rlottieAdapter.js';
-import { createTTPlayer } from './rlottieTT.js';
 import { setPlaceholderVisible } from './utils.js';
 
 let anim = null;

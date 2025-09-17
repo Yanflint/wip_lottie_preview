@@ -1,0 +1,13 @@
+TamTam RLottie integration
+--------------------------
+This project now supports real RLottie rendering via TamTam's @tamtam-chat/lottie-player
+(see README on GitHub). We dynamically import their ESM bundle from GitHub Pages and point
+the worker to their hosted worker.js, so you don't have to bundle WASM yourself.
+
+How to force rlottie:
+- Open the app with ?engine=rlottie, or run in DevTools:
+    localStorage.setItem('lp_engine', 'rlottie'); location.reload();
+
+If you want to self-host:
+- Copy TamTam's built files and set TT_MODULE_URL and TT_WORKER_URL in src/app/rlottieTT.js
+  to your own origin (same-origin is recommended for Workers).
