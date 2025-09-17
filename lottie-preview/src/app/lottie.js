@@ -139,8 +139,7 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     }
   })();
 
-  refs.bgImg.onload = () => {
-    try { __bgResolve && __bgResolve(); } catch {}
+  refs.bgImg.onload = async () => {
 
     const iw = Number(refs.bgImg.naturalWidth || 0) || 1;
     const ih = Number(refs.bgImg.naturalHeight || 0) || 1;
@@ -164,6 +163,8 @@ export async function setBackgroundFromSrc(refs, src, meta = {}) {
     }
 
     setPlaceholderVisible(refs, false);
+    try { const { afterTwoFrames } = await import('./utils.js'); await afterTwoFrames(); await afterTwoFrames(); } catch {}
+    try { __bgResolve && __bgResolve(); } catch {}
   };
 
   refs.bgImg.onerror = () => {
