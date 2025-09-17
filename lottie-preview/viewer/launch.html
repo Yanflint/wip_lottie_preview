@@ -102,6 +102,67 @@
   tryLoad(0);
 })();
 </script>
+
+<script>
+(function(){
+  function unique(a){ return Array.from(new Set(a)); }
+  function dirname(p){ var i=p.lastIndexOf('/'); return i>=0?p.slice(0,i+1):'/'; }
+
+  // Optional override via ?rlottie_base=/path/ or localStorage
+  var sp = new URLSearchParams(location.search);
+  var override = sp.get('rlottie_base');
+  if (override) { try { localStorage.setItem('rlottie_base', override); } catch(e){} }
+  try { override = override || localStorage.getItem('rlottie_base') || ""; } catch(e){}
+
+  var dir = dirname(location.pathname.replace(/[#?].*$/, ""));
+  var parts = dir.replace(/^\/+|\/+$/g,"").split("/").filter(Boolean);
+
+  var bases = [];
+  if (override) { if (!/\/$/.test(override)) override += "/"; bases.push(override); }
+  bases.push(dir);
+  for (var i=parts.length-1;i>=0;i--) bases.push("/"+parts.slice(0,i).join("/")+"/");
+  bases.push("/", "./", "../", "../../", "../../../", "/lottie-preview/");
+  bases = unique(bases);
+
+  // Try multiple filenames in each base
+  var names = ["rlottie-wasm.js", "rlottie.min.js", "rlottie.js"];
+  var candidates = [];
+  bases.forEach(function(b){ names.forEach(function(n){ candidates.push((b.endsWith('/')?b:b+'/') + "rlottie/" + n); }); });
+
+  function setLocateFile(prefix){
+    window.__rlottieLocateFile = function(path){
+      if (/\.wasm$/i.test(path)) {
+        var name = path.split("/").pop() || "rlottie-wasm.wasm";
+        try { return new URL(prefix + name, document.baseURI).toString(); } catch(e) {}
+        return prefix + name;
+      }
+      return path;
+    };
+    window.Module = Object.assign({}, window.Module || {}, { locateFile: window.__rlottieLocateFile });
+  }
+  function loadScript(url){
+    return new Promise(function(resolve,reject){
+      var s=document.createElement('script'); s.src=url; s.defer=true;
+      s.onload=function(){ resolve(url); }; s.onerror=function(){ reject(url); };
+      document.head.appendChild(s);
+    });
+  }
+  function dirPrefix(url){ var m=url.match(/^(.*\/)[^\/]*$/); return m?m[1]:"./"; }
+
+  function tryLoad(i){
+    if(i>=candidates.length){
+      console.error("[rlottie] Could not load rlottie runtime. Tried:", candidates);
+      console.warn("[rlottie] Tip: pass ?rlottie_base=/your/base/ to override search base");
+      return;
+    }
+    var url=candidates[i];
+    setLocateFile(dirPrefix(url));
+    loadScript(url).then(function(){ console.log("[rlottie] Loaded:", url); })
+                   .catch(function(){ tryLoad(i+1); });
+  }
+  tryLoad(0);
+})();
+</script>
 </head>
 <body>
   <div class="center"><div class="hint">Открываю последний шот…</div></div>
